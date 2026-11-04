@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ${{ vars.FLIGHTDECK_RUNNER || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.23.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.12.1
+          cache: pnpm
+      - name: Configure approved Nexus read access
+        env:
+          NEXUS_RO_USER: ${{ vars.NEXUS_RO_USER }}
+          NEXUS_RO_TOKEN: ${{ secrets.NEXUS_RO_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$NEXUS_RO_USER" && test -n "$NEXUS_RO_TOKEN"
+          directory="$RUNNER_TEMP/flightdeck-npm-auth"
+          mkdir -m 700 "$directory"
+          auth=$(printf '%s' "$NEXUS_RO_USER:$NEXUS_RO_TOKEN" | base64 | tr -d '\n')
+          echo "::add-mask::$auth"
+          (umask 077; printf '//nexus.int.onebrief.tools/repository/npmjs.com/:_auth=%s\n' "$auth" > "$directory/npmrc")
+          printf 'NPM_CONFIG_USERCONFIG=%s\n' "$directory/npmrc" >> "$GITHUB_ENV"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm db:setup
+      - run: pnpm test
+      - if: always()
+        run: pnpm db:stop

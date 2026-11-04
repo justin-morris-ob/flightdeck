@@ -1,0 +1,60 @@
+{
+  "name": "@onebrief/flightdeck",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Feature flags, controlled rollouts, and experimentation for Onebrief",
+  "type": "module",
+  "scripts": {
+    "build": "vite build && vite build --config vite.remote.config.ts",
+    "check": "pnpm lint && pnpm typecheck && pnpm contracts --check && pnpm build && pnpm fmt:check",
+    "consumer": "node scripts/local.ts consumer",
+    "contracts": "node scripts/contracts.ts",
+    "db:setup": "node scripts/local.ts setup",
+    "db:stop": "node scripts/local.ts stop-db",
+    "dev": "node scripts/local.ts start",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt . --check",
+    "lint": "oxlint src server shared scripts examples vite.config.ts vite.remote.config.ts",
+    "migrate": "node scripts/migrate.ts",
+    "shell": "node scripts/shell.ts",
+    "start": "node scripts/local.ts start",
+    "test": "node scripts/local.ts test",
+    "typecheck": "tsc --noEmit && tsc --project tsconfig.server.json"
+  },
+  "dependencies": {
+    "@onebrief/atlas-bff-kit": "0.1.0",
+    "@onebrief/atlas-contract-shell": "0.1.0",
+    "@onebrief/atlas-sdk": "0.1.0",
+    "@onebrief/atlas-ui": "0.1.0",
+    "@onebrief/ux-kit": "0.1.0",
+    "pg": "8.16.3",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@onebrief/atlas-vite-config": "0.1.0",
+    "@types/node": "24.19.2",
+    "@types/pg": "8.15.6",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.1",
+    "oxfmt": "0.48.0",
+    "oxlint": "1.57.0",
+    "typescript": "6.0.3",
+    "vite": "8.2.1",
+    "vitest": "4.1.0"
+  },
+  "engines": {
+    "node": "26.12.x",
+    "pnpm": "11.23.0"
+  },
+  "packageManager": "pnpm@11.23.0",
+  "atlas": {
+    "id": "flightdeck",
+    "title": "Flightdeck",
+    "icon": "flag",
+    "tone": "atom",
+    "contributes": []
+  }
+}

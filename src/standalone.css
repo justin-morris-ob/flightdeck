@@ -1,0 +1,26 @@
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  min-width: 20rem;
+  height: 100%;
+}
+
+.fd-standalone {
+  height: 100dvh;
+  color: var(--ob-sys-fg-primary);
+  background: var(--ob-sys-bg-canvas);
+}
+
+/* A standalone app does not offer the platform-wide search, drawer, AI or needs-you services. */
+.fd-standalone .ob-header__center,
+.fd-standalone .ob-header__drawer-anchor,
+.fd-standalone .ob-header__bell-anchor,
+.fd-standalone .ob-header__agent {
+  display: none;
+}
+
+.fd-standalone .ob-header {
+  grid-template-columns: 1fr auto;
+}

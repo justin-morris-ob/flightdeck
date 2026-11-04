@@ -1,0 +1,23 @@
+name: flightdeck-local
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: flightdeck
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${FLIGHTDECK_POSTGRES_PASSWORD:?Run node scripts/local.ts setup}
+    ports:
+      - '127.0.0.1:55471:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d flightdeck']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+    name: flightdeck-local-postgres

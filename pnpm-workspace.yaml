@@ -1,0 +1,6 @@
+minimumReleaseAgeExclude:
+  - '@onebrief/atlas-bff-kit@0.1.0'
+  - '@onebrief/atlas-contract-shell@0.1.0'
+  - '@onebrief/atlas-sdk@0.1.0'
+  - '@onebrief/atlas-ui@0.1.0'
+  - '@onebrief/atlas-vite-config@0.1.0'

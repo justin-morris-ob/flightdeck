@@ -27,38 +27,43 @@ The backend serves both built browser assets and the API; `pnpm dev` currently s
 
 ### Local roles
 
-| Operator      | Permission                                                    | Organization                |
-| ------------- | ------------------------------------------------------------- | --------------------------- |
-| Alex Morgan   | Administrator: flag changes and scoped credential management  | Flightdeck development      |
-| Ellis Chen    | Editor: flag changes, no credential management                | Flightdeck development      |
-| Vera Singh    | Viewer: inventory, activity and evaluation preview, no writes | Flightdeck development      |
-| Jordan Rivera | Administrator of the isolated test organization only          | Isolation test organization |
+| Operator      | Permission                                                   | Organization                |
+| ------------- | ------------------------------------------------------------ | --------------------------- |
+| Alex Morgan   | Administrator: flag changes and scoped credential management | Flightdeck development      |
+| Ellis Chen    | Editor: flag changes, no credential management               | Flightdeck development      |
+| Vera Singh    | Viewer: read-only flags and segments in the simplified UI    | Flightdeck development      |
+| Jordan Rivera | Administrator of the isolated test organization only         | Isolation test organization |
 
-These identities are fixed server-owned fixtures. The browser cannot choose its role or organization by posting those values. Selecting another development operator deliberately switches identity. Atlas's independently selected demo name does not establish Flightdeck authorization.
+These identities are fixed server-owned fixtures. The browser cannot choose its role or organization by posting those values. Session responses resolve the administrative organization's display name from PostgreSQL using the authenticated operator's organization ID; every session-producing path uses that same read. Selecting another development operator deliberately switches identity. Atlas's independently selected demo name does not establish Flightdeck authorization.
 
 The main organization has Flightdeck and Sandbox projects, each with development and simulated production environments. Creation adds an immutable project-scoped key, initially disabled everywhere with boolean off false/default true. Configuration and overrides are environment-specific; metadata, archive state and revision are project-wide. Archived flags retain configuration and return the typed off value with reason `archived`. Unknown keys return 404, not a successful false decision.
 
 ### Projects and the shared flag inventory
 
-A project owns one flag set; environments configure that same set differently. The standalone menu labels project navigation **Projects**, using published `MenuSection`/`MenuItem` primitives in the existing shell slot because the pinned composite `AppMenu` hardcodes “Collections.” No toolkit source, CSS text replacement or copied shell is used. Embedded Atlas pages retain the shell's chrome and use the explicit project selector.
+A project owns one flag set; environments configure that same set differently. Standalone and embedded pages expose one Flightdeck-owned **Project** selector in the always-visible scope bar, including narrow screens. Embedded pages retain Atlas chrome. Neither composition reuses the shell's unrelated project or organization display as application authorization.
 
-Feature flags shows one row per project flag, with On/Off columns for each environment. Select a status to open that exact environment; selecting a different **Configuration environment** does not filter the inventory or reset its current search/page. Inventory versions are displayed as “Version 13,” independently of environment gates. Archived rows distinguish project-wide archival from saved gate state; an absent configuration is Unavailable, never guessed Off.
+The POC has exactly three project sections: **Flags**, **Segments**, and **Audit log**. Audit log is an explicitly unimplemented placeholder, not a fabricated feed. Standalone has no competing sidebar or context-pill navigation.
 
-Creation from any selected environment creates the project flag disabled in every environment. Metadata and archive/restore affect the whole project; configuration publication, enabled state, credentials and subject overrides remain environment-specific. The project targeting catalog has no environment selector because its definitions are project-wide.
+Flags lists names, descriptions and per-environment On/Off statuses. A name opens a small read-only overview with key, description and environments; a status opens that exact configuration without toggling it. The inventory and overview have no environment selector. Returning from a flag retains search/page and refreshes stored summaries. An absent configuration is Unavailable, never guessed Off.
 
-Management inventory now uses operator-only `GET /api/v1/projects/{projectId}/flags`, bounded to 20 shared summaries with environment gates per page. The obsolete environment-scoped GET list is removed; existing environment POST creation, detail and mutation routes remain. No schema/data migration or changes to flag-evaluation semantics are required.
+Creation uses a valid project environment as its existing API transport context, creates the flag Off in every environment and opens its overview. Metadata/archive/restore, credentials and individual exceptions remain authorized API capabilities, but are not exposed in this POC UI. The same applies to advanced configuration editors, diagnostics, activity and attribute-schema editing.
+
+Management inventory uses operator-only `GET /api/v1/projects/{projectId}/flags`, bounded to 20 shared summaries with environment gates per page. Operator-only `GET /api/v1/projects/{projectId}/flags/{flagKey}` supplies overview from one authorized metadata/gate query; no environment selection or full configuration is required. Service credentials are denied, and inaccessible project/flag combinations return 404. Existing environment POST creation, detail and mutation routes remain; no schema migration or evaluation change is required.
 
 Flag environments are configuration scopes, not deployment environments. The entire local instance currently hosts both projects and their configurations; “Production (local simulation)” remains local-only.
 
+Standalone links encode only `projectId`, `flagKey`, `environmentId` and the project view (`flags`, `segments`, `audit`). A flag without environment means overview; adding an environment means that exact configuration. Refresh and browser Back/Forward restore location; invalid or unauthorized scope never silently falls back to another scope. Retired catalog/credential UI locations are invalid rather than aliases. Embedded navigation registers flags, flag overview, configuration, segments and audit object types through the published Atlas SDK; Atlas owns its URL.
+
+Unpublished creation, audience and segment forms share **Stay / Discard and leave** protection. Busy writes block transitions that would lose their state. Successful saves do not trigger a false abandoned-draft prompt. Native document unload warns where supported. Signing out clears identity-bound edits. Host-owned Atlas tab closure has no veto in the pinned SDK; persistent draft recovery is not claimed.
+
 ### Author targeting and configuration
 
-1. Open a flag's **Targeting** tab. **Feature availability** is the environment master switch; audience changes do not turn it on.
-2. For a compatible Boolean flag, choose **Everyone** or **Selected audiences**. Select existing Flightdeck segments to admit anyone matching at least one of them. Empty selection means nobody through audience targeting, never an automatic switch to Everyone. Individual exceptions retain their existing priority.
-3. **People by email**, **Organizations** and **Groups** are disabled with **BC directory not connected**. This is the explicitly chosen UI-first boundary, not a working BC integration or a sample directory. Do not enter pretend BC identities through a substitute path.
-4. **Review targeting changes** validates the configuration through the existing server preview, shows current/proposed audiences and warnings, then requires explicit environment-specific publication. Its empty-context validation is not a real-user simulation or audience-size estimate.
-5. **Advanced controls** preserves typed values, ordered conditions, rollouts, variants, pinned definitions, undo and the context playground. Typed/complex configurations show a preserved-advanced notice instead of a lossy simple conversion. Opening/closing the disclosure or inspecting Activity does not discard the draft. Advanced simulations still explain actual supplied context.
-6. **Project targeting catalog** defines typed scalar and `string_list` attributes and reusable AND-predicate segments. List conditions use `contains_any` or `contains_all`; the advanced playground accepts a JSON array of strings. Basic multi-segment targeting places one segment per full-rollout true rule, with false default, so segment alternatives are OR while each segment's conditions remain AND. It does not create a second evaluator.
-7. **Exceptions (advanced)** requires an exact tenant/subject, owner, reason and future expiry. Overrides precede audience rules but never archive/disable gates. Revoke explicitly; expiry equality is already expired. Lifecycle and empty-context diagnostics remain available behind their own disclosures.
+1. Open an environment status from **Flags**, or choose an environment from a flag's overview. The detail's **Environment** selector names the exact configuration.
+2. **Availability** is the On/Off master switch, confirmed for that environment. Changing it leaves saved targeting and other environments unchanged.
+3. Compatible Boolean flags expose **Everyone** or **Selected segments**. Any selected segment can qualify; conditions inside a segment must all match. Empty selection matches nobody through audience targeting. Existing individual exceptions retain their precedence.
+4. **Save** validates the draft with the server, then asks for confirmation in the named environment. It retains flag/catalog conflict checks and pins the current segment definitions. This is configuration validation, not real-user simulation.
+5. Existing typed or otherwise non-representable configurations display a read-only explanation; only availability can change in this UI. There is no automatic lossy conversion or advanced-editor escape hatch.
+6. **Segments** lists reusable audiences. Create/edit opens one focused form over existing attributes. Saving preserves the attribute schema and unrelated segments, and does not automatically update saved flag targeting. Viewer inspection is read-only.
 
 Publication pins attribute definitions and referenced segment snapshots. Catalog edits do not change existing live decisions; refreshing to the current catalog requires explicit publication. Changing variants/weights/order may reassign subjects. Increasing a rollout preserves existing eligibility under the unchanged namespace/rule ID. Names are not allocation IDs. See the [exact evaluation specification](evaluation-spec.md).
 

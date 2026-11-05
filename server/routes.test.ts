@@ -14,9 +14,11 @@ import {
   evaluationSchema,
   flagSchema,
   flagsSchema,
+  flagSummarySchema,
   issuedCredentialSchema,
   projectsSchema,
   previewSchema,
+  sessionSchema,
   type Flag,
   type Principal,
   type Routes,
@@ -47,6 +49,7 @@ const migrationUrl = process.env.FLIGHTDECK_TEST_MIGRATION_DATABASE_URL;
 const token = `fd_${'1'.repeat(64)}`;
 const base = '/api/v1/projects/:projectId/environments/:environmentId';
 const inventory = 'GET /api/v1/projects/:projectId/flags';
+const overview = 'GET /api/v1/projects/:projectId/flags/:flagKey';
 const administrator = localOperators[0]!;
 const editor = localOperators[1]!;
 const viewer = localOperators[2]!;
@@ -1278,6 +1281,176 @@ describe('PostgreSQL routes and storage', () => {
     expect(flagsSchema.parse(await invoke(inventory)).items[0]!.environments).toEqual([
       { environmentId, enabled: true },
     ]);
+  });
+
+  it('reads exact project flag overviews without choosing an environment or exposing configurations', async () => {
+    const created = await create();
+    const enabled = await update({ expectedRevision: created.revision, enabled: true });
+    const changed = await update({
+      expectedRevision: enabled.revision,
+      name: 'Shared name',
+      description: 'Shared description',
+      owner: 'Shared owner',
+      archived: true,
+    });
+    const result = await routes[overview]!({
+      principal: viewer,
+      params: { projectId, flagKey: created.key },
+      query: new URLSearchParams(),
+      body: undefined,
+    });
+    expect(result).toEqual({
+      id: created.id,
+      projectId,
+      key: created.key,
+      name: changed.name,
+      description: changed.description,
+      owner: changed.owner,
+      archived: true,
+      revision: changed.revision,
+      updatedAt: changed.updatedAt,
+      environments: [
+        { environmentId, enabled: true },
+        { environmentId: productionId, enabled: false },
+      ],
+    });
+    const sandboxProjectId = localProjects[1]!.id;
+    const sandboxEnvironmentId = localEnvironments[2]!.id;
+    const sandbox = flagSchema.parse(
+      await invoke(`POST ${base}/flags`, {
+        params: { projectId: sandboxProjectId, environmentId: sandboxEnvironmentId },
+        body: {
+          key: created.key,
+          name: 'Same key, other project',
+          description: '',
+          owner: 'Sandbox',
+        },
+      })
+    );
+    expect(
+      flagSummarySchema.parse(await invoke(overview, { params: { projectId: sandboxProjectId } }))
+    ).toMatchObject({
+      id: sandbox.id,
+      projectId: sandboxProjectId,
+      name: sandbox.name,
+      environments: [
+        { environmentId: sandboxEnvironmentId, enabled: false },
+        { environmentId: localEnvironments[3]!.id, enabled: false },
+      ],
+    });
+    await owner.query(
+      'DELETE FROM flightdeck.configurations WHERE flag_id = $1 AND environment_id = $2',
+      [created.id, productionId]
+    );
+    expect(flagSummarySchema.parse(await invoke(overview)).environments).toEqual([
+      { environmentId, enabled: true },
+    ]);
+    await owner.query('DELETE FROM flightdeck.configurations WHERE flag_id = $1', [created.id]);
+    expect(flagSummarySchema.parse(await invoke(overview)).environments).toEqual([]);
+  });
+
+  it('authorizes and validates project flag overview scopes without resource enumeration', async () => {
+    await create();
+    const inaccessibleScopes: NonNullable<Parameters<typeof invoke>[1]>[] = [
+      { principal: outsider },
+      { params: { projectId: localProjects[1]!.id } },
+      { params: { projectId: '10000000-0000-4000-8000-000000000099' } },
+      { params: { flagKey: 'missing' } },
+    ];
+    for (const options of inaccessibleScopes) {
+      await expect(invoke(overview, options)).rejects.toMatchObject({
+        status: 404,
+      });
+    }
+    await expect(invoke(overview, { principal: service })).rejects.toMatchObject({ status: 403 });
+    const invalidScopes: NonNullable<Parameters<typeof invoke>[1]>[] = [
+      { params: { projectId: 'invalid' } },
+      { params: { flagKey: 'invalid/key' } },
+      { query: `environmentId=${environmentId}` },
+      { query: 'unknown=1&unknown=2' },
+    ];
+    for (const options of invalidScopes) {
+      await expect(invoke(overview, options)).rejects.toMatchObject({ status: 400 });
+    }
+  });
+
+  it('resolves every session organization from PostgreSQL and refuses spoofing or missing membership', async () => {
+    const reservation = createPortReservation();
+    const reserved = Promise.withResolvers<void>();
+    reservation.listen(0, '127.0.0.1', reserved.resolve);
+    await reserved.promise;
+    const port = (reservation.address() as AddressInfo).port;
+    const released = Promise.withResolvers<void>();
+    reservation.close(() => released.resolve());
+    await released.promise;
+    const oldMode = process.env.FLIGHTDECK_MODE;
+    process.env.FLIGHTDECK_MODE = 'local-development';
+    const secret = 'organization-session-test-secret-at-least-32-characters';
+    const app = createApplication({ pool: runtime, sessionSecret: secret, port });
+    const origin = `http://127.0.0.1:${port}`;
+    const listening = Promise.withResolvers<void>();
+    app.listen(port, '127.0.0.1', listening.resolve);
+    await listening.promise;
+    const cookie = sessionCookie(signSession(administrator.id, secret)).split(';')[0]!;
+    const postSession = (body: unknown) =>
+      fetch(`${origin}/api/v1/dev/session`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    try {
+      const organization = { id: administrator.organizationId, name: 'Database organization name' };
+      await owner.query('UPDATE flightdeck.organizations SET name = $1 WHERE id = $2', [
+        organization.name,
+        organization.id,
+      ]);
+      const anonymous = await fetch(`${origin}/api/v1/dev/session`);
+      expect(await anonymous.json()).toEqual({ session: null });
+      const issued = await postSession({ operatorId: administrator.id });
+      expect(issued.status).toBe(200);
+      expect(issued.headers.get('set-cookie')).toContain('fd_local_session=');
+      expect(sessionSchema.parse(await issued.json()).organization).toEqual(organization);
+      for (const path of ['/api/v1/dev/session', '/api/v1/session']) {
+        const response = await fetch(`${origin}${path}`, { headers: { cookie } });
+        expect(response.status).toBe(200);
+        const body = await response.json();
+        expect(
+          sessionSchema.parse(path.includes('/dev/') ? body.session : body).organization
+        ).toEqual(organization);
+      }
+      for (const organizationId of [
+        outsider.organizationId,
+        '10000000-0000-4000-8000-000000000099',
+      ]) {
+        const spoofed = await postSession({
+          operatorId: administrator.id,
+          organizationId,
+          organization: { id: organizationId, name: 'Spoofed name' },
+        });
+        expect(spoofed.status).toBe(400);
+        expect(await spoofed.json()).toEqual({ error: 'Invalid request' });
+        expect(spoofed.headers.get('set-cookie')).toBeNull();
+      }
+      // This suite owns and reseeds all database fixtures before each test.
+      await owner.query(`TRUNCATE flightdeck.subject_overrides, flightdeck.project_targeting_audit,
+        flightdeck.project_targeting, flightdeck.audit, flightdeck.configurations, flightdeck.flags,
+        flightdeck.credentials, flightdeck.environments, flightdeck.projects, flightdeck.organizations`);
+      const missing = await postSession({ operatorId: administrator.id });
+      expect(missing.status).toBe(401);
+      expect(missing.headers.get('set-cookie')).toBeNull();
+      expect(await missing.json()).toEqual({ error: 'Local development session required' });
+      for (const path of ['/api/v1/dev/session', '/api/v1/session']) {
+        const response = await fetch(`${origin}${path}`, { headers: { cookie } });
+        expect(response.status).toBe(401);
+        expect(await response.json()).toEqual({ error: 'Local development session required' });
+      }
+    } finally {
+      const closed = Promise.withResolvers<void>();
+      app.close(() => closed.resolve());
+      await closed.promise;
+      if (oldMode === undefined) delete process.env.FLIGHTDECK_MODE;
+      else process.env.FLIGHTDECK_MODE = oldMode;
+    }
   });
 
   it('paginates/searches inventory and project-wide audit by stable cursors', async () => {

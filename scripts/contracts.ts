@@ -229,6 +229,18 @@ const document = {
         }
       ),
     },
+    '/api/v1/projects/{projectId}/flags/{flagKey}': {
+      get: operation(
+        'Read shared project flag metadata and stored environment gates without full configurations; operator viewer or above',
+        flagSummarySchema,
+        {
+          parameters: [
+            parameter('projectId', 'path', { type: 'string', format: 'uuid' }),
+            flagParameter,
+          ],
+        }
+      ),
+    },
     [`${scope}/flags`]: {
       post: operation(
         'Create a project flag disabled in all environments; editor or administrator',

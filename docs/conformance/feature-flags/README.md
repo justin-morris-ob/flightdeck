@@ -4,4 +4,6 @@ Flightdeck lets an authorized local operator publish typed environment configura
 
 [Stage 2 requirements](requirements/stage-two.md) define current evaluation and authoring behavior. [Stage 1 requirements](requirements/stage-one.md) retain the original lifecycle/security baseline; Stage 2 explicitly replaces boolean-only evaluation and GET contracts. Evidence: [Stage 1](../../stage-one-verification.md), [Stage 2](../../stage-two-verification.md).
 
+The current POC deliberately reduces the operator UI to Flags, Segments and an Audit log placeholder. Stage 2 §4–§6 supersede earlier UI breadth/disclosure requirements, including Stage 1 §4.1; backend security, persistence and evaluation requirements remain unchanged.
+
 The management identity picker and consumer lab personas are synthetic and loopback-only. Backend-asserted traits and credential tenant grants are not production sign-in or independently verified BC membership. The separate BC adapter supplies its own authenticated UUID/membership context; it does not create a directory connection in Flightdeck. Experiment measurement, shared-environment deployment and production identity remain outside the implemented scope.

@@ -127,7 +127,14 @@ export function evaluate({ flag, context, overrides, now }: EvaluationInput): Ev
     const declaredType = builtin
       ? 'string'
       : configuration.contextDefinitions.find((item) => item.key === condition.attribute)?.type;
-    const typed = present && declaredType !== undefined && typeof value === declaredType;
+    const typed =
+      present &&
+      declaredType !== undefined &&
+      (declaredType === 'string_list'
+        ? Array.isArray(value) &&
+          value.length <= 100 &&
+          value.every((item) => typeof item === 'string' && item.length <= 500)
+        : typeof value === declaredType);
     let matches = false;
     let code: EvaluationTrace['code'];
     if (present && !typed) code = 'wrong_type';
@@ -149,10 +156,10 @@ export function evaluate({ flag, context, overrides, now }: EvaluationInput): Ev
           matches = operandsTyped && value !== operand;
           break;
         case 'in':
-          matches = operandsTyped && condition.values.includes(value!);
+          matches = operandsTyped && !Array.isArray(value) && condition.values.includes(value!);
           break;
         case 'not_in':
-          matches = operandsTyped && !condition.values.includes(value!);
+          matches = operandsTyped && !Array.isArray(value) && !condition.values.includes(value!);
           break;
         case 'gt':
           matches = typeof value === 'number' && typeof operand === 'number' && value > operand;
@@ -165,6 +172,18 @@ export function evaluate({ flag, context, overrides, now }: EvaluationInput): Ev
           break;
         case 'lte':
           matches = typeof value === 'number' && typeof operand === 'number' && value <= operand;
+          break;
+        case 'contains_any':
+        case 'contains_all':
+          matches =
+            declaredType === 'string_list' &&
+            Array.isArray(value) &&
+            value.length > 0 &&
+            condition.values.length > 0 &&
+            condition.values.every((item) => typeof item === 'string') &&
+            (condition.operator === 'contains_any'
+              ? condition.values.some((item) => value.includes(item as string))
+              : condition.values.every((item) => value.includes(item as string)));
           break;
       }
       code = matches ? 'condition_matched' : 'condition_failed';

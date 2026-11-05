@@ -1,3 +1,6 @@
+packages:
+  - packages/*
+
 minimumReleaseAgeExclude:
   - '@onebrief/atlas-bff-kit@0.1.0'
   - '@onebrief/atlas-contract-shell@0.1.0'

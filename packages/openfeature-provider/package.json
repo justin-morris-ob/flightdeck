@@ -1,0 +1,36 @@
+{
+  "name": "@flightdeck/openfeature-provider",
+  "version": "0.1.0",
+  "description": "Scoped server-side OpenFeature provider for Flightdeck",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@openfeature/server-sdk": "1.23.0",
+    "@types/node": "24.19.2",
+    "typescript": "6.0.3"
+  },
+  "peerDependencies": {
+    "@openfeature/server-sdk": "^1.23.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

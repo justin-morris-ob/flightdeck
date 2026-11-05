@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@flightdeck/openfeature-provider':
+        specifier: workspace:*
+        version: link:packages/openfeature-provider
       '@onebrief/atlas-bff-kit':
         specifier: 0.1.0
         version: 0.1.0
@@ -23,6 +26,12 @@ importers:
       '@onebrief/ux-kit':
         specifier: 0.1.0
         version: 0.1.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@openfeature/core':
+        specifier: 1.12.0
+        version: 1.12.0
+      '@openfeature/server-sdk':
+        specifier: 1.23.0
+        version: 1.23.0(@openfeature/core@1.12.0)
       pg:
         specifier: 8.16.3
         version: 8.16.3
@@ -69,6 +78,22 @@ importers:
       vitest:
         specifier: 4.1.0
         version: 4.1.0(@types/node@24.19.2)(vite@8.2.1(@types/node@24.19.2))
+
+  packages/openfeature-provider:
+    dependencies:
+      zod:
+        specifier: 4.3.6
+        version: 4.3.6
+    devDependencies:
+      '@openfeature/server-sdk':
+        specifier: 1.23.0
+        version: 1.23.0(@openfeature/core@1.12.0)
+      '@types/node':
+        specifier: 24.19.2
+        version: 24.19.2
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
 
 packages:
 
@@ -135,6 +160,15 @@ packages:
     peerDependencies:
       react: '>=18'
       react-dom: '>=18'
+
+  '@openfeature/core@1.12.0':
+    resolution: {integrity: sha512-7PCPzyd1OC19begz30+CRknFB0ChtyaZUhk7YWrk+Bov1fpVw0HYkTXtoxxsvPfDZB9P9WsT7uixN+Z8f9+bcA==}
+
+  '@openfeature/server-sdk@1.23.0':
+    resolution: {integrity: sha512-JWeLvltJIV0AFgOfbw7hK9b9Rw/5wWq+RMhCIU9sJtAqarxr8hSPglG+JAGGhYdElAz3Qwe9W3ApWyPNkQEyqg==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@openfeature/core': ^1.12.0
 
   '@oxc-project/types@0.156.0':
     resolution: {integrity: sha512-1Duyg48TdJNdyhEB8Xn1L36bT9Pv6GUtlKjHxOys8xkaF/rQq3XJE+bAurSK/AgIz5mGFsb77cn9Pb20+WCScw==}
@@ -1038,6 +1072,12 @@ snapshots:
     dependencies:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
+
+  '@openfeature/core@1.12.0': {}
+
+  '@openfeature/server-sdk@1.23.0(@openfeature/core@1.12.0)':
+    dependencies:
+      '@openfeature/core': 1.12.0
 
   '@oxc-project/types@0.156.0': {}
 

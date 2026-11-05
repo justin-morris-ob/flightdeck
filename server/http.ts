@@ -43,10 +43,10 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
   let exceeded = false;
   req.on('data', (chunk: Buffer) => {
     size += chunk.length;
-    if (size > 32768) {
+    if (size > 65536) {
       exceeded = true;
       chunks.length = 0;
-      reject(new HttpError(413, 'Request body exceeds 32 KiB'));
+      reject(new HttpError(413, 'Request body exceeds 64 KiB'));
     } else if (!exceeded) chunks.push(chunk);
   });
   req.on('error', reject);

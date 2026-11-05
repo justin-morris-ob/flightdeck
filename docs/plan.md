@@ -95,15 +95,17 @@ Implement a versioned backend client and one agreed real BC feature path. Coordi
 
 Acceptance:
 
-- [ ] A real BC browser interaction reaches BC's backend, consumes Flightdeck's decision and changes after a managed configuration update within the agreed freshness bound.
-- [ ] Browser code never receives an evaluation/management secret or directly calls the service with one.
-- [ ] Exercise timeout/outage, cold start, expired cached state where caching exists, malformed response, revoked credential and wrong-tenant context. Observe the declared result for each case; permission failures are not ordinary false evaluations.
-- [ ] No cached response from another project/environment can satisfy a request.
+- [x] A real BC browser interaction reaches BC's backend and consumes Flightdeck's managed decision. The homepage filter appeared after publication and page refresh; no server decision cache or push guarantee was added.
+- [x] Browser code does not receive an evaluation secret or call Flightdeck with one. The provider is backend-only; management sessions remain separate.
+- [x] Exercise cold start, timeout, malformed response, authorization and scope failures through real SDK/HTTP boundary tests. An actual BC outage/recovery and dedicated-credential revocation were also exercised; revoked authorization was an explicit 502, not false. Expired-cache behavior is inapplicable because no cache is implemented.
+- [x] Provider scope is fixed per instance and wrong-scope responses are rejected. There is no decision cache that can satisfy another project/environment.
 - [ ] When an optional directory connection is introduced, disconnect it and prove existing rules still evaluate consumer-supplied context; new searches show unavailable rather than fabricated results.
-- [ ] Exercise collection membership, current organization versus any-membership, missing/wrong-type context and source/tenant isolation through the same evaluator used by generic targeting.
-- [ ] Verify OpenFeature provider behavior through actual SDK calls, including context mapping, typed decisions and error/default handling; API shape alone is not compatibility evidence.
+- [x] Exercise exact collection membership, missing/wrong-type data and scope isolation. BC bootstrap supplies effective memberships; singular current organization is deliberately omitted because this route has no server-validated selection.
+- [x] Verify Boolean/string/number/object decisions and context/error/default behavior through actual OpenFeature SDK calls, rather than inferring compatibility from API shape.
 
 **Checkpoint:** BC walkthrough plus service interruption and credential revocation. This is the first proof of BC integration, not something inferred from a command-line API sample.
+
+The first consumer checkpoint includes a reusable local contract lab and a separate opt-in BC change for `HOMEPAGE_CARDS_SHARED_TEXT_FILTER`. The fresh isolated BC database migrated from 0 to 760; the existing inconsistent shared database was not repaired, reset or reused. A managed Flightdeck update changed only the selected BC bootstrap flag. Production identity/delegation, rollout operational signals and shared-environment onboarding remain qualification work; the directory acceptance item above remains deferred until that optional integration is built. Execution details are in the [verification record](stage-two-verification.md#stage-3-consumer-checkpoint).
 
 ## Stage 4 — Lifecycle and operational controls
 

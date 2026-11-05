@@ -19,7 +19,8 @@ export const valueSchema = z.discriminatedUnion('type', [
 ]);
 export type TypedValue = z.infer<typeof valueSchema>;
 export const scalarSchema = z.union([z.string().max(500), z.number().finite(), z.boolean()]);
-export const attributeTypeSchema = z.enum(['string', 'number', 'boolean']);
+export const stringListSchema = z.array(z.string().max(500)).max(100);
+export const attributeTypeSchema = z.enum(['string', 'number', 'boolean', 'string_list']);
 const attributeKeySchema = z
   .string()
   .min(1)
@@ -47,6 +48,8 @@ export const conditionSchema = z
       'gte',
       'lt',
       'lte',
+      'contains_any',
+      'contains_all',
       'present',
       'absent',
     ]),
@@ -57,7 +60,7 @@ export const conditionSchema = z
     if (
       ['present', 'absent'].includes(condition.operator)
         ? count !== 0
-        : ['in', 'not_in'].includes(condition.operator)
+        : ['in', 'not_in', 'contains_any', 'contains_all'].includes(condition.operator)
           ? count === 0
           : count !== 1
     ) {
@@ -74,6 +77,15 @@ export const conditionSchema = z
       context.addIssue({
         code: 'custom',
         message: 'Ordered comparison requires a number',
+        path: ['values'],
+      });
+    if (
+      ['contains_any', 'contains_all'].includes(condition.operator) &&
+      condition.values.some((value) => typeof value !== 'string')
+    )
+      context.addIssue({
+        code: 'custom',
+        message: 'List membership requires string operands',
         path: ['values'],
       });
   });
@@ -214,13 +226,18 @@ export const publishConfigurationSchema = z.strictObject({
   expectedCatalogRevision: z.number().int().positive(),
   configuration: configurationInputSchema,
 });
-export const contextSchema = z.strictObject({
-  tenantId: tenantIdSchema.optional(),
-  subjectId: z.string().min(1).max(200).optional(),
-  attributes: z
-    .record(attributeKeySchema, scalarSchema)
-    .refine((attributes) => Object.keys(attributes).length <= 32, 'At most 32 context attributes'),
-});
+export const contextSchema = z
+  .strictObject({
+    tenantId: tenantIdSchema.optional(),
+    subjectId: z.string().min(1).max(200).optional(),
+    attributes: z
+      .record(attributeKeySchema, z.union([scalarSchema, stringListSchema]))
+      .refine(
+        (attributes) => Object.keys(attributes).length <= 32,
+        'At most 32 context attributes'
+      ),
+  })
+  .refine((context) => byteLength(context) <= 32768, 'Evaluation context exceeds 32 KiB');
 export type EvaluationContext = z.infer<typeof contextSchema>;
 export const evaluationRequestSchema = z.strictObject({ context: contextSchema });
 export const previewRequestSchema = z.strictObject({

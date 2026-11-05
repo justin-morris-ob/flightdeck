@@ -19,7 +19,7 @@ const configSchema = z.strictObject({
 });
 type LocalConfig = z.infer<typeof configSchema>;
 const usage =
-  'Usage: node scripts/local.ts setup|start|test|consumer <key> <tagged-fallback-json> [context-json]|stop-db';
+  'Usage: node scripts/local.ts setup|start|test|demo|seed-demo|consumer <key> <tagged-fallback-json> [context-json]|stop-db';
 
 function hasCode(error: unknown, code: string): boolean {
   return error instanceof Error && 'code' in error && error.code === code;
@@ -145,7 +145,9 @@ async function setupDatabases(config: LocalConfig): Promise<void> {
 
 async function main(): Promise<void> {
   const command = process.argv[2];
-  if (!['setup', 'start', 'test', 'consumer', 'stop-db'].includes(command ?? '')) {
+  if (
+    !['setup', 'start', 'test', 'demo', 'seed-demo', 'consumer', 'stop-db'].includes(command ?? '')
+  ) {
     throw new Error(usage);
   }
   if (command !== 'consumer' && process.argv.length > 3) throw new Error(usage);
@@ -154,6 +156,20 @@ async function main(): Promise<void> {
   const config = await loadConfig(command === 'setup');
   if (command === 'setup') {
     await setupDatabases(config);
+  } else if (command === 'demo' || command === 'seed-demo') {
+    if (process.env.NODE_ENV === 'production')
+      throw new Error('Consumer demo refuses NODE_ENV=production.');
+    await runCommand(
+      process.execPath,
+      [`demo/consumer/${command === 'demo' ? 'server' : 'seed'}.ts`],
+      {
+        cwd: root,
+        env: {
+          NODE_ENV: 'development',
+          FLIGHTDECK_MODE: 'local-development',
+        },
+      }
+    );
   } else if (command === 'start') {
     if (process.env.NODE_ENV === 'production')
       throw new Error('Local development startup refuses NODE_ENV=production.');

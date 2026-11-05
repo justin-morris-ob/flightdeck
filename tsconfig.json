@@ -20,6 +20,8 @@
     "shared",
     "scripts",
     "examples",
+    "demo",
+    "vite.demo.config.ts",
     "vite.config.ts",
     "vite.remote.config.ts",
     "vitest.config.ts"

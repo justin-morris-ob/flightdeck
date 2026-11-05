@@ -4,7 +4,7 @@
 
 - Node `26.12.1`, pnpm `11.23.0`, Docker with Compose and approved Nexus read access.
 - Route `@onebrief` through the committed `.npmrc`. Keep URL-scoped Nexus credentials in your private user configuration, never in this repository.
-- Local ports: Flightdeck `4721`, optional Atlas shell `4720`, PostgreSQL `55471`.
+- Local ports: Flightdeck `4721`, consumer lab `4722`, optional Atlas shell `4720`, PostgreSQL `55471`.
 
 Flightdeck is intentionally a loopback-only development application using synthetic identities and data. `Production (local simulation)` is an environment label, not a deployed production environment. Do not put organizational/customer data in this instance.
 
@@ -57,20 +57,73 @@ Flag environments are configuration scopes, not deployment environments. The ent
 3. **People by email**, **Organizations** and **Groups** are disabled with **BC directory not connected**. This is the explicitly chosen UI-first boundary, not a working BC integration or a sample directory. Do not enter pretend BC identities through a substitute path.
 4. **Review targeting changes** validates the configuration through the existing server preview, shows current/proposed audiences and warnings, then requires explicit environment-specific publication. Its empty-context validation is not a real-user simulation or audience-size estimate.
 5. **Advanced controls** preserves typed values, ordered conditions, rollouts, variants, pinned definitions, undo and the context playground. Typed/complex configurations show a preserved-advanced notice instead of a lossy simple conversion. Opening/closing the disclosure or inspecting Activity does not discard the draft. Advanced simulations still explain actual supplied context.
-6. **Project targeting catalog** defines typed scalar attributes and reusable AND-predicate segments. Basic multi-segment targeting places one segment per full-rollout true rule, with false default, so segment alternatives are OR while each segment's conditions remain AND. It does not create a second evaluator.
+6. **Project targeting catalog** defines typed scalar and `string_list` attributes and reusable AND-predicate segments. List conditions use `contains_any` or `contains_all`; the advanced playground accepts a JSON array of strings. Basic multi-segment targeting places one segment per full-rollout true rule, with false default, so segment alternatives are OR while each segment's conditions remain AND. It does not create a second evaluator.
 7. **Exceptions (advanced)** requires an exact tenant/subject, owner, reason and future expiry. Overrides precede audience rules but never archive/disable gates. Revoke explicitly; expiry equality is already expired. Lifecycle and empty-context diagnostics remain available behind their own disclosures.
 
 Publication pins attribute definitions and referenced segment snapshots. Catalog edits do not change existing live decisions; refreshing to the current catalog requires explicit publication. Changing variants/weights/order may reassign subjects. Increasing a rollout preserves existing eligibility under the unchanged namespace/rule ID. Names are not allocation IDs. See the [exact evaluation specification](evaluation-spec.md).
 
-Limits: 32 custom context definitions, 50 segments, 20 rules, 10 conditions per rule/segment, 5 segment references per rule and 10 variants. Configuration input is bounded to 24 KiB and its published snapshot to 64 KiB; individual JSON values to 4 KiB, HTTP request bodies to 32 KiB. Evaluation context contains scalar attributes, not arbitrary nested traits.
+Limits: 32 custom context definitions, 50 segments, 20 rules, 10 conditions per rule/segment, 5 segment references per rule and 10 variants. Configuration input is bounded to 24 KiB and its published snapshot to 64 KiB; individual JSON values to 4 KiB. Context is bounded to 32 KiB and string lists to 100 entries of 500 characters each. HTTP request envelopes are bounded to 64 KiB so previews can include a context and proposed configuration. Arbitrary nested traits are not supported.
 
 ### BC directory ownership and the deferred connection
 
 BC remains authoritative for users/accounts, organizations, groups and effective memberships. Flightdeck owns its segment definitions. An optional authoring connection will resolve email/name for selection but save stable, source-scoped references; a user target should use BC account UUID, not email as identity. Organization/group IDs also require a BC deployment/source namespace. BC's trusted backend supplies approved identity and membership context for evaluation, not browser claims or manual copies of users into every segment. Group-predicate segments can match that supplied membership without replicating the group's member list.
 
-This pass neither changes BC nor adds directory/sync APIs, credentials or replicated PII storage. Inspection found session-authenticated internal BC search/resolve endpoints, not a supported service-authenticated directory contract for Flightdeck. A future authoring connection needs explicit read scopes, bounded wire contracts, source/environment mapping and active/deleted behavior. Reusing browser cookies, BC signing secrets or direct BC SQL is not that contract. Live read-only authoring lookup is the recommended starting point. It is not an evaluation dependency: existing saved rules must continue evaluating supplied context when directory search is unavailable, with no per-decision callback to BC.
+Flightdeck does not add BC directory/sync APIs, directory credentials or replicated PII storage. Inspection found session-authenticated internal BC search/resolve endpoints, not a supported service-authenticated directory contract for Flightdeck. A future authoring connection needs explicit read scopes, bounded wire contracts, source/environment mapping and active/deleted behavior. Reusing browser cookies, BC signing secrets or direct BC SQL is not that contract. Live read-only authoring lookup is the recommended starting point. It is not an evaluation dependency: existing saved rules evaluate supplied context when directory search is unavailable, with no per-decision callback to BC.
 
-Before enabling these selectors, define collection-valued context and membership operators, current organization versus any-organization membership, missing-data behavior and trusted source/tenant scoping. BC pickers must create generic Flightdeck rules, not a separate evaluator. An OpenFeature provider adapter and documented context mapping also remain future implementation and verification work; OpenFeature does not standardize BC's field names or supply the directory connection. See the [architecture boundary](architecture.md#optional-directory-integration-and-consumer-supplied-context).
+Collection-valued targeting and the server OpenFeature provider are now implemented. The separate BC bootstrap adapter sends effective organization/group membership, not a current organization inferred from browser navigation. Directory selectors remain disabled until the optional lookup/resolve integration exists. BC pickers must create generic Flightdeck rules, not a separate evaluator. See the [architecture boundary](architecture.md#optional-directory-integration-and-consumer-supplied-context).
+
+## Reusable consumer contract lab
+
+Keep Flightdeck running, then in a second terminal:
+
+```sh
+pnpm demo:seed
+pnpm demo
+```
+
+Open **http://localhost:4722**. Initial setup adds four demo flags and an Alpha-pilot membership segment to **Sandbox / Development**, without resetting existing records or requiring another migration. Re-running setup preserves existing demo configurations; a conflicting key/definition is rejected rather than overwritten. The demo's dedicated evaluation credential is scoped to tenant `consumer-demo` and retained in ignored mode-0600 `.local/consumer-demo/config.json`. Do not delete this file to repair a revoked credential: issue and deliberately configure a replacement instead.
+
+Choose Mira (Alpha pilot), Kai (standard member) or Rowan (multiple memberships), then **Evaluate capability**. On the initial seeded configuration, Mira and Rowan receive the title filter; Kai does not. The backend constructs canonical synthetic subject, deployment source, tenant and membership lists from the known persona ID; browser-supplied context/extra fields are rejected. Source membership in this lab is synthetic, not a real BC directory.
+
+The other capabilities exercise string, numeric and object OpenFeature detail APIs. **Unavailable** and **Malformed response** deliberately call a local simulated transport and visibly identify the caller default. **Denied tenant** and **Invalid credential** call the real Flightdeck service and display an authorization failure, not false/fallback. Change the managed demo flag in Flightdeck and re-evaluate to see its next decision; there is no cache or polling. Selecting another person/scenario clears the old decision immediately.
+
+### OpenFeature backend use
+
+The independent `packages/openfeature-provider` package builds distributable JS/types and has only public package dependencies. Its peer is `@openfeature/server-sdk` `^1.23.0` (SDK core peer `^1.12.0`). Use the typed detail API, then enforce the application's non-fallback policy:
+
+```ts
+await OpenFeature.setProviderAndWait(
+  'my-consumer',
+  new FlightdeckProvider({
+    baseUrl,
+    token,
+    projectId,
+    environmentId,
+    timeoutMs: 1000,
+  })
+);
+const details = enforceFlightdeckPolicy(
+  await OpenFeature.getClient('my-consumer').getBooleanDetails(
+    'bc-homepage-title-filter',
+    existingApplicationDefault,
+    {
+      targetingKey: accountUuid,
+      tenantId: trustedTenantBinding,
+      sourceId: trustedSourceBinding,
+      organizationIds: effectiveOrganizationIds,
+      groupIds: effectiveGroupIds,
+    }
+  )
+);
+```
+
+Import `OpenFeature` from `@openfeature/server-sdk` and `FlightdeckProvider` / `enforceFlightdeckPolicy` from `@flightdeck/openfeature-provider`. Project/environment/credential and tenant/source bindings are server configuration, not browser inputs. SDK value-only methods return defaults on errors and do not enforce this authorization policy. Inspect details to distinguish a service decision from recovery. See [supported context and error semantics](evaluation-spec.md#openfeature-server-provider).
+
+### Separate BC integration
+
+BC owns its adapter and deployment configuration. The opt-in bootstrap path maps only `HOMEPAGE_CARDS_SHARED_TEXT_FILTER` to `bc-homepage-title-filter`; all other flags retain BC's evaluator. Required backend settings are `BC_FLIGHTDECK_ENABLED=true`, `BC_FLIGHTDECK_BASE_URL`, `BC_FLIGHTDECK_EVALUATION_TOKEN`, `BC_FLIGHTDECK_PROJECT_ID`, `BC_FLIGHTDECK_ENVIRONMENT_ID`, `BC_FLIGHTDECK_TENANT_ID` and `BC_FLIGHTDECK_SOURCE_ID`. `BC_FLIGHTDECK_TIMEOUT_MS` defaults to 250 and is bounded to 1–10000 ms. Disabling the integration retains BC behavior; enabled incomplete configuration is an error.
+
+The tenant/source is an explicit deployment binding, not an inferred organization. Issue a dedicated environment credential whose tenant grant agrees with that binding; the lab and bootstrap credentials do not automatically authorize BC. Keep it in BC's backend secret configuration, never a Vite variable or browser storage. BC's session-derived canonical account UUID and existing effective memberships supply the context; global bootstrap does not assert a singular current organization. A refreshed authenticated bootstrap/page load consumes the current decision; no Flightdeck-to-BC push event is implemented. A recoverable error uses the existing BC-evaluated Boolean; an authorization/invalid-context error fails bootstrap explicitly.
 
 ## Evaluate from a separate backend process
 

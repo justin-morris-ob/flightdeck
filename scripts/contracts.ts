@@ -111,7 +111,7 @@ const errors = Object.fromEntries(
           403: 'Insufficient permission',
           404: 'Unknown or inaccessible resource',
           409: 'Duplicate key or conflicting revision',
-          413: 'Body exceeds 32 KiB',
+          413: 'Body exceeds 64 KiB',
           415: 'JSON required',
           500: 'Internal error',
         } as Record<number, string>
@@ -146,9 +146,9 @@ const document = {
   openapi: '3.1.0',
   info: {
     title: 'Flightdeck API',
-    version: '2.0.0',
+    version: '2.1.0',
     description:
-      'Stage 2 local-development API. This development contract replaces Stage 1 boolean GET evaluation with typed POST evaluation and cuts over all local consumers; it is not a production-stable external API. Signed local sessions remain demo-only. Inventory is project-scoped, with one shared flag row and ordered environment gate summaries rather than full configuration payloads. Enabled state and typed configuration are environment-specific; metadata, archive state and flag revisions are project-wide. Publication pins project context/segment definitions. Archive/disable return the configured typed off value. Credentials grant explicit tenant contexts within one project/environment. No context is stored as exposure or used as entitlement authorization.',
+      'Local-development API with the Stage 3 bounded string-list context extension. Version 2.0 replaced Stage 1 boolean GET evaluation with typed POST evaluation; this is not a production-stable external API. Signed local sessions remain demo-only. Inventory is project-scoped, with one shared flag row and ordered environment gate summaries rather than full configurations. Enabled state and typed configuration are environment-specific; metadata, archive state and flag revisions are project-wide. Publication pins project context/segment definitions. Archive/disable return the configured typed off value. Credentials grant explicit tenant contexts within one project/environment. Context and proposed configuration retain independent bounds inside a 64-KiB HTTP envelope. No context is stored as exposure or used as entitlement authorization.',
   },
   servers: [{ url: 'http://localhost:4721' }],
   components: {

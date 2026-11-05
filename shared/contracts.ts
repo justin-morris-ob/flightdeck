@@ -43,6 +43,7 @@ export const operatorSchema = z.object({
 export const sessionSchema = z.object({
   mode: z.literal('local-development'),
   operator: operatorSchema,
+  organization: z.object({ id: z.uuid(), name: z.string() }),
 });
 export const environmentSchema = z.object({ id: z.uuid(), key: z.string(), name: z.string() });
 export const projectSchema = z.object({

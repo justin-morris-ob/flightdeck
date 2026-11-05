@@ -20,18 +20,21 @@ import {
   type Role,
 } from '../shared/contracts.ts';
 import { dateTime, errorMessage, get, send, type Request } from './api.ts';
+import { useDraftNavigation } from './draft-context.ts';
 import { FlagForm, Modal } from './forms.tsx';
 
 interface Props {
   request: Request;
   scope: string;
   project: Project;
-  environmentId: string;
   role: Role;
-  onOpen: (key: string, environmentId: string) => void;
+  active: boolean;
+  onOpen: (key: string, environmentId?: string) => void;
+  onCreated: (key: string) => void;
 }
 
-export function Inventory({ request, scope, project, environmentId, role, onOpen }: Props) {
+export function Inventory({ request, scope, project, role, active, onOpen, onCreated }: Props) {
+  const { confirmTransition } = useDraftNavigation();
   const [items, setItems] = useState<FlagSummary[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [cursors, setCursors] = useState<string[]>([]);
@@ -45,8 +48,8 @@ export function Inventory({ request, scope, project, environmentId, role, onOpen
   const [version, setVersion] = useState(0);
   const after = cursors.at(-1);
   const projectId = project.id;
-  const environment = project.environments.find((item) => item.id === environmentId);
   useEffect(() => {
+    if (!active) return;
     let current = true;
     setLoading(true);
     setError('');
@@ -68,7 +71,7 @@ export function Inventory({ request, scope, project, environmentId, role, onOpen
     return () => {
       current = false;
     };
-  }, [request, projectId, after, search, archived, version]);
+  }, [request, projectId, after, search, archived, version, active]);
   function submitSearch(event: FormEvent) {
     event.preventDefault();
     setCursors([]);
@@ -207,10 +210,8 @@ export function Inventory({ request, scope, project, environmentId, role, onOpen
                       <button
                         type="button"
                         className="fd-flag-link"
-                        aria-label={`Open ${flag.name} in ${
-                          environment?.name ?? 'selected environment'
-                        }`}
-                        onClick={() => onOpen(flag.key, environmentId)}
+                        aria-label={`Open ${flag.name} overview`}
+                        onClick={() => onOpen(flag.key)}
                       >
                         {flag.name}
                       </button>
@@ -295,7 +296,7 @@ export function Inventory({ request, scope, project, environmentId, role, onOpen
         <Modal
           title="Create feature flag"
           onClose={() => {
-            if (!busy) setCreating(false);
+            if (!busy) confirmTransition(() => setCreating(false));
           }}
         >
           <p>
@@ -316,7 +317,8 @@ export function Inventory({ request, scope, project, environmentId, role, onOpen
                   flagSchema
                 );
                 setCreating(false);
-                onOpen(flag.key, flag.environmentId);
+                setVersion((value) => value + 1);
+                onCreated(flag.key);
               } finally {
                 setBusy(false);
               }

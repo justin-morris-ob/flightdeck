@@ -16,26 +16,55 @@ import {
 import { errorMessage, get, send, type Request } from './api.ts';
 import { Catalog } from './Catalog.tsx';
 import { Credentials } from './Credentials.tsx';
+import { useDraftNavigation } from './draft-context.ts';
+import { DraftNavigationProvider } from './DraftNavigation.tsx';
 import { FlagDetail } from './FlagDetail.tsx';
+import { FlagOverview } from './FlagOverview.tsx';
 import { Modal } from './forms.tsx';
 import { Inventory } from './Inventory.tsx';
+import { emptyLocation, type FlightdeckLocation, type LocationResult } from './navigation.ts';
+import { useFlightdeckLocation } from './useFlightdeckLocation.ts';
 
 type Session = z.infer<typeof sessionSchema>;
 type Operator = z.infer<typeof operatorSchema>;
 interface Props {
   request: Request;
   embedded?: boolean;
-  initialProjectId?: string;
+  visible?: boolean;
+  initialLocation?: LocationResult;
+  onNavigate?: (location: FlightdeckLocation) => void;
 }
 
-export function FlightdeckApp({ request, embedded = false, initialProjectId }: Props) {
+export function FlightdeckApp(props: Props) {
+  return (
+    <DraftNavigationProvider>
+      <FlightdeckContent {...props} />
+    </DraftNavigationProvider>
+  );
+}
+
+function FlightdeckContent({
+  request,
+  embedded = false,
+  visible = true,
+  initialLocation,
+  onNavigate,
+}: Props) {
+  const { cancelTransition } = useDraftNavigation();
+  const {
+    location,
+    locationError,
+    navigate: goTo,
+    commit,
+    initializeProject,
+    reset,
+    canGoBack,
+    canGoForward,
+  } = useFlightdeckLocation({ embedded, initialLocation, onNavigate });
+  const { projectId, environmentId, flagKey, view } = location;
   const [session, setSession] = useState<Session | null>(null);
   const [operators, setOperators] = useState<Operator[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [projectId, setProjectId] = useState(initialProjectId ?? '');
-  const [environmentId, setEnvironmentId] = useState('');
-  const [flagKey, setFlagKey] = useState<string | null>(null);
-  const [view, setView] = useState<'flags' | 'credentials' | 'catalog'>('flags');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [loading, setLoading] = useState(true);
   const [scopeLoading, setScopeLoading] = useState(false);
@@ -77,9 +106,7 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
       .then((result) => {
         if (!current) return;
         setProjects(result.items);
-        setProjectId((previous) =>
-          result.items.some((item) => item.id === previous) ? previous : (result.items[0]?.id ?? '')
-        );
+        if (result.items[0]) initializeProject(result.items[0].id);
       })
       .catch((cause: unknown) => {
         if (current) setScopeError(errorMessage(cause));
@@ -90,11 +117,13 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
     return () => {
       current = false;
     };
-  }, [request, session]);
+  }, [request, session, initializeProject]);
   const project = projects.find((item) => item.id === projectId);
-  const environment =
-    project?.environments.find((item) => item.id === environmentId) ?? project?.environments[0];
+  const environment = project?.environments.find((item) => item.id === environmentId);
   const scope = project && environment ? scopePath(project.id, environment.id) : '';
+  const projectScope = project?.environments[0]
+    ? scopePath(project.id, project.environments[0].id)
+    : '';
   const role = session?.operator.role;
   async function login(operatorId: string) {
     setBusy(true);
@@ -108,10 +137,6 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
         sessionSchema
       );
       setProjects([]);
-      setProjectId('');
-      setEnvironmentId('');
-      setFlagKey(null);
-      setView('flags');
       setSession(next);
     } catch (cause) {
       setError(errorMessage(cause));
@@ -126,10 +151,8 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
       await request('/api/v1/session', { method: 'DELETE', credentials: 'include' });
       setSession(null);
       setProjects([]);
-      setProjectId('');
-      setEnvironmentId('');
-      setFlagKey(null);
-      setView('flags');
+      reset();
+      cancelTransition();
       setAccount(false);
     } catch (cause) {
       setError(errorMessage(cause));
@@ -138,17 +161,45 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
     }
   }
   function navigate(id: string) {
-    setFlagKey(null);
-    if (id === 'credentials' && role === 'administrator') setView('credentials');
-    else if (id === 'catalog') setView('catalog');
-    else {
-      setView('flags');
-      if (projects.some((item) => item.id === id)) {
-        setProjectId(id);
-        setEnvironmentId('');
-      }
-    }
+    if (id === view && !flagKey) return;
+    const nextView =
+      id === 'credentials' && role === 'administrator'
+        ? 'credentials'
+        : id === 'catalog'
+          ? 'catalog'
+          : 'flags';
+    goTo({
+      ...emptyLocation,
+      projectId,
+      view: nextView,
+      environmentId: nextView === 'credentials' ? (project?.environments[0]?.id ?? '') : '',
+    });
   }
+  const projectPicker = (
+    <label className="fd-project-picker">
+      Project
+      <select
+        className="input"
+        value={projectId}
+        disabled={scopeLoading}
+        onChange={(event) => goTo({ ...emptyLocation, projectId: event.target.value })}
+      >
+        <option value="" disabled>
+          Choose project
+        </option>
+        {projectId && !project && (
+          <option value={projectId} disabled>
+            Unavailable project
+          </option>
+        )}
+        {projects.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
   const appMenu = (
     <nav className="fd-project-menu" aria-label="Flightdeck menu">
       <MenuSection kind="shared" className="fd-menu-heading">
@@ -176,17 +227,6 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
               onSelect={() => navigate('credentials')}
             />
           )}
-        </MenuSection>
-        <MenuSection title="Projects" kind="app">
-          {projects.map((item) => (
-            <MenuItem
-              key={item.id}
-              label={item.name}
-              icon="collection"
-              current={item.id === projectId}
-              onSelect={() => navigate(item.id)}
-            />
-          ))}
         </MenuSection>
       </div>
     </nav>
@@ -243,11 +283,7 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
                   >
                     <span>
                       <strong>{operator.name}</strong>
-                      <span className="fd-table-sub">
-                        {operator.id === 'local-outsider'
-                          ? 'Isolation test organization'
-                          : 'Flightdeck development'}
-                      </span>
+                      <span className="fd-table-sub">Disposable local identity</span>
                     </span>
                     <Badge>{operator.role}</Badge>
                     <Icon name="chevR" size="sm" />
@@ -265,36 +301,28 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
         <>
           <div className="fd-scope-bar">
             <div className="fd-scope-fields">
-              <label>
-                Project
-                <select
-                  className="input"
-                  value={projectId}
-                  onChange={(event) => {
-                    setProjectId(event.target.value);
-                    setEnvironmentId('');
-                    setFlagKey(null);
-                  }}
-                  disabled={scopeLoading}
-                >
-                  {projects.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {view !== 'catalog' && (
+              <span className="fd-organization" aria-label="Administrative organization">
+                <span className="fd-scope-label">Organization</span>
+                <strong>{session.organization.name}</strong>
+              </span>
+              {projectPicker}
+              {flagKey && environmentId && (
+                <Button size="sm" onClick={() => goTo({ ...location, environmentId: '' })}>
+                  Flag overview
+                </Button>
+              )}
+              {(view === 'credentials' || (view === 'flags' && flagKey && environmentId)) && (
                 <label>
                   Configuration environment
                   <select
                     className="input"
-                    value={environment?.id ?? ''}
-                    onChange={(event) => {
-                      setEnvironmentId(event.target.value);
-                    }}
+                    value={environmentId}
+                    onChange={(event) => goTo({ ...location, environmentId: event.target.value })}
                     disabled={scopeLoading}
                   >
+                    <option value="" disabled>
+                      Choose environment
+                    </option>
                     {project?.environments.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.name}
@@ -328,8 +356,21 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
                 Reload session and projects
               </Button>
             </div>
-          ) : !project || !environment ? (
-            <Empty>No authorized project environments are available.</Empty>
+          ) : locationError ? (
+            <Notice tone="danger">{locationError}</Notice>
+          ) : !project ? (
+            <Empty>
+              {projectId
+                ? 'Project is unavailable in this organization. Choose an authorized project.'
+                : 'No authorized projects are available.'}
+            </Empty>
+          ) : view === 'credentials' && role !== 'administrator' ? (
+            <Notice tone="danger">Evaluation credentials require administrator access.</Notice>
+          ) : environmentId && !environment ? (
+            <Notice tone="danger">
+              Environment is unavailable in this project. Choose a valid environment or return to
+              the flag overview.
+            </Notice>
           ) : (
             <>
               {embedded && (
@@ -358,13 +399,13 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
               )}
               {view === 'catalog' ? (
                 <Catalog
-                  key={`${scope}:${session.operator.id}`}
+                  key={`${project.id}:${session.operator.id}`}
                   request={request}
-                  scope={scope}
+                  scope={projectScope}
                   projectName={project.name}
                   role={session.operator.role}
                 />
-              ) : view === 'credentials' && role === 'administrator' ? (
+              ) : view === 'credentials' && role === 'administrator' && environment ? (
                 <Credentials
                   key={`${scope}:${session.operator.id}`}
                   request={request}
@@ -372,30 +413,51 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
                   projectName={project.name}
                   environmentName={environment.name}
                 />
-              ) : flagKey ? (
-                <FlagDetail
-                  key={`${scope}:${flagKey}:${session.operator.id}`}
-                  request={request}
-                  scope={scope}
-                  flagKey={flagKey}
-                  project={project}
-                  environmentId={environment.id}
-                  role={session.operator.role}
-                  onBack={() => setFlagKey(null)}
-                />
+              ) : view === 'flags' ? (
+                <>
+                  <div className="fd-inventory-panel" hidden={Boolean(flagKey)}>
+                    <Inventory
+                      key={`${project.id}:${session.operator.id}`}
+                      request={request}
+                      scope={projectScope}
+                      project={project}
+                      role={session.operator.role}
+                      active={visible && !flagKey}
+                      onOpen={(key, selectedEnvironmentId) =>
+                        goTo({
+                          ...location,
+                          flagKey: key,
+                          environmentId: selectedEnvironmentId ?? '',
+                        })
+                      }
+                      onCreated={(key) => commit({ ...location, flagKey: key, environmentId: '' })}
+                    />
+                  </div>
+                  {flagKey && !environmentId && (
+                    <FlagOverview
+                      key={`${project.id}:${flagKey}:${session.operator.id}`}
+                      request={request}
+                      project={project}
+                      flagKey={flagKey}
+                      onBack={() => goTo({ ...location, flagKey: null })}
+                      onOpenEnvironment={(id) => goTo({ ...location, environmentId: id })}
+                    />
+                  )}
+                  {flagKey && environment && (
+                    <FlagDetail
+                      key={`${scope}:${flagKey}:${session.operator.id}`}
+                      request={request}
+                      scope={scope}
+                      flagKey={flagKey}
+                      project={project}
+                      environmentId={environment.id}
+                      role={session.operator.role}
+                      onBack={() => goTo({ ...location, flagKey: null, environmentId: '' })}
+                    />
+                  )}
+                </>
               ) : (
-                <Inventory
-                  key={`${project.id}:${session.operator.id}`}
-                  request={request}
-                  scope={scope}
-                  project={project}
-                  environmentId={environment.id}
-                  role={session.operator.role}
-                  onOpen={(key, selectedEnvironmentId) => {
-                    setEnvironmentId(selectedEnvironmentId);
-                    setFlagKey(key);
-                  }}
-                />
+                <Empty>Choose an environment to inspect evaluation credentials.</Empty>
               )}
             </>
           )}
@@ -407,7 +469,11 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
             <p>
               <strong>{session.operator.name}</strong> · {session.operator.role}
             </p>
-            <p>Application-local identity only. Signing out here does not sign you out of Atlas.</p>
+            <p>Organization · {session.organization.name}</p>
+            <p>
+              Application-local identity only. Signing out clears unpublished local edits; it does
+              not sign you out of Atlas.
+            </p>
             <p className="fd-help">
               To change roles, sign out and select another disposable operator.
             </p>
@@ -432,8 +498,10 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
         header={
           <Header
             currentLabel="Flightdeck"
-            canGoBack={false}
-            canGoForward={false}
+            canGoBack={Boolean(session) && canGoBack}
+            canGoForward={Boolean(session) && canGoForward}
+            onBack={() => window.history.back()}
+            onForward={() => window.history.forward()}
             userName={session?.operator.name ?? 'Local development'}
             onAccount={() => {
               if (session) setAccount(true);
@@ -481,7 +549,9 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
                   : view === 'credentials'
                     ? 'Service credentials'
                     : flagKey
-                      ? 'Flag configuration'
+                      ? environmentId
+                        ? `Configuration · ${environment?.name ?? 'Unavailable'}`
+                        : 'Flag overview'
                       : 'Shared flag inventory'
               }
             />

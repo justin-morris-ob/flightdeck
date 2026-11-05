@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Resolve administrative organization names from authenticated server scope on every session response, and add operator-only project flag overview reads with shared metadata and stored environment gates.
+- Replace duplicate project navigation and ambient inventory environment selection with one project selector, read-only flag overview, exact environment links and restorable standalone/Atlas object locations.
+- Preserve inventory search/page across flag visits and guard unpublished configuration, metadata, exception and catalog edits through navigation/reload/revision changes; distinguish shared metadata/lifecycle actions from environment gates.
 - Add bounded string-list context and exact any/all membership targeting throughout validation, the evaluator, catalogs and the advanced playground.
 - Add an independently packaged server OpenFeature provider with typed detail methods, scope/response validation, bounded deadlines and explicit authorization-versus-recovery policy.
 - Add a reusable loopback consumer lab with server-owned synthetic personas, real persisted flag decisions, typed configuration, explicit transport-failure scenarios and private scoped credential provisioning.

@@ -27,6 +27,7 @@ import {
 import { dateTime, errorMessage, get, send, type Request } from './api.ts';
 import { ConfigurationEditor } from './ConfigurationEditor.tsx';
 import { Decision } from './Decision.tsx';
+import { useDraftNavigation, useDraftSource } from './draft-context.ts';
 import { Confirm, FlagForm, Modal } from './forms.tsx';
 import { Overrides } from './Overrides.tsx';
 
@@ -61,6 +62,8 @@ export function FlagDetail({
   const [version, setVersion] = useState(0);
   const [edit, setEdit] = useState(false);
   const [confirm, setConfirm] = useState<'toggle' | 'archive' | null>(null);
+  const { confirmTransition } = useDraftNavigation();
+  useDraftSource(false, () => setConfirm(null), busy);
   const writable = role !== 'viewer';
   const environment = project.environments.find((item) => item.id === environmentId)!;
   const path = `${scope}/flags/${encodeURIComponent(flagKey)}`;
@@ -135,11 +138,14 @@ export function FlagDetail({
   }
   const reload = (
     <Button
-      onClick={() => {
-        setEdit(false);
-        setConfirm(null);
-        setVersion((value) => value + 1);
-      }}
+      disabled={busy}
+      onClick={() =>
+        confirmTransition(() => {
+          setEdit(false);
+          setConfirm(null);
+          setVersion((value) => value + 1);
+        })
+      }
     >
       Reload latest version
     </Button>
@@ -174,7 +180,11 @@ export function FlagDetail({
             actions={
               <>
                 <Button onClick={onBack}>Back to flags</Button>
-                {writable && <Button onClick={() => setEdit(true)}>Edit metadata</Button>}
+                {writable && (
+                  <Button onClick={() => confirmTransition(() => setEdit(true))} disabled={busy}>
+                    Edit metadata · All project environments
+                  </Button>
+                )}
                 {reload}
               </>
             }
@@ -227,7 +237,7 @@ export function FlagDetail({
                     <Button
                       variant="primary"
                       disabled={busy || flag.archived}
-                      onClick={() => setConfirm('toggle')}
+                      onClick={() => confirmTransition(() => setConfirm('toggle'))}
                     >
                       {flag.enabled ? 'Disable' : 'Enable'} in {environment.name}
                     </Button>
@@ -248,16 +258,19 @@ export function FlagDetail({
                   setVersion((value) => value + 1);
                 }}
               />
-              <Block name="content" label="Lifecycle" icon="flag">
+              <Block name="content" label="Lifecycle · All project environments" icon="flag">
                 <details>
-                  <summary>Archive or restore this flag</summary>
+                  <summary>Archive or restore · All project environments</summary>
                   <p>
                     Archiving applies to every environment. The immutable key and audit history
                     remain available.
                   </p>
                   <div className="fd-actions">
                     {writable && (
-                      <Button disabled={busy} onClick={() => setConfirm('archive')}>
+                      <Button
+                        disabled={busy}
+                        onClick={() => confirmTransition(() => setConfirm('archive'))}
+                      >
                         {flag.archived ? 'Restore flag' : 'Archive flag'}
                       </Button>
                     )}
@@ -265,7 +278,7 @@ export function FlagDetail({
                 </details>
               </Block>
             </div>
-            {tab === 'overrides' ? (
+            <div hidden={tab !== 'overrides'}>
               <Overrides
                 request={request}
                 path={path}
@@ -277,7 +290,8 @@ export function FlagDetail({
                   setVersion((value) => value + 1);
                 }}
               />
-            ) : tab === 'activity' ? (
+            </div>
+            {tab === 'activity' ? (
               <Block name="content" label="Activity history" icon="clock">
                 <p className="fd-help">
                   Project-wide history · Each change identifies its environment and verified local
@@ -338,7 +352,7 @@ export function FlagDetail({
                 ]}
               />
               <p className="fd-help">{flag.description || 'No description'}</p>
-              <p className="fd-help">Metadata is shared across project environments.</p>
+              <p className="fd-help">Metadata scope · All project environments.</p>
             </AsideSection>
             <AsideSection name="status" title="Advanced diagnostics" icon="eye">
               <details>
@@ -355,9 +369,9 @@ export function FlagDetail({
       />
       {edit && (
         <Modal
-          title="Edit flag metadata"
+          title="Edit flag metadata · All project environments"
           onClose={() => {
-            if (!busy) setEdit(false);
+            if (!busy) confirmTransition(() => setEdit(false));
           }}
         >
           <FlagForm
@@ -376,8 +390,8 @@ export function FlagDetail({
           title={
             confirm === 'archive'
               ? flag.archived
-                ? 'Restore flag?'
-                : 'Archive flag?'
+                ? 'Restore flag · All project environments?'
+                : 'Archive flag · All project environments?'
               : `${flag.enabled ? 'Disable' : 'Enable'} this environment?`
           }
           action={
@@ -401,7 +415,7 @@ export function FlagDetail({
           </p>
           <p>
             {confirm === 'archive'
-              ? `This changes the lifecycle in all ${project.environments.length} project environments. ${flag.archived ? 'Saved environment configurations become effective again.' : 'Every evaluation returns its typed off value with enabled:false and reason archived.'}`
+              ? `All project environments · This changes the lifecycle in all ${project.environments.length} environments. ${flag.archived ? 'Saved environment configurations become effective again.' : 'Every evaluation returns its typed off value with enabled:false and reason archived.'}`
               : `Only ${environment.name} changes to ${flag.enabled ? 'disabled' : 'enabled'}. Other environments retain their state.`}
           </p>
           {confirm === 'toggle' && environment.key === 'production' && (

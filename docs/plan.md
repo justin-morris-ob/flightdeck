@@ -86,6 +86,9 @@ Acceptance:
 Implement a versioned backend client and one agreed real BC feature path. Coordinate BC adapter code in BC's own repository; keep Flightdeck implementation here.
 
 - Agree BC-user/account-to-subject mapping and which signed/scoped caller claims establish permitted tenant context. Do not infer Atlas membership from BC identity.
+- Define trusted consumer-supplied account, current-organization and effective-membership context. Add explicit typed collection/membership semantics before enabling group targeting; specify missing-data behavior and source/tenant scoping without stringifying collections.
+- Keep optional BC directory search/resolve on the authoring path. Resolve friendly names/email to stable source-scoped IDs and author ordinary Flightdeck rules. BC remains authoritative for identities/memberships; Flightdeck owns segment definitions. Do not require replicated group-member lists for predicate segments or call BC's directory during evaluation.
+- Implement and verify an OpenFeature provider adapter with a documented targeting-key/custom-context mapping before claiming compatibility. OpenFeature does not define BC-specific attribute names or directory integration.
 - Add bounded evaluation, timeouts, predictable errors, credential rotation/revocation and per-feature caller-selected safe fallback.
 - Specify delivery latency and freshness requirements. If measured requirements need caching or last-known-good snapshots, scope caches by organization/project/environment, validate revisions and impose a maximum age. Do not build edge/local SDK infrastructure speculatively.
 - Add minimal latency/error/freshness signals without retaining sensitive contexts by default.
@@ -96,6 +99,9 @@ Acceptance:
 - [ ] Browser code never receives an evaluation/management secret or directly calls the service with one.
 - [ ] Exercise timeout/outage, cold start, expired cached state where caching exists, malformed response, revoked credential and wrong-tenant context. Observe the declared result for each case; permission failures are not ordinary false evaluations.
 - [ ] No cached response from another project/environment can satisfy a request.
+- [ ] When an optional directory connection is introduced, disconnect it and prove existing rules still evaluate consumer-supplied context; new searches show unavailable rather than fabricated results.
+- [ ] Exercise collection membership, current organization versus any-membership, missing/wrong-type context and source/tenant isolation through the same evaluator used by generic targeting.
+- [ ] Verify OpenFeature provider behavior through actual SDK calls, including context mapping, typed decisions and error/default handling; API shape alone is not compatibility evidence.
 
 **Checkpoint:** BC walkthrough plus service interruption and credential revocation. This is the first proof of BC integration, not something inferred from a command-line API sample.
 

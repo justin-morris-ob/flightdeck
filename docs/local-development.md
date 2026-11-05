@@ -38,17 +38,39 @@ These identities are fixed server-owned fixtures. The browser cannot choose its 
 
 The main organization has Flightdeck and Sandbox projects, each with development and simulated production environments. Creation adds an immutable project-scoped key, initially disabled everywhere with boolean off false/default true. Configuration and overrides are environment-specific; metadata, archive state and revision are project-wide. Archived flags retain configuration and return the typed off value with reason `archived`. Unknown keys return 404, not a successful false decision.
 
+### Projects and the shared flag inventory
+
+A project owns one flag set; environments configure that same set differently. The standalone menu labels project navigation **Projects**, using published `MenuSection`/`MenuItem` primitives in the existing shell slot because the pinned composite `AppMenu` hardcodes “Collections.” No toolkit source, CSS text replacement or copied shell is used. Embedded Atlas pages retain the shell's chrome and use the explicit project selector.
+
+Feature flags shows one row per project flag, with On/Off columns for each environment. Select a status to open that exact environment; selecting a different **Configuration environment** does not filter the inventory or reset its current search/page. Inventory versions are displayed as “Version 13,” independently of environment gates. Archived rows distinguish project-wide archival from saved gate state; an absent configuration is Unavailable, never guessed Off.
+
+Creation from any selected environment creates the project flag disabled in every environment. Metadata and archive/restore affect the whole project; configuration publication, enabled state, credentials and subject overrides remain environment-specific. The project targeting catalog has no environment selector because its definitions are project-wide.
+
+Management inventory now uses operator-only `GET /api/v1/projects/{projectId}/flags`, bounded to 20 shared summaries with environment gates per page. The obsolete environment-scoped GET list is removed; existing environment POST creation, detail and mutation routes remain. No schema/data migration or changes to flag-evaluation semantics are required.
+
+Flag environments are configuration scopes, not deployment environments. The entire local instance currently hosts both projects and their configurations; “Production (local simulation)” remains local-only.
+
 ### Author targeting and configuration
 
-1. In **Project targeting catalog**, define typed scalar attributes and reusable AND segments. Catalog saves require their own expected revision and retain actor history.
-2. Open a flag's **Configuration** tab. Choose boolean/string/number/JSON; set off/default outcomes, variants and ordered rules. All fixed/variant payloads must share the selected type. All variant weights must total 10000 integer basis points.
-3. Each rule matches its conditions AND attached segments, then applies rollout admission. Rules are first-match; the default applies if none is eligible. Read the displayed “who → fraction → outcome” summary.
-4. Supply actual tenant, stable subject and optional typed attributes in the playground. Preview shows current/proposed values, gate, variant, rule, revisions and trace. Review reassignment warnings and explicitly confirm publication. Viewers can simulate the published configuration without authoring.
-5. **Subject overrides** requires an exact tenant/subject, owner, reason and future expiry. Overrides precede rules, never archive/disable gates. Revoke explicitly; expiry equality is already expired.
+1. Open a flag's **Targeting** tab. **Feature availability** is the environment master switch; audience changes do not turn it on.
+2. For a compatible Boolean flag, choose **Everyone** or **Selected audiences**. Select existing Flightdeck segments to admit anyone matching at least one of them. Empty selection means nobody through audience targeting, never an automatic switch to Everyone. Individual exceptions retain their existing priority.
+3. **People by email**, **Organizations** and **Groups** are disabled with **BC directory not connected**. This is the explicitly chosen UI-first boundary, not a working BC integration or a sample directory. Do not enter pretend BC identities through a substitute path.
+4. **Review targeting changes** validates the configuration through the existing server preview, shows current/proposed audiences and warnings, then requires explicit environment-specific publication. Its empty-context validation is not a real-user simulation or audience-size estimate.
+5. **Advanced controls** preserves typed values, ordered conditions, rollouts, variants, pinned definitions, undo and the context playground. Typed/complex configurations show a preserved-advanced notice instead of a lossy simple conversion. Opening/closing the disclosure or inspecting Activity does not discard the draft. Advanced simulations still explain actual supplied context.
+6. **Project targeting catalog** defines typed scalar attributes and reusable AND-predicate segments. Basic multi-segment targeting places one segment per full-rollout true rule, with false default, so segment alternatives are OR while each segment's conditions remain AND. It does not create a second evaluator.
+7. **Exceptions (advanced)** requires an exact tenant/subject, owner, reason and future expiry. Overrides precede audience rules but never archive/disable gates. Revoke explicitly; expiry equality is already expired. Lifecycle and empty-context diagnostics remain available behind their own disclosures.
 
 Publication pins attribute definitions and referenced segment snapshots. Catalog edits do not change existing live decisions; refreshing to the current catalog requires explicit publication. Changing variants/weights/order may reassign subjects. Increasing a rollout preserves existing eligibility under the unchanged namespace/rule ID. Names are not allocation IDs. See the [exact evaluation specification](evaluation-spec.md).
 
 Limits: 32 custom context definitions, 50 segments, 20 rules, 10 conditions per rule/segment, 5 segment references per rule and 10 variants. Configuration input is bounded to 24 KiB and its published snapshot to 64 KiB; individual JSON values to 4 KiB, HTTP request bodies to 32 KiB. Evaluation context contains scalar attributes, not arbitrary nested traits.
+
+### BC directory ownership and the deferred connection
+
+BC remains authoritative for users/accounts, organizations, groups and effective memberships. Flightdeck owns its segment definitions. An optional authoring connection will resolve email/name for selection but save stable, source-scoped references; a user target should use BC account UUID, not email as identity. Organization/group IDs also require a BC deployment/source namespace. BC's trusted backend supplies approved identity and membership context for evaluation, not browser claims or manual copies of users into every segment. Group-predicate segments can match that supplied membership without replicating the group's member list.
+
+This pass neither changes BC nor adds directory/sync APIs, credentials or replicated PII storage. Inspection found session-authenticated internal BC search/resolve endpoints, not a supported service-authenticated directory contract for Flightdeck. A future authoring connection needs explicit read scopes, bounded wire contracts, source/environment mapping and active/deleted behavior. Reusing browser cookies, BC signing secrets or direct BC SQL is not that contract. Live read-only authoring lookup is the recommended starting point. It is not an evaluation dependency: existing saved rules must continue evaluating supplied context when directory search is unavailable, with no per-decision callback to BC.
+
+Before enabling these selectors, define collection-valued context and membership operators, current organization versus any-organization membership, missing-data behavior and trusted source/tenant scoping. BC pickers must create generic Flightdeck rules, not a separate evaluator. An OpenFeature provider adapter and documented context mapping also remain future implementation and verification work; OpenFeature does not standardize BC's field names or supply the directory connection. See the [architecture boundary](architecture.md#optional-directory-integration-and-consumer-supplied-context).
 
 ## Evaluate from a separate backend process
 

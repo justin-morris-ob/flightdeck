@@ -80,6 +80,10 @@ Implemented local domain (experiment records remain planned):
 
 Boolean, string, number and JSON values are implemented. The value type belongs to an environment configuration; all its outcomes, variants and active overrides must agree. Keys are immutable and unique within a project. Flag metadata/archive/revision are project-wide; configuration and overrides are environment-scoped. Experiment records are not implemented.
 
+Projects own a shared flag inventory across their environments. A flag is defined once, initialized disabled in every project environment, and configured independently there; multiple projects can exist in one Flightdeck deployment. A deployment environment is not a flag-environment record. The application does not create a project per deployment/environment.
+
+The operator inventory is project-scoped and returns bounded lightweight summaries, including every stored environment gate, from one authorized SQL statement. It does not fetch full targeting snapshots per row or make per-flag requests. Selecting a status opens that environment's full detail; switching the inventory's configuration environment preserves search/pagination and never changes flag membership. Standalone navigation explicitly says Projects; Atlas retains its own chrome. No toolkit package changes or schema migrations are involved.
+
 Separate three identities:
 
 1. **Operator identity:** the authenticated person or workload managing configuration.
@@ -130,6 +134,20 @@ Local policy retains configuration until explicit archival and retains audit/rev
 Borrow Unleash's information hierarchy: project/environment navigation, a searchable flag inventory, clear per-environment state and a flag detail view with configuration, targeting, variants and activity as those capabilities arrive. Use focused create/edit flows, readable rule summaries and an evaluation playground before a complex visual rule builder.
 
 Use Onebrief UX Kit and Atlas UI for actual components, density, typography, colors, focus behavior and accessibility. Shell-owned navigation stays in the shell; do not rebuild a competing shell. Distinguish configuration changes from runtime evaluation status. Require deliberate, scoped confirmation for risky production changes and show permission/validation errors rather than optimistic false success.
+
+The default Boolean authoring surface is now **Everyone / Selected audiences**, with OR across existing selected Flightdeck segments. It compiles to the same full-rollout ordered rules and false default; it is not a second flag engine. Typed values, arbitrary conditions, variants, partial rollouts and technical simulation stay mounted under **Advanced controls**, collapsed by default. A strict projection refuses to rewrite non-representable configurations. Metadata, diagnostics and lifecycle actions are separated from the common targeting task.
+
+The user explicitly chose UI simplification before directory integration. BC user/email, organization and group selectors are therefore genuinely disabled and labeled disconnected. No fake BC records, local directory replicas, new BC endpoints or authentication fallbacks are implemented. Current scalar context and predicate segments do not implement the future membership contract below.
+
+### Optional directory integration and consumer-supplied context
+
+The following is the intended Stage 3 boundary, not implemented BC integration or a claim of OpenFeature provider compatibility:
+
+- **Authoring:** an optional BC directory connection lets operators search people by email and organizations/groups by name. Save stable source-scoped IDs, with email/name as lookup and display data, rather than using a mutable email as account identity. The connection needs a supported service-authenticated, authorized and bounded lookup/resolve contract; browser cookies, BC signing secrets and direct BC SQL are not that contract.
+- **Evaluation:** BC's backend supplies approved identity and effective membership context. Flightdeck evaluates saved generic rules against that supplied context without calling BC's directory. A directory outage may prevent new searches or label refreshes, but must not prevent existing rules from evaluating. Evaluation authorization still independently establishes permitted project/environment/tenant scope; arbitrary browser claims cannot establish membership.
+- **Generic targeting:** BC-aware pickers author ordinary typed Flightdeck predicates, not a second BC-specific evaluator. Explicit collection-valued context and membership operators are prerequisites for groups; do not encode memberships as delimited strings or force them into scalar attributes. Define current-organization targeting separately from any-organization membership, including missing-data and source/tenant-scoping semantics.
+- **Ownership:** BC owns accounts, organizations, groups and their memberships; Flightdeck owns segment definitions. A predicate segment referring to a group ID uses consumer-supplied memberships and does not require copying every group member into Flightdeck. Any future explicit identity-list segment needs its own defined representation and lifecycle.
+- **OpenFeature:** the [evaluation-context specification](https://openfeature.dev/specification/sections/evaluation-context/) provides a targeting key and custom context fields, not standard BC attribute names, a directory protocol or management UI. Document the mapping to Flightdeck's context and implement and verify a provider adapter before claiming OpenFeature compatibility. The provider and membership types remain future work.
 
 ## Deployment boundary
 

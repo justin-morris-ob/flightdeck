@@ -121,8 +121,8 @@ export function FlagForm({ flag, busy, onCancel, onSave }: FlagFormProps) {
       </label>
       <p className="fd-help">
         {flag
-          ? `Metadata applies to every environment. Saving publishes the next global revision after r${flag.revision}.`
-          : 'Created disabled in every project environment. No rollout or targeting rules are applied.'}
+          ? `Metadata is shared across every environment. Current flag version: ${flag.revision}.`
+          : 'Created disabled in every project environment. Choose Everyone or selected audiences after creation.'}
       </p>
       <div className="fd-actions">
         <Button onClick={onCancel} disabled={busy}>

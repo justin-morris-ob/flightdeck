@@ -141,7 +141,7 @@ export function FlagDetail({
         setVersion((value) => value + 1);
       }}
     >
-      Reload latest revision
+      Reload latest version
     </Button>
   );
   if (loading || !flag || !evaluation)
@@ -169,7 +169,7 @@ export function FlagDetail({
                 {flag.archived ? 'Archived' : flag.enabled ? 'Enabled' : 'Disabled'}
               </Badge>
             }
-            crumbs={[project.name, environment.name]}
+            crumbs={[`Project · ${project.name}`, `Configuration · ${environment.name}`]}
             meta={<code>{flag.key}</code>}
             actions={
               <>
@@ -201,8 +201,8 @@ export function FlagDetail({
         viewBar={
           <ViewBar
             tabs={[
-              { id: 'configuration', label: 'Configuration' },
-              { id: 'overrides', label: 'Subject overrides' },
+              { id: 'configuration', label: 'Targeting' },
+              { id: 'overrides', label: 'Exceptions (advanced)' },
               { id: 'activity', label: 'Activity' },
             ]}
             value={tab}
@@ -212,25 +212,16 @@ export function FlagDetail({
         main={
           <>
             <div className="fd-configuration-panel" hidden={tab !== 'configuration'}>
-              <Block name="content" label="Environment configuration" icon="sliders">
+              <Block name="content" label="Feature availability" icon="flag">
                 <div className="fd-config-state">
                   <div>
                     <h2>{environment.name}</h2>
-                    <p>Environment gate · Separate from selected configuration value</p>
+                    <p>Master switch · Targeting applies only while this environment is On.</p>
                   </div>
                   <Badge tone={flag.enabled && !flag.archived ? 'success' : 'secondary'}>
                     {flag.archived ? 'Archived · evaluates off' : flag.enabled ? 'On' : 'Off'}
                   </Badge>
                 </div>
-                <Properties
-                  items={[
-                    ['Flag key', <code>{flag.key}</code>],
-                    ['Owner', flag.owner],
-                    ['Description', flag.description || 'No description'],
-                    ['Global revision', `r${flag.revision}`],
-                    ['Updated', dateTime(flag.updatedAt)],
-                  ]}
-                />
                 {writable && (
                   <div className="fd-actions">
                     <Button
@@ -258,17 +249,20 @@ export function FlagDetail({
                 }}
               />
               <Block name="content" label="Lifecycle" icon="flag">
-                <p>
-                  Archiving applies to every environment. The immutable key and audit history remain
-                  available.
-                </p>
-                <div className="fd-actions">
-                  {writable && (
-                    <Button disabled={busy} onClick={() => setConfirm('archive')}>
-                      {flag.archived ? 'Restore flag' : 'Archive flag'}
-                    </Button>
-                  )}
-                </div>
+                <details>
+                  <summary>Archive or restore this flag</summary>
+                  <p>
+                    Archiving applies to every environment. The immutable key and audit history
+                    remain available.
+                  </p>
+                  <div className="fd-actions">
+                    {writable && (
+                      <Button disabled={busy} onClick={() => setConfirm('archive')}>
+                        {flag.archived ? 'Restore flag' : 'Archive flag'}
+                      </Button>
+                    )}
+                  </div>
+                </details>
               </Block>
             </div>
             {tab === 'overrides' ? (
@@ -333,21 +327,28 @@ export function FlagDetail({
         }
         aside={
           <>
-            <AsideSection name="status" title="Published decision · empty context" icon="eye">
-              <Decision decision={evaluation} title="Current published decision" />
-              <p className="fd-help">
-                Empty-context baseline only. Use the configuration playground to send actual tenant,
-                subject and typed attributes. The gate can be enabled while the value is false.
-              </p>
-            </AsideSection>
-            <AsideSection name="people" title="Ownership" icon="users">
+            <AsideSection name="people" title="Flag information" icon="flag">
               <Properties
                 items={[
+                  ['Key', <code>{flag.key}</code>],
                   ['Owner', flag.owner],
                   ['Project', project.name],
-                  ['Metadata scope', 'All project environments'],
+                  ['Version', flag.revision],
+                  ['Updated', dateTime(flag.updatedAt)],
                 ]}
               />
+              <p className="fd-help">{flag.description || 'No description'}</p>
+              <p className="fd-help">Metadata is shared across project environments.</p>
+            </AsideSection>
+            <AsideSection name="status" title="Advanced diagnostics" icon="eye">
+              <details>
+                <summary>Inspect the empty-context decision</summary>
+                <Decision decision={evaluation} title="Current published decision" />
+                <p className="fd-help">
+                  Technical baseline only, not a BC user simulation. Use Advanced controls to supply
+                  evaluation context and inspect the trace.
+                </p>
+              </details>
             </AsideSection>
           </>
         }
@@ -396,7 +397,7 @@ export function FlagDetail({
           }}
         >
           <p>
-            <strong>{flag.name}</strong> · <code>{flag.key}</code> · Revision r{flag.revision}
+            <strong>{flag.name}</strong> · <code>{flag.key}</code> · Version {flag.revision}
           </p>
           <p>
             {confirm === 'archive'

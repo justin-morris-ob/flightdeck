@@ -23,6 +23,30 @@
   display: contents;
 }
 
+.fd-project-menu {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  color: var(--ob-sys-fg-primary);
+  background: var(--ob-sys-bg-raised);
+}
+
+.fd-menu-heading {
+  padding: var(--ob-sys-space-inset-md);
+}
+
+.fd-menu-title {
+  margin: 0;
+  font-family: var(--ob-sys-type-display-family);
+  font-size: var(--ob-sys-type-title-size);
+}
+
+.fd-project-menu-scroll {
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .fd-dev-banner {
   display: flex;
   flex: none;
@@ -600,4 +624,58 @@
 
 .fd-value-editor {
   min-width: 0;
+}
+
+.fd-advanced-controls {
+  min-width: 0;
+  padding: var(--ob-sys-space-inset-md);
+  border: 1px solid var(--ob-sys-border-default);
+  border-radius: var(--ob-sys-radius-control);
+  background: var(--ob-sys-bg-canvas);
+}
+
+.fd-advanced-controls > summary {
+  color: var(--ob-sys-fg-secondary);
+  font-weight: var(--ob-sys-type-weight-medium);
+}
+
+.fd-advanced-controls > :not(summary) {
+  margin-top: var(--ob-sys-space-inset-md);
+}
+
+.fd-audience-mode,
+.fd-audience-segments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ob-sys-space-inset-md);
+}
+
+.fd-audience-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ob-sys-space-inset-sm);
+  min-height: 1.75rem;
+  cursor: pointer;
+}
+
+.fd-audience-choice > input {
+  flex: none;
+  margin-top: var(--ob-sys-space-inset-xs);
+  accent-color: var(--ob-obj-link-active-fg);
+}
+
+.fd-audience-mode ~ .fd-fieldset {
+  margin-top: var(--ob-sys-space-inset-md);
+}
+
+.fd-bc-directory label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ob-sys-space-inset-xs);
+}
+
+.fd-bc-directory input {
+  width: 100%;
+  box-sizing: border-box;
+  opacity: 0.65;
 }

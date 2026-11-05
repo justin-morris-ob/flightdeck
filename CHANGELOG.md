@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Simplify Boolean flag details to Everyone or selected Flightdeck segments, with empty selections matching nobody and OR across segments through the existing evaluator.
+- Preserve typed configuration, rules, rollouts, variants, diagnostics and draft state behind working advanced disclosures; refuse lossy conversion of existing advanced configurations.
+- Clearly disable BC email/organization/group pickers until a real directory bridge exists, and document BC identity ownership versus Flightdeck segment ownership. No BC directory data or API is fabricated.
+- Define the optional BC directory as an authoring convenience, separate from consumer-supplied runtime context; record stable identity, generic membership targeting and verified OpenFeature provider prerequisites without claiming those integrations are implemented.
+
+- Clarify shared project flag ownership: show one inventory row with per-environment gates, explicit Projects navigation and environment-specific detail links. Preserve inventory search/page when switching configuration environments.
+- Replace environment GET inventory with bounded project summary reads; retain scoped creation/detail/mutation contracts and verify shared identity, project isolation, archived gates and missing configuration behavior.
+
 - Add Stage 2 typed boolean/string/number/JSON configuration, ordered AND targeting rules, reusable typed project segments and explicitly pinned catalog snapshots.
 - Add versioned deterministic rollout/variant assignment, language-neutral decision/hash vectors, scoped expiring subject overrides and atomic configuration/catalog/override audit history.
 - Add structured Onebrief-toolkit authoring, first-match rule ordering, current/draft decision traces, explicit reassignment review and read-only viewer simulation in standalone and Atlas.

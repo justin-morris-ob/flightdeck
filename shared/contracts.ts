@@ -92,8 +92,14 @@ export const flagSchema = z.object({
   updatedAt: z.iso.datetime(),
 });
 export type Flag = z.infer<typeof flagSchema>;
+export const flagSummarySchema = flagSchema
+  .omit({ environmentId: true, enabled: true, configuration: true })
+  .extend({
+    environments: z.array(z.object({ environmentId: z.uuid(), enabled: z.boolean() })),
+  });
+export type FlagSummary = z.infer<typeof flagSummarySchema>;
 export const flagsSchema = z.object({
-  items: z.array(flagSchema),
+  items: z.array(flagSummarySchema),
   nextCursor: z.string().nullable(),
 });
 export const evaluationSchema = z.object({

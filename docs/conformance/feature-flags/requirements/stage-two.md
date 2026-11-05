@@ -32,7 +32,25 @@ Stage 1's lifecycle, authorization, audit, concurrency and independent Atlas com
 - **§4.1** Shared standalone/Atlas pages provide structured typed values, catalog/segment editing, ordered rules, variants, scoped override create/revoke and audit. They use Onebrief components/tokens, not copied reference-product UI.
 - **§4.2** Preview shows exact current/proposed decisions and assignment warnings; publication requires explicit scoped review/confirmation. Invalid JSON/weights cannot appear successfully published.
 - **§4.3** Viewers have read-only authoring controls and can simulate published context. Embedded pages defer chrome/theme ownership to Atlas. Both themes render actual targeting/playground content without overlapping toolkit blocks.
-- **§4.4** Switching between Configuration, Activity and Subject overrides without mutation preserves the unpublished draft, preview and simulation context. Merely inspecting history is not an implicit discard.
+- **§4.4** Switching between Targeting, Activity and Exceptions (advanced) without mutation preserves the unpublished draft, preview and simulation context. Merely inspecting history is not an implicit discard.
+
+## §5 Shared project inventory and environment scope
+
+- **§5.1** A project owns one flag definition per immutable key, shared by all its environments. Creating from any environment initializes that same flag disabled in every project environment. Metadata and archive/restore remain project-wide; values, targeting, enabled state and overrides remain environment-specific.
+- **§5.2** Inventory lists one row per project flag with per-environment gates. Choosing a different configuration environment does not change inventory membership or reset its search/page. An environment cell opens the exact flag/environment; a name opens the selected configuration environment.
+- **§5.3** Project navigation is explicitly labeled Projects in standalone; embedded pages keep Atlas chrome and expose an explicit project selector. Project-wide targeting definitions are not presented as belonging to the selected environment.
+- **§5.4** Archived lifecycle is distinct from saved gate state. An absent configuration is Unavailable, never silently Off. Status cells navigate rather than mutate; environment changes and project-wide archival require the existing scoped confirmations.
+- **§5.5** The operator-only project inventory API returns lightweight summaries and stored environment gates from one SQL statement, bounded to 20 flags with stable cursors/search/archive filters. It excludes full configurations and other-project gates. Service credentials are denied; inaccessible projects return 404, invalid inputs 400. The obsolete environment GET list is removed and every repository caller is migrated.
+
+## §6 Simple audience authoring with preserved advanced capabilities
+
+- **§6.1** Compatible Boolean flags expose Everyone or Selected audiences. Everyone is explicit; an empty Selected audience matches nobody through audience rules and never implicitly becomes Everyone.
+- **§6.2** Each selected Flightdeck segment is an OR alternative, implemented as one full-rollout true rule with false off/default values. Existing segment predicates keep AND semantics. The environment gate, archive state and active individual-override precedence remain unchanged.
+- **§6.3** Simple edits preserve allocation namespace/hash version and retained rule IDs/names. Arbitrary conditions, partial rollouts, variants, typed outcomes, duplicate branches or other non-representable configurations are not automatically rewritten or converted.
+- **§6.4** Working advanced authoring and simulation stay mounted behind a closed-by-default Advanced controls disclosure. Drafts/undo/context survive disclosure and detail-tab switches. Hidden invalid native configuration fields invalidate review and surface an error outside the disclosure; they cannot publish silently.
+- **§6.5** Simple review uses the existing server validation/preview and publication routes, preserves version/catalog conflict checks and shows audience changes plus warnings. Empty-context configuration validation is explicitly not a BC-user simulation or membership-size estimate. Publication remains an explicit scoped confirmation; viewers cannot author or publish.
+- **§6.6** BC people/email, organization and group pickers are genuinely disabled with disconnected status. This UI-only pass does not claim a directory connection, fake BC entities, service authentication, membership sync or BC-backed segment evaluation. Existing Flightdeck predicate segments remain usable, with missing/pinned selections preserved rather than silently dropped. Evaluation uses supplied context and has no BC directory dependency. The optional authoring connection, collection-valued membership contract and verified OpenFeature provider remain future work, as described in the [architecture](../../../architecture.md#optional-directory-integration-and-consumer-supplied-context).
+- **§6.7** Metadata/version, advanced empty-context diagnostics and lifecycle actions do not obscure the default audience controls. Advanced functionality is not misleadingly labeled under development; only the unavailable BC connection is marked disconnected.
 
 ## Evidence
 

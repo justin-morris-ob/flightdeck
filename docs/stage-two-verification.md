@@ -11,11 +11,11 @@ Executed:
 - `pnpm db:setup`: applied `002-targeting.sql` to existing application/test databases without resetting application storage.
 - `pnpm fmt`: completed successfully with BC-derived Oxfmt.
 - `pnpm check`: Oxlint reported zero warnings/errors; frontend and native-server typechecks passed; generated OpenAPI matched runtime schemas; standalone and federation builds passed; formatting check passed.
-- `pnpm test`: **109 tests passed across four files** after integration fixes. The final full run followed the UI layout correction and consumer/contract integration.
+- `pnpm test`: initial Stage 2 integration passed 109 tests across four files; shared inventory passed 110 across four files; the subsequent UI-first simple-audience pass passed **135 tests across five files**. Runtime/browser evidence for each refinement is below.
 - Separate native-Node HTTP smoke script: exited successfully after the persisted/API scenarios below. The temporary ignored script/result were removed after verification.
 - Separate `pnpm consumer` processes: observed real service decisions with tagged string and JSON values, rule/variant IDs, revisions and deterministic traces.
 
-No hosted CI run, new cloud deployment, container execution or Stage 2 frozen reinstall is claimed. Stage 1 records the original lockfile installation proof.
+No new cloud deployment, container execution or Stage 2 frozen reinstall is claimed. Stage 1 records the original lockfile installation proof. The first PR's [hosted CI attempt](https://github.com/justin-morris-ob/flightdeck/actions/runs/41944114954) later failed at dependency installation because Nexus returned 401 for UX Kit; hosted application checks did not run. Spud also refused the personal repository with `repository-forbidden`. Neither remote gate is represented as passed.
 
 ## Evaluator and boundary proof
 
@@ -80,6 +80,31 @@ A subsequent real browser recording is retained locally at `.local/demos/flightd
 ## Pre-PR review correction
 
 An independent frontend review identified silent loss of unpublished configuration when visiting Activity or Subject overrides. Actual browser reproduction confirmed the draft reset to published JSON after a tab roundtrip. The detail now keeps the configuration editor mounted but hidden on other tabs, preserving its draft, undo/preview and simulation context. A fresh browser run confirmed draft, context and preview survived both detail tabs; the hidden panel had computed display none, and explicit Discard still restored the published value. Full `pnpm check` and all 109 tests passed after the correction. No changes from this smoke were published.
+
+## Shared inventory refinement
+
+The follow-on organization refinement changes presentation and operator reads, not flag ownership or evaluation semantics. No database migration/reset or toolkit dependency change was needed.
+
+- `pnpm check` passed lint, both typechecks, OpenAPI consistency, standalone/federation builds and formatting. `pnpm test` passed 110 tests across four files, including a real-DB summary case and migrated inventory authorization/pagination/archive tests.
+- A separate native Node 26 HTTP smoke verified project-level summary/detail parity: `targeting-b986e9d4-release` retained ID `4a00465e-e1ab-4dc1-87b1-4676b35e047b` in both Development (On) and Production simulation (Off). It also observed inaccessible-project 404, invalid limit 400 and removed environment GET list 404. The smoke did not mutate flags.
+- Actual standalone browser inspection showed Projects navigation and one row per flag with environment columns, in dark/light themes. Filtering to “Stage Two,” then switching configuration environments retained the search and single-row result. Clicking Production's Off cell opened Production detail; switching the same flag to Development showed its existing On state. Sandbox navigation showed its separate empty inventory.
+- Created `shared-config-mw375idx` (“Shared configuration example”) through the actual UI while Production simulation was selected. Both gates started Off; enabling only Development produced one shared row with Development On and Production Off. The project-wide archive warning explicitly identified both environments; it was cancelled. The new demo remains active, with all preexisting records retained.
+- The project targeting catalog did not show an environment selector. Archived inventory rows displayed their lifecycle separately from saved gates.
+- The independently built page loaded in the restarted, unmodified separate Atlas shell. A synthetic viewer saw the same five shared rows and could open Production detail, but had no create or enable controls. No standalone chrome was present. Both shell themes were visually inspected.
+
+## UI-first simple audience refinement
+
+The user explicitly selected UI simplification before building a BC directory bridge. No BC files, identity credentials, server directory endpoints, replicated directory data or database migrations were added.
+
+- `pnpm check` passed lint, both typechecks, OpenAPI consistency, standalone/federation builds and formatting; `pnpm test` passed 135 tests across five files. The new deterministic helper tests use the actual evaluator to cover Everyone, empty selected audiences, OR versus AND, wrong/missing attributes, stable retained rule IDs, bounds and refusal to rewrite advanced shapes.
+- In the actual standalone browser, created `simple-targeting-mw38e63c` (“Simple targeting example”), enabled Development, selected no audiences and explicitly published. A real evaluation returned Boolean false at version 3 despite matching-looking synthetic attributes: empty Selected did not become Everyone.
+- Selected two existing Flightdeck predicate segments through the simple editor. Draft selection survived opening/closing Advanced controls and a roundtrip through Activity. Published through simple review while Advanced stayed closed.
+- A separate native Node 26 process evaluated the persisted union at version 4: enterprise/east matched the enterprise segment; basic/west matched the west segment; basic/east and missing attributes returned false. Each admitted context matched a different rule, proving OR rather than intersection.
+- Explicitly changed to Everyone and observed an otherwise excluded context return true at version 5. Disabling Development returned false with reason disabled at version 6. Re-enabled and restored the two-segment audience; the retained demonstration is version 8. Production simulation stayed unconfigured/disabled.
+- All three BC directory fields were natively disabled and labeled disconnected. These checks did not use real BC users or claim verified membership.
+- Captured both environment configurations of the existing string/variant and JSON demonstration flags before this UI change; all four full flag snapshots matched afterward. The string flag still had weights 6000/4000 and its existing namespace/rules. Opening Advanced and simulating `local-tenant` / `person-0` / `plan=enterprise` still returned control.
+- Entered invalid JSON in the existing advanced editor, closed its disclosure, and observed the visible invalid-configuration notice outside it. Restored the raw input without publishing. Existing JSON configuration was not converted or overwritten.
+- Visually inspected standalone and separate unmodified Atlas pages in both themes. Atlas contained no standalone chrome; a synthetic viewer saw disabled audience/review controls and no gate-mutation action. Working advanced functionality remained available, not mislabeled under development.
 
 ## Limits and next stage
 

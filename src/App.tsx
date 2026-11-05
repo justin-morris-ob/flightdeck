@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { z } from 'zod';
 
 import { Badge, Button, Empty, Notice } from '@onebrief/atlas-ui';
-import { AppMenu, AppShell, ContextBar, Header, Icon, Rail, type App } from '@onebrief/ux-kit';
+import { AppShell, ContextBar, Header, Icon, MenuItem, MenuSection, Rail } from '@onebrief/ux-kit';
 
 import {
   operatorSchema,
@@ -149,23 +149,48 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
       }
     }
   }
-  const appMenu: App = {
-    id: 'flightdeck',
-    name: 'Flightdeck',
-    short: 'Flags',
-    tone: 'atom',
-    icon: 'flag',
-    quickActions: [],
-    pinned: [],
-    views: [
-      { id: 'flags', label: 'Feature flags', icon: 'flag' },
-      { id: 'catalog', label: 'Project targeting catalog', icon: 'sliders' },
-      ...(role === 'administrator'
-        ? [{ id: 'credentials', label: 'Evaluation credentials', icon: 'approval' as const }]
-        : []),
-    ],
-    collections: projects.map((item) => ({ id: item.id, label: item.name, icon: 'collection' })),
-  };
+  const appMenu = (
+    <nav className="fd-project-menu" aria-label="Flightdeck menu">
+      <MenuSection kind="shared" className="fd-menu-heading">
+        <h2 className="fd-menu-title">Flightdeck</h2>
+      </MenuSection>
+      <div className="fd-project-menu-scroll">
+        <MenuSection title="Views" kind="app">
+          <MenuItem
+            label="Feature flags"
+            icon="flag"
+            current={view === 'flags'}
+            onSelect={() => navigate('flags')}
+          />
+          <MenuItem
+            label="Project targeting catalog"
+            icon="sliders"
+            current={view === 'catalog'}
+            onSelect={() => navigate('catalog')}
+          />
+          {role === 'administrator' && (
+            <MenuItem
+              label="Evaluation credentials"
+              icon="approval"
+              current={view === 'credentials'}
+              onSelect={() => navigate('credentials')}
+            />
+          )}
+        </MenuSection>
+        <MenuSection title="Projects" kind="app">
+          {projects.map((item) => (
+            <MenuItem
+              key={item.id}
+              label={item.name}
+              icon="collection"
+              current={item.id === projectId}
+              onSelect={() => navigate(item.id)}
+            />
+          ))}
+        </MenuSection>
+      </div>
+    </nav>
+  );
   const banner = (
     <div className="fd-dev-banner">
       <Icon name="flag" size="sm" />
@@ -259,23 +284,25 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
                   ))}
                 </select>
               </label>
-              <label>
-                Environment
-                <select
-                  className="input"
-                  value={environment?.id ?? ''}
-                  onChange={(event) => {
-                    setEnvironmentId(event.target.value);
-                  }}
-                  disabled={scopeLoading}
-                >
-                  {project?.environments.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {view !== 'catalog' && (
+                <label>
+                  Configuration environment
+                  <select
+                    className="input"
+                    value={environment?.id ?? ''}
+                    onChange={(event) => {
+                      setEnvironmentId(event.target.value);
+                    }}
+                    disabled={scopeLoading}
+                  >
+                    {project?.environments.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
             <div className="fd-session">
               <span>{session.operator.name}</span>
@@ -305,28 +332,30 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
             <Empty>No authorized project environments are available.</Empty>
           ) : (
             <>
-              <nav className="fd-section-nav" aria-label="Flightdeck sections">
-                <Button
-                  variant={view === 'flags' ? 'primary' : 'quiet'}
-                  onClick={() => navigate('flags')}
-                >
-                  Feature flags
-                </Button>
-                <Button
-                  variant={view === 'catalog' ? 'primary' : 'quiet'}
-                  onClick={() => navigate('catalog')}
-                >
-                  Project targeting catalog
-                </Button>
-                {role === 'administrator' && (
+              {embedded && (
+                <nav className="fd-section-nav" aria-label="Flightdeck sections">
                   <Button
-                    variant={view === 'credentials' ? 'primary' : 'quiet'}
-                    onClick={() => navigate('credentials')}
+                    variant={view === 'flags' ? 'primary' : 'quiet'}
+                    onClick={() => navigate('flags')}
                   >
-                    Evaluation credentials
+                    Feature flags
                   </Button>
-                )}
-              </nav>
+                  <Button
+                    variant={view === 'catalog' ? 'primary' : 'quiet'}
+                    onClick={() => navigate('catalog')}
+                  >
+                    Project targeting catalog
+                  </Button>
+                  {role === 'administrator' && (
+                    <Button
+                      variant={view === 'credentials' ? 'primary' : 'quiet'}
+                      onClick={() => navigate('credentials')}
+                    >
+                      Evaluation credentials
+                    </Button>
+                  )}
+                </nav>
+              )}
               {view === 'catalog' ? (
                 <Catalog
                   key={`${scope}:${session.operator.id}`}
@@ -356,13 +385,16 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
                 />
               ) : (
                 <Inventory
-                  key={`${scope}:${session.operator.id}`}
+                  key={`${project.id}:${session.operator.id}`}
                   request={request}
                   scope={scope}
                   project={project}
                   environmentId={environment.id}
                   role={session.operator.role}
-                  onOpen={setFlagKey}
+                  onOpen={(key, selectedEnvironmentId) => {
+                    setEnvironmentId(selectedEnvironmentId);
+                    setFlagKey(key);
+                  }}
                 />
               )}
             </>
@@ -438,22 +470,20 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
             onSelect={() => navigate('flags')}
           />
         }
-        appMenu={
-          session && (
-            <AppMenu
-              app={appMenu}
-              presentation="docked"
-              currentPlaceId={view}
-              onNavigate={navigate}
-            />
-          )
-        }
+        appMenu={session && appMenu}
         contextBar={
           session && (
             <ContextBar
               scope={project?.name ?? 'No project'}
-              time="Live configuration"
-              phase={environment?.name}
+              time={
+                view === 'catalog'
+                  ? 'Targeting library'
+                  : view === 'credentials'
+                    ? 'Service credentials'
+                    : flagKey
+                      ? 'Flag configuration'
+                      : 'Shared flag inventory'
+              }
             />
           )
         }

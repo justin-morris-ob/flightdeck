@@ -11,6 +11,7 @@ import {
   evaluationSchema,
   flagSchema,
   flagsSchema,
+  flagSummarySchema,
   issuedCredentialSchema,
   operatorSchema,
   projectsSchema,
@@ -41,6 +42,7 @@ const schemaNames = new Map<z.ZodType, string>([
   [evaluationSchema, 'Evaluation'],
   [flagSchema, 'Flag'],
   [flagsSchema, 'FlagList'],
+  [flagSummarySchema, 'FlagSummary'],
   [issuedCredentialSchema, 'IssuedCredential'],
   [operatorSchema, 'Operator'],
   [projectsSchema, 'Projects'],
@@ -146,7 +148,7 @@ const document = {
     title: 'Flightdeck API',
     version: '2.0.0',
     description:
-      'Stage 2 local-development API. This development contract replaces Stage 1 boolean GET evaluation with typed POST evaluation and cuts over all local consumers; it is not a production-stable external API. Signed local sessions remain demo-only. Enabled state and typed configuration are environment-specific; metadata, archive state and flag revisions are project-wide. Publication pins project context/segment definitions. Archive/disable return the configured typed off value. Credentials grant explicit tenant contexts within one project/environment. No context is stored as exposure or used as entitlement authorization.',
+      'Stage 2 local-development API. This development contract replaces Stage 1 boolean GET evaluation with typed POST evaluation and cuts over all local consumers; it is not a production-stable external API. Signed local sessions remain demo-only. Inventory is project-scoped, with one shared flag row and ordered environment gate summaries rather than full configuration payloads. Enabled state and typed configuration are environment-specific; metadata, archive state and flag revisions are project-wide. Publication pins project context/segment definitions. Archive/disable return the configured typed off value. Credentials grant explicit tenant contexts within one project/environment. No context is stored as exposure or used as entitlement authorization.',
   },
   servers: [{ url: 'http://localhost:4721' }],
   components: {
@@ -205,23 +207,29 @@ const document = {
     '/api/v1/projects': {
       get: operation('List projects and environments in the operator organization', projectsSchema),
     },
+    '/api/v1/projects/{projectId}/flags': {
+      get: operation(
+        'List shared project flags with environment gates, ordered by immutable key; operator viewer or above',
+        flagsSchema,
+        {
+          parameters: [
+            parameter('projectId', 'path', { type: 'string', format: 'uuid' }),
+            parameter('search', 'query', { type: 'string', maxLength: 100 }),
+            parameter('after', 'query', {
+              type: 'string',
+              description: 'Exclusive last flag key from previous page',
+            }),
+            parameter('limit', 'query', { type: 'integer', minimum: 1, maximum: 20, default: 20 }),
+            parameter('archived', 'query', {
+              type: 'string',
+              enum: ['active', 'archived', 'all'],
+              default: 'active',
+            }),
+          ],
+        }
+      ),
+    },
     [`${scope}/flags`]: {
-      get: operation('List scoped flag configuration, ordered by immutable key', flagsSchema, {
-        parameters: [
-          ...scopeParameters,
-          parameter('search', 'query', { type: 'string', maxLength: 100 }),
-          parameter('after', 'query', {
-            type: 'string',
-            description: 'Exclusive last flag key from previous page',
-          }),
-          parameter('limit', 'query', { type: 'integer', minimum: 1, maximum: 20, default: 20 }),
-          parameter('archived', 'query', {
-            type: 'string',
-            enum: ['active', 'archived', 'all'],
-            default: 'active',
-          }),
-        ],
-      }),
       post: operation(
         'Create a project flag disabled in all environments; editor or administrator',
         flagSchema,

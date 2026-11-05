@@ -3,7 +3,7 @@
   "info": {
     "title": "Flightdeck API",
     "version": "2.0.0",
-    "description": "Stage 2 local-development API. This development contract replaces Stage 1 boolean GET evaluation with typed POST evaluation and cuts over all local consumers; it is not a production-stable external API. Signed local sessions remain demo-only. Enabled state and typed configuration are environment-specific; metadata, archive state and flag revisions are project-wide. Publication pins project context/segment definitions. Archive/disable return the configured typed off value. Credentials grant explicit tenant contexts within one project/environment. No context is stored as exposure or used as entitlement authorization."
+    "description": "Stage 2 local-development API. This development contract replaces Stage 1 boolean GET evaluation with typed POST evaluation and cuts over all local consumers; it is not a production-stable external API. Signed local sessions remain demo-only. Inventory is project-scoped, with one shared flag row and ordered environment gate summaries rather than full configuration payloads. Enabled state and typed configuration are environment-specific; metadata, archive state and flag revisions are project-wide. Publication pins project context/segment definitions. Archive/disable return the configured typed off value. Credentials grant explicit tenant contexts within one project/environment. No context is stored as exposure or used as entitlement authorization."
   },
   "servers": [
     {
@@ -22,7 +22,7 @@
         "required": ["error"],
         "additionalProperties": false
       },
-      "Auxiliary24": {
+      "Auxiliary25": {
         "type": "object",
         "properties": {
           "name": {
@@ -41,7 +41,7 @@
         "required": ["name", "ok", "mode"],
         "additionalProperties": false
       },
-      "Auxiliary25": {
+      "Auxiliary26": {
         "type": "object",
         "properties": {
           "items": {
@@ -71,7 +71,7 @@
         "required": ["items"],
         "additionalProperties": false
       },
-      "Auxiliary26": {
+      "Auxiliary27": {
         "type": "object",
         "properties": {
           "session": {
@@ -116,7 +116,7 @@
         "required": ["session"],
         "additionalProperties": false
       },
-      "Auxiliary27": {
+      "Auxiliary28": {
         "type": "object",
         "properties": {
           "operatorId": {
@@ -229,11 +229,6 @@
                   "format": "uuid",
                   "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                 },
-                "environmentId": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                },
                 "key": {
                   "type": "string",
                   "minLength": 1,
@@ -257,614 +252,41 @@
                   "exclusiveMinimum": 0,
                   "maximum": 9007199254740991
                 },
-                "enabled": {
-                  "type": "boolean"
-                },
-                "configuration": {
-                  "type": "object",
-                  "properties": {
-                    "allocationNamespace": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 100
-                    },
-                    "hashVersion": {
-                      "type": "string",
-                      "const": "sha256-v1"
-                    },
-                    "offValue": {
-                      "oneOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "type": {
-                              "type": "string",
-                              "const": "boolean"
-                            },
-                            "value": {
-                              "type": "boolean"
-                            }
-                          },
-                          "required": ["type", "value"],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "type": {
-                              "type": "string",
-                              "const": "string"
-                            },
-                            "value": {
-                              "type": "string",
-                              "maxLength": 2000
-                            }
-                          },
-                          "required": ["type", "value"],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "type": {
-                              "type": "string",
-                              "const": "number"
-                            },
-                            "value": {
-                              "type": "number"
-                            }
-                          },
-                          "required": ["type", "value"],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "type": {
-                              "type": "string",
-                              "const": "json"
-                            },
-                            "value": {
-                              "$ref": "#/components/schemas/FlagList/$defs/__schema0"
-                            }
-                          },
-                          "required": ["type", "value"],
-                          "additionalProperties": false
-                        }
-                      ]
-                    },
-                    "defaultOutcome": {
-                      "oneOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "value"
-                            },
-                            "value": {
-                              "oneOf": [
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "type": {
-                                      "type": "string",
-                                      "const": "boolean"
-                                    },
-                                    "value": {
-                                      "type": "boolean"
-                                    }
-                                  },
-                                  "required": ["type", "value"],
-                                  "additionalProperties": false
-                                },
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "type": {
-                                      "type": "string",
-                                      "const": "string"
-                                    },
-                                    "value": {
-                                      "type": "string",
-                                      "maxLength": 2000
-                                    }
-                                  },
-                                  "required": ["type", "value"],
-                                  "additionalProperties": false
-                                },
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "type": {
-                                      "type": "string",
-                                      "const": "number"
-                                    },
-                                    "value": {
-                                      "type": "number"
-                                    }
-                                  },
-                                  "required": ["type", "value"],
-                                  "additionalProperties": false
-                                },
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "type": {
-                                      "type": "string",
-                                      "const": "json"
-                                    },
-                                    "value": {
-                                      "$ref": "#/components/schemas/FlagList/$defs/__schema0"
-                                    }
-                                  },
-                                  "required": ["type", "value"],
-                                  "additionalProperties": false
-                                }
-                              ]
-                            }
-                          },
-                          "required": ["kind", "value"],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "variant"
-                            },
-                            "variantId": {
-                              "type": "string",
-                              "minLength": 1,
-                              "maxLength": 100,
-                              "pattern": "^[a-z][a-z0-9_-]*$"
-                            }
-                          },
-                          "required": ["kind", "variantId"],
-                          "additionalProperties": false
-                        },
-                        {
-                          "type": "object",
-                          "properties": {
-                            "kind": {
-                              "type": "string",
-                              "const": "weighted"
-                            }
-                          },
-                          "required": ["kind"],
-                          "additionalProperties": false
-                        }
-                      ]
-                    },
-                    "variants": {
-                      "maxItems": 10,
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 100,
-                            "pattern": "^[a-z][a-z0-9_-]*$"
-                          },
-                          "name": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 120
-                          },
-                          "weightBasisPoints": {
-                            "type": "integer",
-                            "minimum": 0,
-                            "maximum": 10000
-                          },
-                          "value": {
-                            "oneOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "type": {
-                                    "type": "string",
-                                    "const": "boolean"
-                                  },
-                                  "value": {
-                                    "type": "boolean"
-                                  }
-                                },
-                                "required": ["type", "value"],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "type": {
-                                    "type": "string",
-                                    "const": "string"
-                                  },
-                                  "value": {
-                                    "type": "string",
-                                    "maxLength": 2000
-                                  }
-                                },
-                                "required": ["type", "value"],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "type": {
-                                    "type": "string",
-                                    "const": "number"
-                                  },
-                                  "value": {
-                                    "type": "number"
-                                  }
-                                },
-                                "required": ["type", "value"],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "type": {
-                                    "type": "string",
-                                    "const": "json"
-                                  },
-                                  "value": {
-                                    "$ref": "#/components/schemas/FlagList/$defs/__schema0"
-                                  }
-                                },
-                                "required": ["type", "value"],
-                                "additionalProperties": false
-                              }
-                            ]
-                          }
-                        },
-                        "required": ["id", "name", "weightBasisPoints", "value"],
-                        "additionalProperties": false
-                      }
-                    },
-                    "rules": {
-                      "maxItems": 20,
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid",
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                          },
-                          "name": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 120
-                          },
-                          "conditions": {
-                            "maxItems": 10,
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "attribute": {
-                                  "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 64
-                                },
-                                "operator": {
-                                  "type": "string",
-                                  "enum": [
-                                    "eq",
-                                    "not_eq",
-                                    "in",
-                                    "not_in",
-                                    "gt",
-                                    "gte",
-                                    "lt",
-                                    "lte",
-                                    "present",
-                                    "absent"
-                                  ]
-                                },
-                                "values": {
-                                  "maxItems": 20,
-                                  "type": "array",
-                                  "items": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string",
-                                        "maxLength": 500
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
-                                        "type": "boolean"
-                                      }
-                                    ]
-                                  }
-                                }
-                              },
-                              "required": ["attribute", "operator", "values"],
-                              "additionalProperties": false
-                            }
-                          },
-                          "segmentIds": {
-                            "maxItems": 5,
-                            "type": "array",
-                            "items": {
-                              "type": "string",
-                              "format": "uuid",
-                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                            }
-                          },
-                          "rolloutBasisPoints": {
-                            "type": "integer",
-                            "minimum": 0,
-                            "maximum": 10000
-                          },
-                          "outcome": {
-                            "oneOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "value"
-                                  },
-                                  "value": {
-                                    "oneOf": [
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "type": {
-                                            "type": "string",
-                                            "const": "boolean"
-                                          },
-                                          "value": {
-                                            "type": "boolean"
-                                          }
-                                        },
-                                        "required": ["type", "value"],
-                                        "additionalProperties": false
-                                      },
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "type": {
-                                            "type": "string",
-                                            "const": "string"
-                                          },
-                                          "value": {
-                                            "type": "string",
-                                            "maxLength": 2000
-                                          }
-                                        },
-                                        "required": ["type", "value"],
-                                        "additionalProperties": false
-                                      },
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "type": {
-                                            "type": "string",
-                                            "const": "number"
-                                          },
-                                          "value": {
-                                            "type": "number"
-                                          }
-                                        },
-                                        "required": ["type", "value"],
-                                        "additionalProperties": false
-                                      },
-                                      {
-                                        "type": "object",
-                                        "properties": {
-                                          "type": {
-                                            "type": "string",
-                                            "const": "json"
-                                          },
-                                          "value": {
-                                            "$ref": "#/components/schemas/FlagList/$defs/__schema0"
-                                          }
-                                        },
-                                        "required": ["type", "value"],
-                                        "additionalProperties": false
-                                      }
-                                    ]
-                                  }
-                                },
-                                "required": ["kind", "value"],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "variant"
-                                  },
-                                  "variantId": {
-                                    "type": "string",
-                                    "minLength": 1,
-                                    "maxLength": 100,
-                                    "pattern": "^[a-z][a-z0-9_-]*$"
-                                  }
-                                },
-                                "required": ["kind", "variantId"],
-                                "additionalProperties": false
-                              },
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "kind": {
-                                    "type": "string",
-                                    "const": "weighted"
-                                  }
-                                },
-                                "required": ["kind"],
-                                "additionalProperties": false
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "id",
-                          "name",
-                          "conditions",
-                          "segmentIds",
-                          "rolloutBasisPoints",
-                          "outcome"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "catalogRevision": {
-                      "type": "integer",
-                      "exclusiveMinimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "contextDefinitions": {
-                      "maxItems": 32,
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "key": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 64,
-                            "pattern": "^[a-zA-Z][a-zA-Z0-9_]*$"
-                          },
-                          "type": {
-                            "type": "string",
-                            "enum": ["string", "number", "boolean"]
-                          },
-                          "description": {
-                            "type": "string",
-                            "maxLength": 300
-                          }
-                        },
-                        "required": ["key", "type", "description"],
-                        "additionalProperties": false
-                      }
-                    },
-                    "segments": {
-                      "maxItems": 50,
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid",
-                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                          },
-                          "key": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 100,
-                            "pattern": "^[a-z][a-z0-9_-]*$"
-                          },
-                          "name": {
-                            "type": "string",
-                            "minLength": 1,
-                            "maxLength": 120
-                          },
-                          "conditions": {
-                            "minItems": 1,
-                            "maxItems": 10,
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "attribute": {
-                                  "type": "string",
-                                  "minLength": 1,
-                                  "maxLength": 64
-                                },
-                                "operator": {
-                                  "type": "string",
-                                  "enum": [
-                                    "eq",
-                                    "not_eq",
-                                    "in",
-                                    "not_in",
-                                    "gt",
-                                    "gte",
-                                    "lt",
-                                    "lte",
-                                    "present",
-                                    "absent"
-                                  ]
-                                },
-                                "values": {
-                                  "maxItems": 20,
-                                  "type": "array",
-                                  "items": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string",
-                                        "maxLength": 500
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
-                                        "type": "boolean"
-                                      }
-                                    ]
-                                  }
-                                }
-                              },
-                              "required": ["attribute", "operator", "values"],
-                              "additionalProperties": false
-                            }
-                          },
-                          "revision": {
-                            "type": "integer",
-                            "exclusiveMinimum": 0,
-                            "maximum": 9007199254740991
-                          }
-                        },
-                        "required": ["id", "key", "name", "conditions", "revision"],
-                        "additionalProperties": false
-                      }
-                    }
-                  },
-                  "required": [
-                    "allocationNamespace",
-                    "hashVersion",
-                    "offValue",
-                    "defaultOutcome",
-                    "variants",
-                    "rules",
-                    "catalogRevision",
-                    "contextDefinitions",
-                    "segments"
-                  ],
-                  "additionalProperties": false
-                },
                 "updatedAt": {
                   "type": "string",
                   "format": "date-time",
                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "environments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "environmentId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "enabled": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": ["environmentId", "enabled"],
+                    "additionalProperties": false
+                  }
                 }
               },
               "required": [
                 "id",
                 "projectId",
-                "environmentId",
                 "key",
                 "name",
                 "description",
                 "owner",
                 "archived",
                 "revision",
-                "enabled",
-                "configuration",
-                "updatedAt"
+                "updatedAt",
+                "environments"
               ],
               "additionalProperties": false
             }
@@ -881,40 +303,7 @@
           }
         },
         "required": ["items", "nextCursor"],
-        "additionalProperties": false,
-        "$defs": {
-          "__schema0": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "number"
-              },
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/FlagList/$defs/__schema0"
-                }
-              },
-              {
-                "type": "object",
-                "propertyNames": {
-                  "type": "string"
-                },
-                "additionalProperties": {
-                  "$ref": "#/components/schemas/FlagList/$defs/__schema0"
-                }
-              }
-            ]
-          }
-        }
+        "additionalProperties": false
       },
       "CreateFlag": {
         "type": "object",
@@ -6372,7 +5761,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Auxiliary24"
+                  "$ref": "#/components/schemas/Auxiliary25"
                 }
               }
             }
@@ -6470,7 +5859,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Auxiliary25"
+                  "$ref": "#/components/schemas/Auxiliary26"
                 }
               }
             }
@@ -6568,7 +5957,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Auxiliary26"
+                  "$ref": "#/components/schemas/Auxiliary27"
                 }
               }
             }
@@ -6663,7 +6052,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Auxiliary27"
+                "$ref": "#/components/schemas/Auxiliary28"
               }
             }
           }
@@ -7055,9 +6444,9 @@
         }
       }
     },
-    "/api/v1/projects/{projectId}/environments/{environmentId}/flags": {
+    "/api/v1/projects/{projectId}/flags": {
       "get": {
-        "summary": "List scoped flag configuration, ordered by immutable key",
+        "summary": "List shared project flags with environment gates, ordered by immutable key; operator viewer or above",
         "security": [
           {
             "localSession": []
@@ -7066,15 +6455,6 @@
         "parameters": [
           {
             "name": "projectId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "environmentId",
             "in": "path",
             "required": true,
             "schema": {
@@ -7214,7 +6594,9 @@
             }
           }
         }
-      },
+      }
+    },
+    "/api/v1/projects/{projectId}/environments/{environmentId}/flags": {
       "post": {
         "summary": "Create a project flag disabled in all environments; editor or administrator",
         "security": [

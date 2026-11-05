@@ -40,6 +40,7 @@ const runtimeUrl = process.env.FLIGHTDECK_TEST_DATABASE_URL;
 const migrationUrl = process.env.FLIGHTDECK_TEST_MIGRATION_DATABASE_URL;
 const token = `fd_${'1'.repeat(64)}`;
 const base = '/api/v1/projects/:projectId/environments/:environmentId';
+const inventory = 'GET /api/v1/projects/:projectId/flags';
 const administrator = localOperators[0]!;
 const editor = localOperators[1]!;
 const viewer = localOperators[2]!;
@@ -125,9 +126,10 @@ describe('PostgreSQL routes and storage', () => {
           : undefined),
     });
   }
-  async function create(key = 'sample') {
+  async function create(key = 'sample', env = environmentId) {
     return flagSchema.parse(
       await invoke(`POST ${base}/flags`, {
+        params: { environmentId: env },
         body: {
           key,
           name: `Flag ${key}`,
@@ -1140,7 +1142,9 @@ describe('PostgreSQL routes and storage', () => {
       await expect(invoke(route, { principal: outsider })).rejects.toMatchObject({ status: 404 });
     }
     await expect(
-      invoke(`GET ${base}/flags`, { params: { environmentId: localEnvironments[2]!.id } })
+      invoke(`GET ${base}/flags/:flagKey`, {
+        params: { environmentId: localEnvironments[2]!.id },
+      })
     ).rejects.toMatchObject({ status: 404 });
     await expect(
       invoke(`POST ${base}/evaluate/:flagKey`, {
@@ -1160,6 +1164,7 @@ describe('PostgreSQL routes and storage', () => {
     await create();
     for (const invalid of [
       'limit=0',
+      'limit=21',
       'limit=101',
       'limit=1.5',
       'archived=unknown',
@@ -1167,13 +1172,13 @@ describe('PostgreSQL routes and storage', () => {
       'limit=1&limit=2',
       'unknown=value',
     ]) {
-      await expect(invoke(`GET ${base}/flags`, { query: invalid })).rejects.toMatchObject({
+      await expect(invoke(inventory, { query: invalid })).rejects.toMatchObject({
         status: 400,
       });
     }
-    await expect(
-      invoke(`GET ${base}/flags`, { params: { projectId: 'invalid' } })
-    ).rejects.toMatchObject({ status: 400 });
+    await expect(invoke(inventory, { params: { projectId: 'invalid' } })).rejects.toMatchObject({
+      status: 400,
+    });
     await expect(
       invoke(`GET ${base}/flags/:flagKey`, { params: { flagKey: 'invalid/key' } })
     ).rejects.toMatchObject({ status: 400 });
@@ -1195,38 +1200,122 @@ describe('PostgreSQL routes and storage', () => {
     ).rejects.toMatchObject({ status: 400 });
   });
 
+  it('lists one shared identity with exact-project gate summaries independently of the creation environment', async () => {
+    expect(await invoke(inventory, { principal: viewer })).toEqual({
+      items: [],
+      nextCursor: null,
+    });
+    const created = await create('sample', productionId);
+    const development = flagSchema.parse(await invoke(`GET ${base}/flags/:flagKey`));
+    expect(development.id).toBe(created.id);
+    const changed = await update({ expectedRevision: 1, enabled: true });
+    await owner.query(
+      `UPDATE flightdeck.environments SET key = CASE WHEN id = $1 THEN 'z-development'
+        ELSE 'a-production' END WHERE project_id = $2`,
+      [environmentId, projectId]
+    );
+    const expected = {
+      items: [
+        {
+          id: created.id,
+          projectId,
+          key: created.key,
+          name: created.name,
+          description: created.description,
+          owner: created.owner,
+          archived: false,
+          revision: changed.revision,
+          updatedAt: changed.updatedAt,
+          environments: [
+            { environmentId: productionId, enabled: false },
+            { environmentId, enabled: true },
+          ],
+        },
+      ],
+      nextCursor: null,
+    };
+    expect(await invoke(inventory, { principal: viewer })).toEqual(expected);
+    expect(
+      await invoke(inventory, { principal: viewer, params: { environmentId: productionId } })
+    ).toEqual(expected);
+    const sandboxProjectId = localProjects[1]!.id;
+    const sandboxEnvironmentId = localEnvironments[2]!.id;
+    const sandbox = flagSchema.parse(
+      await invoke(`POST ${base}/flags`, {
+        params: { projectId: sandboxProjectId, environmentId: sandboxEnvironmentId },
+        body: {
+          key: 'sample',
+          name: 'Other project flag',
+          description: '',
+          owner: 'Sandbox',
+        },
+      })
+    );
+    expect(sandbox.id).not.toBe(created.id);
+    const sandboxInventory = flagsSchema.parse(
+      await invoke(inventory, { params: { projectId: sandboxProjectId } })
+    );
+    expect(sandboxInventory.items).toHaveLength(1);
+    expect(sandboxInventory.items[0]).toMatchObject({
+      id: sandbox.id,
+      projectId: sandboxProjectId,
+      environments: [
+        { environmentId: sandboxEnvironmentId, enabled: false },
+        { environmentId: localEnvironments[3]!.id, enabled: false },
+      ],
+    });
+    expect(await invoke(inventory)).toEqual(expected);
+    await owner.query(
+      'DELETE FROM flightdeck.configurations WHERE flag_id = $1 AND environment_id = $2',
+      [created.id, productionId]
+    );
+    expect(flagsSchema.parse(await invoke(inventory)).items[0]!.environments).toEqual([
+      { environmentId, enabled: true },
+    ]);
+  });
+
   it('paginates/searches inventory and project-wide audit by stable cursors', async () => {
     await create('alpha');
     await create('sample');
     await create('zulu');
-    const first = flagsSchema.parse(await invoke(`GET ${base}/flags`, { query: 'limit=2' }));
+    const first = flagsSchema.parse(await invoke(inventory, { query: 'limit=2' }));
     expect(first.items.map((entry) => entry.key)).toEqual(['alpha', 'sample']);
     expect(first.nextCursor).toBe('sample');
     const second = flagsSchema.parse(
-      await invoke(`GET ${base}/flags`, { query: `limit=2&after=${first.nextCursor}` })
+      await invoke(inventory, { query: `limit=2&after=${first.nextCursor}` })
     );
     expect(second.items.map((entry) => entry.key)).toEqual(['zulu']);
     expect(second.nextCursor).toBeNull();
     expect(
       flagsSchema
-        .parse(await invoke(`GET ${base}/flags`, { query: 'search=ALPHA' }))
+        .parse(await invoke(inventory, { query: 'search=ALPHA' }))
         .items.map((entry) => entry.key)
     ).toEqual(['alpha']);
     expect(
-      flagsSchema.parse(await invoke(`GET ${base}/flags`, { query: "search=' OR true --" })).items
+      flagsSchema.parse(await invoke(inventory, { query: "search=' OR true --" })).items
     ).toEqual([]);
     await update({ expectedRevision: 1, enabled: true }, productionId);
     await update({ expectedRevision: 2, archived: true });
-    expect(
-      flagsSchema.parse(await invoke(`GET ${base}/flags`)).items.map((entry) => entry.key)
-    ).toEqual(['alpha', 'zulu']);
+    expect(flagsSchema.parse(await invoke(inventory)).items.map((entry) => entry.key)).toEqual([
+      'alpha',
+      'zulu',
+    ]);
     expect(
       flagsSchema
-        .parse(await invoke(`GET ${base}/flags`, { query: 'archived=archived' }))
+        .parse(await invoke(inventory, { query: 'archived=archived' }))
         .items.map((entry) => entry.key)
     ).toEqual(['sample']);
     expect(
-      flagsSchema.parse(await invoke(`GET ${base}/flags`, { query: 'archived=all' })).items
+      flagsSchema.parse(await invoke(inventory, { query: 'archived=archived' })).items[0]
+    ).toMatchObject({
+      archived: true,
+      environments: [
+        { environmentId, enabled: false },
+        { environmentId: productionId, enabled: true },
+      ],
+    });
+    expect(
+      flagsSchema.parse(await invoke(inventory, { query: 'archived=all' })).items
     ).toHaveLength(3);
     const page = activitySchema.parse(
       await invoke(`GET ${base}/flags/:flagKey/activity`, { query: 'limit=2' })

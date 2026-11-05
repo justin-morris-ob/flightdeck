@@ -21,6 +21,7 @@ import {
   snapshotSchema,
   updateFlagSchema,
   type Flag,
+  type FlagSummary,
   type OperatorPrincipal,
   type RouteContext,
   type Routes,
@@ -64,6 +65,9 @@ interface FlagRow {
   enabled: boolean;
   configuration: Configuration;
   updated_at: Date;
+}
+interface FlagSummaryRow extends Omit<FlagRow, 'environment_id' | 'enabled' | 'configuration'> {
+  environments: FlagSummary['environments'];
 }
 interface CredentialRow {
   id: string;
@@ -296,31 +300,60 @@ export function createRoutes(pool: Pool): Routes {
       }
       return projectsSchema.parse({ items: [...projects.values()] });
     },
-    [`GET ${base}/flags`]: async (context) => {
-      operator(context);
-      const { projectId, environmentId } = await scope(pool, context);
+    'GET /api/v1/projects/:projectId/flags': async (context) => {
+      const actor = operator(context);
+      const projectId = z.uuid().parse(context.params.projectId);
       const input = query(context, inventoryQuery);
-      const result = await pool.query<FlagRow>(
-        `SELECT ${flagColumns}
-        FROM flightdeck.flags f JOIN flightdeck.configurations c ON c.flag_id = f.id
-        WHERE f.project_id = $1 AND c.environment_id = $2
-        AND ($3::text IS NULL OR f.key > $3)
-        AND ($4 = 'all' OR f.archived = ($4 = 'archived'))
-        AND ($5 = '' OR strpos(lower(f.key || ' ' || f.name || ' ' || f.description || ' ' || f.owner), lower($5)) > 0)
-        ORDER BY f.key LIMIT $6`,
+      const result = await pool.query<FlagSummaryRow>(
+        `SELECT f.id, f.project_id, f.key, f.name, f.description, f.owner, f.archived,
+          f.revision, f.updated_at, gates.environments
+        FROM flightdeck.projects p
+        LEFT JOIN LATERAL (
+          SELECT f.id, f.project_id, f.key, f.name, f.description, f.owner, f.archived,
+            f.revision, f.updated_at
+          FROM flightdeck.flags f
+          WHERE f.project_id = p.id
+          AND ($3::text IS NULL OR f.key > $3)
+          AND ($4 = 'all' OR f.archived = ($4 = 'archived'))
+          AND ($5 = '' OR strpos(lower(f.key || ' ' || f.name || ' ' || f.description || ' ' || f.owner), lower($5)) > 0)
+          ORDER BY f.key LIMIT $6
+        ) f ON true
+        LEFT JOIN LATERAL (
+          SELECT COALESCE(jsonb_agg(jsonb_build_object(
+            'environmentId', e.id, 'enabled', c.enabled
+          ) ORDER BY e.key, e.id), '[]'::jsonb) AS environments
+          FROM flightdeck.configurations c
+          JOIN flightdeck.environments e ON e.id = c.environment_id AND e.project_id = p.id
+          WHERE c.flag_id = f.id AND c.project_id = p.id
+        ) gates ON true
+        WHERE p.id = $1 AND p.organization_id = $2
+        ORDER BY f.key`,
         [
           projectId,
-          environmentId,
+          actor.organizationId,
           input.after ?? null,
           input.archived,
           input.search,
           input.limit + 1,
         ]
       );
-      const items = result.rows.slice(0, input.limit).map(flag);
+      if (!result.rowCount) throw new HttpError(404, 'Project not found');
+      const rows = result.rows.filter((row) => row.id !== null);
+      const items = rows.slice(0, input.limit).map((row) => ({
+        id: row.id,
+        projectId: row.project_id,
+        key: row.key,
+        name: row.name,
+        description: row.description,
+        owner: row.owner,
+        archived: row.archived,
+        revision: row.revision,
+        updatedAt: row.updated_at.toISOString(),
+        environments: row.environments,
+      }));
       return flagsSchema.parse({
         items,
-        nextCursor: result.rows.length > input.limit ? items.at(-1)!.key : null,
+        nextCursor: rows.length > input.limit ? items.at(-1)!.key : null,
       });
     },
     [`POST ${base}/flags`]: async (context) => {

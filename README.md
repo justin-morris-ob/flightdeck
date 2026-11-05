@@ -21,7 +21,11 @@ pnpm start
 
 Open **http://localhost:4721**. Select **Alex Morgan** for administrator access, **Ellis Chen** for editor access or **Vera Singh** for read-only access. All are synthetic local identities. The isolated **Jordan Rivera** identity demonstrates a different organization's scope.
 
-Create a flag in Flightdeck / Development, enable it, and use Configuration to author typed values and targeting. Use Project targeting catalog for typed attributes and reusable segments. Preview with a tenant, stable subject and attributes, then review and publish. Catalog edits do not change live decisions until explicitly republished. Flag metadata and archive state are project-wide; configuration and overrides are environment-specific. Writes require the expected global revision.
+Choose a project under **Projects**. Its Feature flags page is one shared flag inventory with a status column for every environment—not a different flag collection per environment. Click an environment's status to review that configuration; **Configuration environment** determines which configuration opens when you click a flag's name. Creating a flag initializes it disabled everywhere. Enable/configure it independently per environment; metadata and archival apply across the project.
+
+The default **Targeting** tab keeps Boolean flags simple: choose **Everyone** or **Selected audiences**, select existing Flightdeck segments, then review and publish. Any selected segment can qualify; an empty selection matches nobody. BC email, organization and group pickers are visibly unavailable until a real directory connection is built—there is no copied or synthetic BC directory behind them.
+
+Working typed values, ordered rules, rollouts, variants and the playground remain under **Advanced controls**, collapsed by default. Complex existing configurations are preserved and are never automatically converted to the simple editor. Individual overrides remain in **Exceptions (advanced)**. Project targeting catalog owns reusable attributes/segments; publication still explicitly pins their definitions. The Flightdeck and Sandbox names are demo projects, not environments or separate deployments.
 
 ### Separate backend consumer
 

@@ -87,6 +87,32 @@ Choose Mira (Alpha pilot), Kai (standard member) or Rowan (multiple memberships)
 
 The other capabilities exercise string, numeric and object OpenFeature detail APIs. **Unavailable** and **Malformed response** deliberately call a local simulated transport and visibly identify the caller default. **Denied tenant** and **Invalid credential** call the real Flightdeck service and display an authorization failure, not false/fallback. Change the managed demo flag in Flightdeck and re-evaluate to see its next decision; there is no cache or polling. Selecting another person/scenario clears the old decision immediately.
 
+### Record Flightdeck-owned demos
+
+The committed `demo/recordings/` scenarios and presentation harness run entirely from Flightdeck. They do not import BC source, require a BC checkout or use BC browser sessions. The real BC integration walkthrough remains a separate BC-owned scenario.
+
+After the frozen install and `pnpm db:setup`, install Chromium once and provide `ffmpeg` on PATH (macOS: `brew install ffmpeg`):
+
+```sh
+pnpm demo:install
+pnpm demo:record
+```
+
+`demo:record` rebuilds Flightdeck and records two assertion-backed browser scenarios: live membership targeting/typed configuration, and explicitly simulated fallback versus real denied-tenant failure/recovery. Captions, chapter cards and the pointer are presentation-only overlays; they do not replace application results. The scenarios read the synthetic lab and never publish flag changes.
+
+Playwright starts Flightdeck on `4721` and seeds/starts the lab on `4722` when those services are absent, or reuses running local services. Setup checks their health identities and local-development mode before running the scenarios. PostgreSQL must already be initialized. Servers started by Playwright stop afterward; reused servers and the database remain running. Recording refuses `NODE_ENV=production`.
+
+The scenarios expect the initial seed decisions. Setup deliberately preserves existing managed configurations and credentials; it does not overwrite edited flags to force a passing recording. If an assertion fails after editing demo targeting, inspect and deliberately restore the intended synthetic configuration in Flightdeck. Do not delete private configuration to rotate a credential.
+
+Successful MP4s are written to:
+
+- `.local/demos/should-consume-live-targeting-and-typed-configuration.mp4`
+- `.local/demos/should-distinguish-simulated-fallback-from-live-tenant-denial-and-recovery.mp4`
+
+Raw WebM recordings and failure screenshots remain under `.local/demos/results/`. A selected scenario's previous MP4 is removed when the run begins; failed/skipped scenarios do not export a successful clip. MP4 conversion failure makes the command fail and removes incomplete exports. Videos have burned-in captions, not an audio voiceover. All generated artifacts and private credentials remain ignored.
+
+Pass Playwright options through the command, for example `pnpm demo:record --headed` or `pnpm demo:record --grep 'live targeting'`. To add another reusable demo, commit a `*.demo.ts` scenario under `demo/recordings/`, import its presentation fixture from `harness.ts`, keep selectors in a page model and assert actual user-visible outcomes before presenting them as proof. Use distinct scenario titles so export filenames cannot collide. Keep pure evaluator/HTTP regressions in the existing lower-level suites rather than substituting narrated demos for those tests.
+
 ### OpenFeature backend use
 
 The independent `packages/openfeature-provider` package builds distributable JS/types and has only public package dependencies. Its own workspace boundary and lockfile keep Git-subdirectory preparation from installing Flightdeck's private Atlas dependencies. Consumers pin the exact Git commit/subdirectory and explicitly approve only that source's preparation script under their package-manager policy. Its peer is `@openfeature/server-sdk` `^1.23.0` (SDK core peer `^1.12.0`). Use the typed detail API, then enforce the application's non-fallback policy:

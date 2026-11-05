@@ -7,6 +7,7 @@
 - Add a reusable loopback consumer lab with server-owned synthetic personas, real persisted flag decisions, typed configuration, explicit transport-failure scenarios and private scoped credential provisioning.
 - Align the HTTP envelope allowance with separately bounded preview context/configuration and cover the maximum context through actual HTTP/provider/SDK evaluation and preview.
 - Document the separate opt-in BC homepage-filter mapping, trusted context and deferred directory boundary without claiming production identity or deployment.
+- Add a Flightdeck-owned Playwright demo harness with caption/chapter overlays, a visible cursor, real consumer scenarios, automatic local-service startup/reuse and successful-scenario MP4 export; keep recordings and private configuration ignored.
 
 - Simplify Boolean flag details to Everyone or selected Flightdeck segments, with empty selections matching nobody and OR across segments through the existing evaluator.
 - Preserve typed configuration, rules, rollouts, variants, diagnostics and draft state behind working advanced disclosures; refuse lossy conversion of existing advanced configurations.

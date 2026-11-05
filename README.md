@@ -48,6 +48,17 @@ pnpm demo
 
 Open **http://localhost:4722**. The lab uses an actual backend OpenFeature provider and persisted **Sandbox / Development** flags. Switch synthetic people, exercise Boolean/string/number/object decisions, and compare real decisions with explicitly simulated recovery defaults or real denied-tenant/invalid-credential failures. The backend owns the context and secret; browser requests cannot supply arbitrary memberships. Setup preserves existing flags/configurations and retains its dedicated credential privately. See the [consumer lab guide](docs/local-development.md#reusable-consumer-contract-lab).
 
+### Record captioned demos
+
+With the database initialized and `ffmpeg` on PATH:
+
+```sh
+pnpm demo:install
+pnpm demo:record
+```
+
+Flightdeck's committed Playwright harness records real consumer targeting, typed values, fallback and authorization scenarios with captions and a visible cursor. It starts/reuses the local Flightdeck/lab services without a BC checkout. Passing recordings export to ignored `.local/demos/`; failed assertions or MP4 export errors fail the command. See the [recording workflow](docs/local-development.md#record-flightdeck-owned-demos) for setup, artifacts and adding scenarios.
+
 ### Load inside Atlas
 
 Keep Flightdeck running. Use a separate, installed and built compatible Atlas checkout:

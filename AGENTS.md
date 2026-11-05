@@ -33,4 +33,6 @@ Stage 2 targeting and the Stage 3 consumer lab are real local applications. Run 
 
 When introducing implementation, add real build, lint, typecheck and relevant test commands in the same stage. Verify behavior by running the application and exercising the changed path. Use deterministic behavior tests for evaluation boundaries, authorization, persistence and concurrency. Do not test source text or mock forwarding as a substitute for behavior.
 
+Reusable Flightdeck recording scenarios belong in committed `demo/recordings/*.demo.ts`, not BC's PR-local demo directory. Use the owned presentation fixture and page models, assert real browser outcomes, and run `pnpm demo:record` after `pnpm demo:install` with the local database initialized and ffmpeg available. Keep generated artifacts under ignored `.local/demos/` and do not import BC harness source.
+
 Update documentation and the changelog with permanent changes. Report only checks actually run and distinguish local proofs from production guarantees. Never replace an unresolved production integration with a permissive fallback.

@@ -294,6 +294,25 @@ describe('BC directory HTTP boundary', () => {
     }
   });
 
+  it.each(['ops%planner@example.com', `${'a'.repeat(243)}@example.com`])(
+    'preserves BC-supported email %s through search and resolve',
+    async (email) => {
+      const item = { ...person, email };
+      const search = { ...searchResult, items: [item] };
+      const resolved = { ...resolveResult, items: [item] };
+      const fixture = await upstream((request, res) => {
+        if (request.url === oauthPath) return send(res, 200, token);
+        if (request.url.startsWith(searchPath)) return send(res, 200, search);
+        return send(res, 200, resolved);
+      });
+      const client = new DirectoryClient([connection(fixture.baseUrl)]);
+      expect(await client.search(scope, { kind: 'people', q: 'planner' })).toEqual(search);
+      expect(await client.resolve(scope, { kind: 'people', ids: [personId, missingId] })).toEqual(
+        resolved
+      );
+    }
+  );
+
   it('keeps scope connections isolated and never falls back to another connection', async () => {
     const fixture = await upstream();
     const other = { ...scope, environmentId: missingId };

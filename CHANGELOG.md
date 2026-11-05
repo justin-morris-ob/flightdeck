@@ -16,6 +16,7 @@
 - Author direct people/organization/group audiences as ordinary tenant/source-guarded branches OR with segments, and add an AND-predicate segment helper that preserves existing advanced conditions and saves only with the catalog draft.
 - Separate explicit BC targeting-field catalog preparation from flag publication; preserve incompatible existing types, advanced configurations and stale selected IDs without membership replication or evaluation-time directory calls.
 - Add an opt-in, Flightdeck-owned connected BC recording with a same-account false-to-true control, real authoring-transport interruption, directory-independent BC evaluation and guarded configuration restoration. Keep private credentials/recordings ignored and production onboarding separate.
+- Match BC's HTML5 email validation and 255-character persisted-address bound in directory responses, preserving valid addresses through search and resolution.
 
 - Clarify shared project flag ownership: show one inventory row with per-environment gates, explicit Projects navigation and environment-specific detail links. Preserve inventory search/page when switching configuration environments.
 - Replace environment GET inventory with bounded project summary reads; retain scoped creation/detail/mutation contracts and verify shared identity, project isolation, archived gates and missing configuration behavior.

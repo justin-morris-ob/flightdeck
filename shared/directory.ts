@@ -33,7 +33,7 @@ export type DirectoryAudience = z.infer<typeof directoryAudienceSchema>;
 export const directoryItemSchema = z.strictObject({
   id: directoryIdSchema,
   label: z.string().min(1).max(200),
-  email: z.email().max(254).nullable(),
+  email: z.email({ pattern: z.regexes.html5Email }).max(255).nullable(),
 });
 export type DirectoryItem = z.infer<typeof directoryItemSchema>;
 export const directoryStatusSchema = z.discriminatedUnion('status', [

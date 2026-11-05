@@ -1,10 +1,12 @@
 import type { Evaluation } from '../shared/contracts.ts';
+import type { EvaluationContext, TypedValue } from '../shared/targeting.ts';
 
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { evaluationSchema, flagKeySchema, scopePath } from '../shared/contracts.ts';
 import { localEnvironments, localProjects } from '../shared/fixtures.ts';
+import { contextSchema, valueSchema } from '../shared/targeting.ts';
 
 export interface EvaluateFlagOptions {
   baseUrl: string;
@@ -12,7 +14,8 @@ export interface EvaluateFlagOptions {
   projectId: string;
   environmentId: string;
   key: string;
-  fallback: boolean;
+  fallback: TypedValue;
+  context: EvaluationContext;
   timeoutMs?: number;
 }
 
@@ -20,7 +23,7 @@ export type EvaluationResult =
   | (Evaluation & { source: 'decision' })
   | {
       source: 'fallback';
-      value: boolean;
+      value: TypedValue;
       reason: 'not-found' | 'unavailable' | 'invalid-response';
       revision: null;
     };
@@ -36,11 +39,12 @@ export class EvaluationAuthorizationError extends Error {
 }
 
 export async function evaluateFlag(options: EvaluateFlagOptions): Promise<EvaluationResult> {
-  const { baseUrl, token, projectId, environmentId, fallback } = options;
+  const { baseUrl, token, projectId, environmentId } = options;
+  const fallback = valueSchema.parse(options.fallback);
+  const context = contextSchema.parse(options.context);
   const key = flagKeySchema.parse(options.key);
   const timeoutMs = options.timeoutMs ?? 3000;
   if (!token) throw new Error('A backend evaluation credential is required.');
-  if (typeof fallback !== 'boolean') throw new Error('Declare a boolean fallback value.');
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 4_294_967_295) {
     throw new Error('timeoutMs must be a positive finite integer no greater than 4294967295.');
   }
@@ -55,7 +59,13 @@ export async function evaluateFlag(options: EvaluateFlagOptions): Promise<Evalua
   let response: Response;
   try {
     response = await fetch(endpoint, {
-      headers: { authorization: `Bearer ${token}`, accept: 'application/json' },
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${token}`,
+        accept: 'application/json',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ context }),
       redirect: 'error',
       signal,
     });
@@ -94,7 +104,8 @@ export async function evaluateFlag(options: EvaluateFlagOptions): Promise<Evalua
     !parsed.success ||
     parsed.data.key !== key ||
     parsed.data.projectId !== projectId ||
-    parsed.data.environmentId !== environmentId
+    parsed.data.environmentId !== environmentId ||
+    parsed.data.value.type !== fallback.type
   ) {
     return { source: 'fallback', value: fallback, reason: 'invalid-response', revision: null };
   }
@@ -102,12 +113,14 @@ export async function evaluateFlag(options: EvaluateFlagOptions): Promise<Evalua
 }
 
 async function main(): Promise<void> {
-  const [key, fallbackArgument = 'false', ...extra] = process.argv.slice(2);
-  if (!key || !['true', 'false'].includes(fallbackArgument) || extra.length) {
-    throw new Error(
-      'Usage: node examples/evaluate.ts <key> [true|false] (default fallback: false)'
-    );
+  const [key, fallbackArgument, contextArgument, ...extra] = process.argv.slice(2);
+  if (!key || !fallbackArgument || extra.length) {
+    throw new Error('Usage: node examples/evaluate.ts <key> <tagged-fallback-json> [context-json]');
   }
+  const fallback = valueSchema.parse(JSON.parse(fallbackArgument));
+  const context = contextSchema.parse(
+    contextArgument ? JSON.parse(contextArgument) : { tenantId: 'local-tenant', attributes: {} }
+  );
   const token = process.env.FLIGHTDECK_EVALUATION_TOKEN;
   if (!token) throw new Error('Set FLIGHTDECK_EVALUATION_TOKEN in the backend environment.');
   const result = await evaluateFlag({
@@ -116,7 +129,8 @@ async function main(): Promise<void> {
     projectId: localProjects[0].id,
     environmentId: localEnvironments[0].id,
     key,
-    fallback: fallbackArgument === 'true',
+    fallback,
+    context,
   });
   console.log(JSON.stringify(result, null, 2));
 }

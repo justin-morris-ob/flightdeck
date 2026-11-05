@@ -29,7 +29,7 @@ Use Oxfmt, not Prettier. `oxfmt.config.ts` snapshots the formatting rules from B
 
 ## Verification and documentation
 
-Stage 1 is a real local application. Run `pnpm check` for lint, frontend/server typechecks, API-contract consistency, both frontend builds and formatting. Run `pnpm db:setup` then `pnpm test` for real PostgreSQL behavior tests and local-session tests. Follow [local development](docs/local-development.md) and the [feature requirements](docs/conformance/feature-flags/README.md); do not add placeholder validation scripts.
+Stage 2 is a real local application. Run `pnpm check` for lint, frontend/server typechecks, API-contract consistency, both frontend builds and formatting. Run `pnpm db:setup` then `pnpm test` for real PostgreSQL/API behavior, deterministic evaluation vectors and consumer/session boundaries. Follow [local development](docs/local-development.md), [evaluation semantics](docs/evaluation-spec.md) and the [feature requirements](docs/conformance/feature-flags/README.md); do not add placeholder validation scripts.
 
 When introducing implementation, add real build, lint, typecheck and relevant test commands in the same stage. Verify behavior by running the application and exercising the changed path. Use deterministic behavior tests for evaluation boundaries, authorization, persistence and concurrency. Do not test source text or mock forwarding as a substitute for behavior.
 

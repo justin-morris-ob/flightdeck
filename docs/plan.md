@@ -6,7 +6,7 @@ Build an independently owned Enablements and Experiments application: usable on 
 
 Work one stage at a time. Each stage ends with an executable demonstration, observed validation results, limitations and the proposed next stage. A stage is not complete because its components compile or a mocked screen renders. Do not expand into the next stage before presenting the checkpoint.
 
-Stages 0 and 1 are complete for explicitly local development; [the verification record](stage-one-verification.md) states the observed evidence and limits. Stages 2–6 remain planned and unimplemented. Their checklists are acceptance criteria, not assertions that features already exist.
+Stages 0–2 are complete for explicitly local development; [Stage 1](stage-one-verification.md) and [Stage 2](stage-two-verification.md) record observed evidence and limits. Stages 3–6 remain planned and unimplemented. Their checklists are acceptance criteria, not assertions that features already exist.
 
 ## Stage map
 
@@ -69,15 +69,15 @@ Implement one evaluation model, not an Unleash/Flagsmith hybrid with ambiguous p
 - Environment-scoped subject overrides with owner, reason and expiry. Show their priority; environment disable must dominate them.
 - Deterministic percentage rollout and weighted variants using stable logical IDs, immutable namespace and a versioned hash specification. Use integer basis points with an explicit total.
 - Explain-decision playground using the same evaluator as the API. Summarize “who → what fraction → what outcome,” including missing-data reasons and change/rebucketing previews.
-- A tenant/account enablement workflow using verified subject context, not a second flag engine or an entitlement bypass.
+- A tenant/account enablement workflow constrained by explicit service-credential tenant grants, not a second flag engine or an entitlement bypass. Local context is asserted by a trusted backend; authoritative BC user/tenant mapping is a Stage 3 gate.
 
 Acceptance:
 
-- [ ] Permanent language-neutral evaluation cases cover precedence, missing/wrong-type attributes, negative operators, override expiry, disabled flags and unknown/archived keys.
-- [ ] Fixed subjects receive stable outcomes across requests/restarts; raising a rollout threshold preserves existing eligibility; display-name changes do not rebucket.
-- [ ] Validate weights and payloads before publication; adding/removing a variant previews reassignment rather than silently redistributing an active experiment.
-- [ ] UI playground and consumer API explain the same value, variant, matched rule and revision for the same context.
-- [ ] Segment and override changes cannot leak across organizations, projects or environments.
+- [x] Permanent language-neutral evaluation cases cover precedence, missing/wrong-type attributes, negative operators, override expiry, disabled flags and unknown/archived keys.
+- [x] Fixed subjects receive stable outcomes across requests/restarts; raising a rollout threshold preserves existing eligibility; display-name changes do not rebucket.
+- [x] Validate weights and payloads before publication; adding/removing a variant previews reassignment rather than silently redistributing an active experiment.
+- [x] UI playground and consumer API explain the same value, variant, matched rule and revision for the same context.
+- [x] Segment and override changes cannot leak across organizations, projects or environments.
 
 **Checkpoint:** demonstrate a tenant enablement, a staged rollout and a multivariate configuration against known contexts, including excluded/missing-context cases. Call this targeting and assignment, not experiment results.
 
@@ -86,6 +86,9 @@ Acceptance:
 Implement a versioned backend client and one agreed real BC feature path. Coordinate BC adapter code in BC's own repository; keep Flightdeck implementation here.
 
 - Agree BC-user/account-to-subject mapping and which signed/scoped caller claims establish permitted tenant context. Do not infer Atlas membership from BC identity.
+- Define trusted consumer-supplied account, current-organization and effective-membership context. Add explicit typed collection/membership semantics before enabling group targeting; specify missing-data behavior and source/tenant scoping without stringifying collections.
+- Keep optional BC directory search/resolve on the authoring path. Resolve friendly names/email to stable source-scoped IDs and author ordinary Flightdeck rules. BC remains authoritative for identities/memberships; Flightdeck owns segment definitions. Do not require replicated group-member lists for predicate segments or call BC's directory during evaluation.
+- Implement and verify an OpenFeature provider adapter with a documented targeting-key/custom-context mapping before claiming compatibility. OpenFeature does not define BC-specific attribute names or directory integration.
 - Add bounded evaluation, timeouts, predictable errors, credential rotation/revocation and per-feature caller-selected safe fallback.
 - Specify delivery latency and freshness requirements. If measured requirements need caching or last-known-good snapshots, scope caches by organization/project/environment, validate revisions and impose a maximum age. Do not build edge/local SDK infrastructure speculatively.
 - Add minimal latency/error/freshness signals without retaining sensitive contexts by default.
@@ -96,6 +99,9 @@ Acceptance:
 - [ ] Browser code never receives an evaluation/management secret or directly calls the service with one.
 - [ ] Exercise timeout/outage, cold start, expired cached state where caching exists, malformed response, revoked credential and wrong-tenant context. Observe the declared result for each case; permission failures are not ordinary false evaluations.
 - [ ] No cached response from another project/environment can satisfy a request.
+- [ ] When an optional directory connection is introduced, disconnect it and prove existing rules still evaluate consumer-supplied context; new searches show unavailable rather than fabricated results.
+- [ ] Exercise collection membership, current organization versus any-membership, missing/wrong-type context and source/tenant isolation through the same evaluator used by generic targeting.
+- [ ] Verify OpenFeature provider behavior through actual SDK calls, including context mapping, typed decisions and error/default handling; API shape alone is not compatibility evidence.
 
 **Checkpoint:** BC walkthrough plus service interruption and credential revocation. This is the first proof of BC integration, not something inferred from a command-line API sample.
 

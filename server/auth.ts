@@ -78,8 +78,9 @@ export async function authenticate(
       organization_id: string;
       project_id: string;
       environment_id: string;
+      allowed_tenant_ids: string[];
     }>(
-      `SELECT c.id, c.organization_id, c.project_id, c.environment_id
+      `SELECT c.id, c.organization_id, c.project_id, c.environment_id, c.allowed_tenant_ids
        FROM flightdeck.credentials c
        JOIN flightdeck.projects p ON p.id = c.project_id AND p.organization_id = c.organization_id
        JOIN flightdeck.environments e ON e.id = c.environment_id AND e.project_id = c.project_id
@@ -94,6 +95,7 @@ export async function authenticate(
           organizationId: credential.organization_id,
           projectId: credential.project_id,
           environmentId: credential.environment_id,
+          allowedTenantIds: credential.allowed_tenant_ids,
         }
       : null;
   }

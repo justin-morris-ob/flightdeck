@@ -6,7 +6,7 @@
 - Route `@onebrief` through the committed `.npmrc`. Keep URL-scoped Nexus credentials in your private user configuration, never in this repository.
 - Local ports: Flightdeck `4721`, optional Atlas shell `4720`, PostgreSQL `55471`.
 
-Stage 1 is intentionally a loopback-only development application using synthetic identities and data. `Production (local simulation)` is an environment label, not a deployed production environment. Do not put organizational/customer data in this instance.
+Flightdeck is intentionally a loopback-only development application using synthetic identities and data. `Production (local simulation)` is an environment label, not a deployed production environment. Do not put organizational/customer data in this instance.
 
 ## Install, initialize and run
 
@@ -23,7 +23,7 @@ Open **http://localhost:4721**. Select a synthetic development operator to start
 
 Without a globally active Node, use `mise trust`, `mise install`, then prefix commands with `mise exec --`. pnpm honors the package-manager version in `package.json`.
 
-The backend serves both built browser assets and the API; `pnpm dev` currently starts that same built application. After changing frontend code, run `pnpm build` and reload. Backend changes require a restart. There is no separate Vite/backend two-port development workflow in Stage 1.
+The backend serves both built browser assets and the API; `pnpm dev` currently starts that same built application. After changing frontend code, run `pnpm build` and reload. Backend changes require a restart. There is no separate Vite/backend two-port development workflow.
 
 ### Local roles
 
@@ -36,21 +36,57 @@ The backend serves both built browser assets and the API; `pnpm dev` currently s
 
 These identities are fixed server-owned fixtures. The browser cannot choose its role or organization by posting those values. Selecting another development operator deliberately switches identity. Atlas's independently selected demo name does not establish Flightdeck authorization.
 
-The main organization has Flightdeck and Sandbox projects, each with development and simulated production environments. Creation adds one immutable project-scoped flag key, initially disabled in every environment. Enabled state is environment-specific; name, description, owner, archive state and revision are project-wide. Archived flags retain their underlying configuration, evaluate false with reason `archived`, and may be restored. Unknown keys return 404 rather than a successful false evaluation.
+The main organization has Flightdeck and Sandbox projects, each with development and simulated production environments. Creation adds an immutable project-scoped key, initially disabled everywhere with boolean off false/default true. Configuration and overrides are environment-specific; metadata, archive state and revision are project-wide. Archived flags retain configuration and return the typed off value with reason `archived`. Unknown keys return 404, not a successful false decision.
+
+### Projects and the shared flag inventory
+
+A project owns one flag set; environments configure that same set differently. The standalone menu labels project navigation **Projects**, using published `MenuSection`/`MenuItem` primitives in the existing shell slot because the pinned composite `AppMenu` hardcodes “Collections.” No toolkit source, CSS text replacement or copied shell is used. Embedded Atlas pages retain the shell's chrome and use the explicit project selector.
+
+Feature flags shows one row per project flag, with On/Off columns for each environment. Select a status to open that exact environment; selecting a different **Configuration environment** does not filter the inventory or reset its current search/page. Inventory versions are displayed as “Version 13,” independently of environment gates. Archived rows distinguish project-wide archival from saved gate state; an absent configuration is Unavailable, never guessed Off.
+
+Creation from any selected environment creates the project flag disabled in every environment. Metadata and archive/restore affect the whole project; configuration publication, enabled state, credentials and subject overrides remain environment-specific. The project targeting catalog has no environment selector because its definitions are project-wide.
+
+Management inventory now uses operator-only `GET /api/v1/projects/{projectId}/flags`, bounded to 20 shared summaries with environment gates per page. The obsolete environment-scoped GET list is removed; existing environment POST creation, detail and mutation routes remain. No schema/data migration or changes to flag-evaluation semantics are required.
+
+Flag environments are configuration scopes, not deployment environments. The entire local instance currently hosts both projects and their configurations; “Production (local simulation)” remains local-only.
+
+### Author targeting and configuration
+
+1. Open a flag's **Targeting** tab. **Feature availability** is the environment master switch; audience changes do not turn it on.
+2. For a compatible Boolean flag, choose **Everyone** or **Selected audiences**. Select existing Flightdeck segments to admit anyone matching at least one of them. Empty selection means nobody through audience targeting, never an automatic switch to Everyone. Individual exceptions retain their existing priority.
+3. **People by email**, **Organizations** and **Groups** are disabled with **BC directory not connected**. This is the explicitly chosen UI-first boundary, not a working BC integration or a sample directory. Do not enter pretend BC identities through a substitute path.
+4. **Review targeting changes** validates the configuration through the existing server preview, shows current/proposed audiences and warnings, then requires explicit environment-specific publication. Its empty-context validation is not a real-user simulation or audience-size estimate.
+5. **Advanced controls** preserves typed values, ordered conditions, rollouts, variants, pinned definitions, undo and the context playground. Typed/complex configurations show a preserved-advanced notice instead of a lossy simple conversion. Opening/closing the disclosure or inspecting Activity does not discard the draft. Advanced simulations still explain actual supplied context.
+6. **Project targeting catalog** defines typed scalar attributes and reusable AND-predicate segments. Basic multi-segment targeting places one segment per full-rollout true rule, with false default, so segment alternatives are OR while each segment's conditions remain AND. It does not create a second evaluator.
+7. **Exceptions (advanced)** requires an exact tenant/subject, owner, reason and future expiry. Overrides precede audience rules but never archive/disable gates. Revoke explicitly; expiry equality is already expired. Lifecycle and empty-context diagnostics remain available behind their own disclosures.
+
+Publication pins attribute definitions and referenced segment snapshots. Catalog edits do not change existing live decisions; refreshing to the current catalog requires explicit publication. Changing variants/weights/order may reassign subjects. Increasing a rollout preserves existing eligibility under the unchanged namespace/rule ID. Names are not allocation IDs. See the [exact evaluation specification](evaluation-spec.md).
+
+Limits: 32 custom context definitions, 50 segments, 20 rules, 10 conditions per rule/segment, 5 segment references per rule and 10 variants. Configuration input is bounded to 24 KiB and its published snapshot to 64 KiB; individual JSON values to 4 KiB, HTTP request bodies to 32 KiB. Evaluation context contains scalar attributes, not arbitrary nested traits.
+
+### BC directory ownership and the deferred connection
+
+BC remains authoritative for users/accounts, organizations, groups and effective memberships. Flightdeck owns its segment definitions. An optional authoring connection will resolve email/name for selection but save stable, source-scoped references; a user target should use BC account UUID, not email as identity. Organization/group IDs also require a BC deployment/source namespace. BC's trusted backend supplies approved identity and membership context for evaluation, not browser claims or manual copies of users into every segment. Group-predicate segments can match that supplied membership without replicating the group's member list.
+
+This pass neither changes BC nor adds directory/sync APIs, credentials or replicated PII storage. Inspection found session-authenticated internal BC search/resolve endpoints, not a supported service-authenticated directory contract for Flightdeck. A future authoring connection needs explicit read scopes, bounded wire contracts, source/environment mapping and active/deleted behavior. Reusing browser cookies, BC signing secrets or direct BC SQL is not that contract. Live read-only authoring lookup is the recommended starting point. It is not an evaluation dependency: existing saved rules must continue evaluating supplied context when directory search is unavailable, with no per-decision callback to BC.
+
+Before enabling these selectors, define collection-valued context and membership operators, current organization versus any-organization membership, missing-data behavior and trusted source/tenant scoping. BC pickers must create generic Flightdeck rules, not a separate evaluator. An OpenFeature provider adapter and documented context mapping also remain future implementation and verification work; OpenFeature does not standardize BC's field names or supply the directory connection. See the [architecture boundary](architecture.md#optional-directory-integration-and-consumer-supplied-context).
 
 ## Evaluate from a separate backend process
 
 After creating a flag in the Flightdeck project's development environment:
 
 ```sh
-pnpm consumer new-workspace-navigation false
+pnpm consumer new-workspace-navigation '{"type":"boolean","value":false}' '{"tenantId":"local-tenant","subjectId":"person-0","attributes":{}}'
 ```
 
-Replace the key with the flag you created. The second argument explicitly selects this example consumer's fallback; choose it based on the consuming feature's safety requirements. The result distinguishes a validated service decision from a fallback and includes its reason and revision. A 401/403 authorization failure throws rather than applying a fallback.
+Replace the key with your flag. The second argument is the required tagged fallback; choose its type and value for the consuming feature's safety requirements. The optional third argument is context (default: `{"tenantId":"local-tenant","attributes":{}}`). Decisions include reason, revisions, variant/rule/override IDs and trace. A 401/403 throws rather than applying fallback.
 
-The launcher reads its backend-only evaluation credential from private local configuration. It never sends that secret to the browser or logs it. `examples/evaluate.ts` is also an importable backend client with required project/environment/key/fallback, response validation and a finite timeout. No cache or retry mechanism is implied.
+The launcher reads its backend-only evaluation credential from private local configuration. It never sends that secret to the browser or logs it. `examples/evaluate.ts` is an importable backend client with required project/environment/key/tagged fallback/context, response scope/type validation and a finite timeout. No cache or retry mechanism is implied.
 
-Administrators can issue/revoke additional evaluation credentials for the selected environment in the UI. A new secret is shown only at issuance; copy it into the intended backend's secret store, not application source or browser storage. Only SHA-256 verifiers persist in PostgreSQL. The local bootstrap consumer credential is development-only and restricted to Flightdeck/development.
+Administrators issue/revoke credentials for the selected environment with 1–20 explicit allowed tenant IDs. A secret appears only at issuance; store it in the intended backend's secret store, never browser storage/source. Only SHA-256 verifiers persist. The bootstrap credential permits Flightdeck/development and `local-tenant` only. Caller traits are trusted-backend assertions, not a BC membership proof.
+
+**Breaking local API cutover:** evaluation now uses POST with `{context}` and tagged response values. GET evaluation is removed. OpenAPI version `2.0.0` documents this preproduction contract replacement despite the retained `/api/v1` route prefix. All repository callers are migrated; Stage 1 examples are historical, not supported aliases.
 
 ## Atlas composition
 
@@ -82,7 +118,7 @@ pnpm test
 
 Regenerate `api/openapi.json` with `pnpm contracts` after changing runtime schemas/API operations. Its consistency check ignores formatting differences, not schema differences.
 
-Browser smoke sequence: create → enable development → inspect decision and activity → inspect unchanged production → edit metadata → archive/restore → switch viewer and inspect read-only controls. Restart the backend and confirm the same flag ID, configuration revision and decision remain. Repeat the shared-page flow inside the separately launched Atlas shell, including dark/light themes.
+Browser smoke includes structured typed-value/rule/segment authoring, invalid weights/JSON, explicit reassignment review, same-context current/API parity, override create/revoke, viewer simulation and unchanged environment scope. Restart and confirm stable identity/assignment. Repeat inside the separate Atlas shell in dark/light themes. [Stage 2 evidence](stage-two-verification.md) records actual observed scenarios.
 
 ## Persistence and credentials
 
@@ -106,16 +142,19 @@ All tables are owned by Flightdeck's migration identity; runtime grants are expl
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `organizations`, `projects`, `environments` | Explicit local bootstrap scope; primary/unique keys and organization/project foreign keys; read-only to runtime                                        |
 | `flags`                                     | One row per immutable project/key; bounded metadata; unique `(project_id, key)` supports cursor inventory and scope                                    |
-| `configurations`                            | One row per flag/environment; composite project FKs prevent cross-project references; primary flag/environment and environment/flag index              |
+| `configurations`                            | One bounded typed/pinned snapshot per flag/environment; composite project FKs; immutable allocation namespace checked on publication                   |
 | `audit`                                     | One allowlisted bounded before/after snapshot per successful flag revision; unique flag/revision plus descending history index; append-only to runtime |
 | `credentials`                               | One verifier row per issuance; revoked rows retained; unique verifier and scope/created-time index; only revocation column is runtime-updatable        |
 | `schema_migrations`                         | One name/checksum per applied migration, owner-only; no runtime access                                                                                 |
+| `project_targeting`                         | One bounded current catalog per project; project primary key and expected catalog revision                                                             |
+| `project_targeting_audit`                   | Append-only actor/before/after catalog history; project/revision uniqueness and descending history index                                               |
+| `subject_overrides`                         | Scoped exact targets with owner/reason/expiry; composite FKs, unique unrevoked target and expiry indexes; runtime updates revocation only              |
 
-Audit growth follows successful mutations, not evaluations. Evaluation subject/context data is not retained. Inventory and activity APIs enforce page limits; credential lists are bounded to the latest 100. Project enumeration is limited to the fixed local bootstrap set in Stage 1; broader project provisioning/pagination is not shipped.
+Audit growth follows successful mutations, not evaluations. Evaluation contexts are not retained; override target IDs intentionally persist as management records. Inventory is bounded to 20/page; activity/catalog history/credentials/overrides to 100. Project enumeration remains limited to the fixed local bootstrap set; broader provisioning/pagination is not shipped. Revoked/expired overrides and historical catalog snapshots are retained without automatic cleanup.
 
 ## Onboarding record and remaining external gates
 
-| Contract                                              | Owning boundary                                           | Stage 1 state / required next action                                                                                                                                                                                    |
+| Contract                                              | Owning boundary                                           | Current state / required next action                                                                                                                                                                                    |
 | ----------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Production operator identity and membership           | Identity platform owners + Flightdeck authorization owner | No production issuer/membership contract established; current Atlas SDK lacks role/tenant claims. Agree issuer, audience, verification, membership, revocation and project delegation before real data.                 |
 | BC user/account subject mapping                       | BC application owners + Flightdeck API owner              | Not established; backend example is not a BC integration. Stage 3 must agree tenant authority and an actual BC feature path.                                                                                            |

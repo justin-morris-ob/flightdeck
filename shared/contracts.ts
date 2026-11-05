@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+import {
+  configurationSchema,
+  overrideSchema,
+  tenantIdSchema,
+  traceSchema,
+  valueSchema,
+} from './targeting.ts';
+
 export const roleSchema = z.enum(['viewer', 'editor', 'administrator']);
 export type Role = z.infer<typeof roleSchema>;
 export interface OperatorPrincipal {
@@ -15,6 +23,7 @@ export interface ServicePrincipal {
   organizationId: string;
   projectId: string;
   environmentId: string;
+  allowedTenantIds: string[];
 }
 export type Principal = OperatorPrincipal | ServicePrincipal;
 export interface RouteContext {
@@ -79,28 +88,49 @@ export const flagSchema = z.object({
   archived: z.boolean(),
   revision: z.number().int().positive(),
   enabled: z.boolean(),
+  configuration: configurationSchema,
   updatedAt: z.iso.datetime(),
 });
 export type Flag = z.infer<typeof flagSchema>;
+export const flagSummarySchema = flagSchema
+  .omit({ environmentId: true, enabled: true, configuration: true })
+  .extend({
+    environments: z.array(z.object({ environmentId: z.uuid(), enabled: z.boolean() })),
+  });
+export type FlagSummary = z.infer<typeof flagSummarySchema>;
 export const flagsSchema = z.object({
-  items: z.array(flagSchema),
+  items: z.array(flagSummarySchema),
   nextCursor: z.string().nullable(),
 });
 export const evaluationSchema = z.object({
   key: flagKeySchema,
   projectId: z.uuid(),
   environmentId: z.uuid(),
-  value: z.boolean(),
-  reason: z.enum(['enabled', 'disabled', 'archived']),
+  value: valueSchema,
+  enabled: z.boolean(),
+  reason: z.enum(['disabled', 'archived', 'override', 'rule', 'default', 'missing_subject']),
   revision: z.number().int().positive(),
+  catalogRevision: z.number().int().positive(),
+  variantId: z.string().nullable(),
+  matchedRuleId: z.string().nullable(),
+  matchedOverrideId: z.string().nullable(),
+  trace: z.array(traceSchema).max(2000),
 });
 export type Evaluation = z.infer<typeof evaluationSchema>;
+export const previewSchema = z.object({
+  current: evaluationSchema,
+  proposed: evaluationSchema.nullable(),
+  warnings: z.array(z.string()),
+  allocationChanged: z.boolean(),
+});
 export const snapshotSchema = z.object({
   name: z.string(),
   description: z.string(),
   owner: z.string(),
   archived: z.boolean(),
   enabled: z.boolean(),
+  configuration: configurationSchema.optional(),
+  override: overrideSchema.nullable().optional(),
 });
 export const auditSchema = z.object({
   id: z.uuid(),
@@ -108,7 +138,17 @@ export const auditSchema = z.object({
   environmentId: z.uuid(),
   actorId: z.string(),
   actorName: z.string(),
-  action: z.enum(['created', 'updated', 'enabled', 'disabled', 'archived', 'restored']),
+  action: z.enum([
+    'created',
+    'updated',
+    'enabled',
+    'disabled',
+    'archived',
+    'restored',
+    'configuration',
+    'override_created',
+    'override_revoked',
+  ]),
   revision: z.number().int().positive(),
   previous: snapshotSchema.nullable(),
   next: snapshotSchema,
@@ -121,12 +161,18 @@ export const activitySchema = z.object({
 export type AuditEntry = z.infer<typeof auditSchema>;
 export const createCredentialSchema = z.strictObject({
   name: z.string().trim().min(1).max(120),
+  allowedTenantIds: z
+    .array(tenantIdSchema)
+    .min(1)
+    .max(20)
+    .refine((ids) => new Set(ids).size === ids.length, 'Tenant grants must be unique'),
 });
 export const credentialSchema = z.object({
   id: z.uuid(),
   name: z.string(),
   projectId: z.uuid(),
   environmentId: z.uuid(),
+  allowedTenantIds: z.array(tenantIdSchema).min(1).max(20),
   createdAt: z.iso.datetime(),
   revokedAt: z.iso.datetime().nullable(),
 });

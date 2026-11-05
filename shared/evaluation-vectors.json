@@ -1,0 +1,5232 @@
+{
+  "version": "sha256-v1",
+  "provenance": "Hash expectations independently computed with Python hashlib.sha256; decision expectations specified from contract, not evaluator output.",
+  "hashes": [
+    {
+      "namespace": "release",
+      "purpose": "rollout",
+      "subject": {
+        "tenantId": "tenant",
+        "subjectId": "subject"
+      },
+      "ruleId": "10000000-0000-4000-8000-000000000001",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a726f6c6c6f7574373a72656c6561736533363a31303030303030302d303030302d343030302d383030302d303030303030303030303031363a74656e616e74373a7375626a656374",
+      "sha256": "0992c8056fc55f70dfcb520a4760b7a292dfc85998003d6b95466e4066a5d224",
+      "bucket": 373
+    },
+    {
+      "namespace": "release",
+      "purpose": "rollout",
+      "subject": {
+        "tenantId": "租户",
+        "subjectId": "café🚀"
+      },
+      "ruleId": "10000000-0000-4000-8000-000000000001",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a726f6c6c6f7574373a72656c6561736533363a31303030303030302d303030302d343030302d383030302d303030303030303030303031363ae7a79fe688b7393a636166c3a9f09f9a80",
+      "sha256": "f7fc0e3432e38f504a1894ae13fe40192563ebec32b364f2b8eee93213ee8725",
+      "bucket": 9686
+    },
+    {
+      "namespace": "release",
+      "purpose": "rollout",
+      "subject": {
+        "tenantId": "a:b",
+        "subjectId": "c"
+      },
+      "ruleId": "10000000-0000-4000-8000-000000000001",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a726f6c6c6f7574373a72656c6561736533363a31303030303030302d303030302d343030302d383030302d303030303030303030303031333a613a62313a63",
+      "sha256": "829bfb11e42863da9b9eb3e946d9ff7fb1a15c4fbf1cec797fd3849283e2f79e",
+      "bucket": 5101
+    },
+    {
+      "namespace": "release",
+      "purpose": "rollout",
+      "subject": {
+        "tenantId": "a",
+        "subjectId": "b:c"
+      },
+      "ruleId": "10000000-0000-4000-8000-000000000001",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a726f6c6c6f7574373a72656c6561736533363a31303030303030302d303030302d343030302d383030302d303030303030303030303031313a61333a623a63",
+      "sha256": "85349d0f1d12373dcff69de8a31132766c8cff52c8680a710aec7e7075fe63f3",
+      "bucket": 5203
+    },
+    {
+      "namespace": "release",
+      "purpose": "rollout",
+      "subject": {
+        "tenantId": "tenant",
+        "subjectId": "é"
+      },
+      "ruleId": "10000000-0000-4000-8000-000000000001",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a726f6c6c6f7574373a72656c6561736533363a31303030303030302d303030302d343030302d383030302d303030303030303030303031363a74656e616e74333a65cc81",
+      "sha256": "b87a662ab55bad42db167f3d7bc7fabb1730cfd0d7e0d098a0d4078228df9087",
+      "bucket": 7206
+    },
+    {
+      "namespace": "release",
+      "purpose": "rollout",
+      "subject": {
+        "tenantId": "tenant",
+        "subjectId": "é"
+      },
+      "ruleId": "10000000-0000-4000-8000-000000000001",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a726f6c6c6f7574373a72656c6561736533363a31303030303030302d303030302d343030302d383030302d303030303030303030303031363a74656e616e74323ac3a9",
+      "sha256": "c68fd907278af894d647a3bcb6778eb2b2276533bc65ee09c67c9d71c25d06cc",
+      "bucket": 7756
+    },
+    {
+      "namespace": "release",
+      "purpose": "variant",
+      "subject": {
+        "tenantId": "tenant",
+        "subjectId": "subject"
+      },
+      "ruleId": "10000000-0000-4000-8000-000000000001",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a76617269616e74373a72656c65617365303a363a74656e616e74373a7375626a656374",
+      "sha256": "793c32a7082d86bfbc02ded1b74e4034563754d5ee668d370016bcc53daa8440",
+      "bucket": 4735
+    },
+    {
+      "namespace": "release",
+      "purpose": "variant",
+      "subject": {
+        "tenantId": "租户",
+        "subjectId": "café🚀"
+      },
+      "ruleId": "10000000-0000-4000-8000-000000000001",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a76617269616e74373a72656c65617365303a363ae7a79fe688b7393a636166c3a9f09f9a80",
+      "sha256": "68db97ac1125b02106ea7cf0aa2217d8d925233352049a243d11d90af06e6202",
+      "bucket": 4096
+    },
+    {
+      "namespace": "release",
+      "purpose": "variant",
+      "subject": {
+        "tenantId": "a:b",
+        "subjectId": "c"
+      },
+      "ruleId": "10000000-0000-4000-8000-000000000001",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a76617269616e74373a72656c65617365303a333a613a62313a63",
+      "sha256": "ece280cb994a9f7c7bb512739fe9f2df57bff54767ec82c8f3974611295bceeb",
+      "bucket": 9253
+    },
+    {
+      "namespace": "release",
+      "purpose": "variant",
+      "subject": {
+        "tenantId": "a",
+        "subjectId": "b:c"
+      },
+      "ruleId": "10000000-0000-4000-8000-000000000001",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a76617269616e74373a72656c65617365303a313a61333a623a63",
+      "sha256": "f45c0971aff8f48fd4a97a521d0b4c342aaa2d70af5c869b4f3ce3f75aa7929f",
+      "bucket": 9545
+    },
+    {
+      "namespace": "release",
+      "purpose": "variant",
+      "subject": {
+        "tenantId": "tenant",
+        "subjectId": "é"
+      },
+      "ruleId": "10000000-0000-4000-8000-000000000001",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a76617269616e74373a72656c65617365303a363a74656e616e74333a65cc81",
+      "sha256": "3bd87e8088470af3014d8e3bea1c768f59723e86d0b381279fdacc7eeb097162",
+      "bucket": 2337
+    },
+    {
+      "namespace": "release",
+      "purpose": "variant",
+      "subject": {
+        "tenantId": "tenant",
+        "subjectId": "é"
+      },
+      "ruleId": "10000000-0000-4000-8000-000000000001",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a76617269616e74373a72656c65617365303a363a74656e616e74323ac3a9",
+      "sha256": "4765c87ed70cdd9b75a66f6781e86f360123b387618ea091e8b1b94db2f5ec2a",
+      "bucket": 2788
+    },
+    {
+      "namespace": "release",
+      "purpose": "variant",
+      "subject": {
+        "tenantId": "tenant",
+        "subjectId": "6240"
+      },
+      "ruleId": "",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a76617269616e74373a72656c65617365303a363a74656e616e74343a36323430",
+      "sha256": "7ffa4b0dcdc2f3018328d55a2eee060770d95f7baede80ccd93f2731705a0ba9",
+      "bucket": 4999
+    },
+    {
+      "namespace": "release",
+      "purpose": "variant",
+      "subject": {
+        "tenantId": "tenant",
+        "subjectId": "7707"
+      },
+      "ruleId": "",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a76617269616e74373a72656c65617365303a363a74656e616e74343a37373037",
+      "sha256": "0006337a6a29be91aca1722eb07c7d71d3c4d13227d9c9c192b0301474dc8844",
+      "bucket": 0
+    },
+    {
+      "namespace": "release",
+      "purpose": "variant",
+      "subject": {
+        "tenantId": "tenant",
+        "subjectId": "10159"
+      },
+      "ruleId": "",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a76617269616e74373a72656c65617365303a363a74656e616e74353a3130313539",
+      "sha256": "80042c5f3bdc1b4b0e534b4c40ad4b3965e1bfab443049ebf0184ebfb9c78d3f",
+      "bucket": 5000
+    },
+    {
+      "namespace": "release",
+      "purpose": "variant",
+      "subject": {
+        "tenantId": "tenant",
+        "subjectId": "23664"
+      },
+      "ruleId": "",
+      "encodedHex": "31303a666c696768746465636b393a7368613235362d7631373a76617269616e74373a72656c65617365303a363a74656e616e74353a3233363634",
+      "sha256": "fffb1377c58fc07a3add6b232d7e1c33db59312f6fac14cf2c70197aa8dafcb7",
+      "bucket": 9999
+    }
+  ],
+  "decisions": [
+    {
+      "name": "configured default",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "eq {'tier': 'gold'}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "eq",
+                    "values": ["gold"]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "tier": "gold"
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "eq {'tier': 'silver'}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "eq",
+                    "values": ["gold"]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "tier": "silver"
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "not_eq {}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "not_eq",
+                    "values": ["gold"]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "not_eq {'tier': 3}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "not_eq",
+                    "values": ["gold"]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "tier": 3
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "not_eq {'tier': 'silver'}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "not_eq",
+                    "values": ["gold"]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "tier": "silver"
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "not_in {}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "not_in",
+                    "values": ["gold"]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "not_in {'tier': False}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "not_in",
+                    "values": ["gold"]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "tier": false
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "not_in {'tier': 'silver'}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "not_in",
+                    "values": ["gold"]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "tier": "silver"
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "in {'tier': 'gold'}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "in",
+                    "values": ["gold", "silver"]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "tier": "gold"
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "present {}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "present",
+                    "values": []
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "present {'tier': False}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "present",
+                    "values": []
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "tier": false
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "present {'tier': ''}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "present",
+                    "values": []
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "tier": ""
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "absent {}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "absent",
+                    "values": []
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "absent {'tier': False}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "absent",
+                    "values": []
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "tier": false
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "absent {'tier': 'gold'}",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "absent",
+                    "values": []
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "tier": "gold"
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "numeric gt 5",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "count",
+                    "operator": "gt",
+                    "values": [5]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "count": 5
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "numeric gte 5",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "count",
+                    "operator": "gte",
+                    "values": [5]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "count": 5
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "numeric lt 5",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "count",
+                    "operator": "lt",
+                    "values": [5]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "count": 5
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "numeric lte 5",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "count",
+                    "operator": "lte",
+                    "values": [5]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "count": 5
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "numeric gt 6",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "count",
+                    "operator": "gt",
+                    "values": [5]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "count": 6
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "numeric lt 4",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [
+                  {
+                    "attribute": "count",
+                    "operator": "lt",
+                    "values": [5]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {
+            "count": 4
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "disabled",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": false,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "disabled",
+        "enabled": false,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "archived",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": false,
+          "archived": true,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "archived",
+        "enabled": false,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "rollout threshold 0",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [],
+                "segmentIds": [],
+                "rolloutBasisPoints": 0,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "rollout threshold 10000",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "rollout threshold 373",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [],
+                "segmentIds": [],
+                "rolloutBasisPoints": 373,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "rollout threshold 374",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [],
+                "segmentIds": [],
+                "rolloutBasisPoints": 374,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "partial rollout missing subject skips",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [],
+                "segmentIds": [],
+                "rolloutBasisPoints": 5000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "full fixed rollout without subject",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "weighted missing subject",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "weighted"
+            },
+            "variants": [
+              {
+                "id": "zero",
+                "name": "Zero",
+                "weightBasisPoints": 0,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "control",
+                "name": "Control",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "treatment",
+                "name": "Treatment",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": true
+                }
+              }
+            ],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "missing_subject",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "weighted assignment",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "weighted"
+            },
+            "variants": [
+              {
+                "id": "zero",
+                "name": "Zero",
+                "weightBasisPoints": 0,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "control",
+                "name": "Control",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "treatment",
+                "name": "Treatment",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": true
+                }
+              }
+            ],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": "control",
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "variant missing subject",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "variant",
+              "variantId": "treatment"
+            },
+            "variants": [
+              {
+                "id": "zero",
+                "name": "Zero",
+                "weightBasisPoints": 0,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "control",
+                "name": "Control",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "treatment",
+                "name": "Treatment",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": true
+                }
+              }
+            ],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "missing_subject",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "variant assignment",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "variant",
+              "variantId": "treatment"
+            },
+            "variants": [
+              {
+                "id": "zero",
+                "name": "Zero",
+                "weightBasisPoints": 0,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "control",
+                "name": "Control",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "treatment",
+                "name": "Treatment",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": true
+                }
+              }
+            ],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": "treatment",
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "active exact override",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [
+          {
+            "id": "50000000-0000-4000-8000-000000000001",
+            "flagId": "20000000-0000-4000-8000-000000000001",
+            "projectId": "30000000-0000-4000-8000-000000000001",
+            "environmentId": "40000000-0000-4000-8000-000000000001",
+            "tenantId": "tenant",
+            "subjectId": "subject",
+            "owner": "Owner",
+            "reason": "Support",
+            "createdAt": "2026-11-01T00:00:00.000Z",
+            "revokedAt": null,
+            "expiresAt": "2026-11-04T12:00:00.001Z",
+            "outcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": true
+              }
+            }
+          }
+        ],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "override",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": "50000000-0000-4000-8000-000000000001"
+      }
+    },
+    {
+      "name": "override rejects expiresAt",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [
+          {
+            "id": "50000000-0000-4000-8000-000000000001",
+            "flagId": "20000000-0000-4000-8000-000000000001",
+            "projectId": "30000000-0000-4000-8000-000000000001",
+            "environmentId": "40000000-0000-4000-8000-000000000001",
+            "tenantId": "tenant",
+            "subjectId": "subject",
+            "owner": "Owner",
+            "reason": "Support",
+            "createdAt": "2026-11-01T00:00:00.000Z",
+            "revokedAt": null,
+            "expiresAt": "2026-11-04T12:00:00.000Z",
+            "outcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": true
+              }
+            }
+          }
+        ],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "override rejects revokedAt",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [
+          {
+            "id": "50000000-0000-4000-8000-000000000001",
+            "flagId": "20000000-0000-4000-8000-000000000001",
+            "projectId": "30000000-0000-4000-8000-000000000001",
+            "environmentId": "40000000-0000-4000-8000-000000000001",
+            "tenantId": "tenant",
+            "subjectId": "subject",
+            "owner": "Owner",
+            "reason": "Support",
+            "createdAt": "2026-11-01T00:00:00.000Z",
+            "revokedAt": "2026-11-04T11:00:00.000Z",
+            "expiresAt": "2026-11-04T12:00:00.001Z",
+            "outcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": true
+              }
+            }
+          }
+        ],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "override rejects tenantId",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [
+          {
+            "id": "50000000-0000-4000-8000-000000000001",
+            "flagId": "20000000-0000-4000-8000-000000000001",
+            "projectId": "30000000-0000-4000-8000-000000000001",
+            "environmentId": "40000000-0000-4000-8000-000000000001",
+            "tenantId": "other",
+            "subjectId": "subject",
+            "owner": "Owner",
+            "reason": "Support",
+            "createdAt": "2026-11-01T00:00:00.000Z",
+            "revokedAt": null,
+            "expiresAt": "2026-11-04T12:00:00.001Z",
+            "outcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": true
+              }
+            }
+          }
+        ],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "override rejects subjectId",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [
+          {
+            "id": "50000000-0000-4000-8000-000000000001",
+            "flagId": "20000000-0000-4000-8000-000000000001",
+            "projectId": "30000000-0000-4000-8000-000000000001",
+            "environmentId": "40000000-0000-4000-8000-000000000001",
+            "tenantId": "tenant",
+            "subjectId": "other",
+            "owner": "Owner",
+            "reason": "Support",
+            "createdAt": "2026-11-01T00:00:00.000Z",
+            "revokedAt": null,
+            "expiresAt": "2026-11-04T12:00:00.001Z",
+            "outcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": true
+              }
+            }
+          }
+        ],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "override rejects environmentId",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [
+          {
+            "id": "50000000-0000-4000-8000-000000000001",
+            "flagId": "20000000-0000-4000-8000-000000000001",
+            "projectId": "30000000-0000-4000-8000-000000000001",
+            "environmentId": "40000000-0000-4000-8000-000000000002",
+            "tenantId": "tenant",
+            "subjectId": "subject",
+            "owner": "Owner",
+            "reason": "Support",
+            "createdAt": "2026-11-01T00:00:00.000Z",
+            "revokedAt": null,
+            "expiresAt": "2026-11-04T12:00:00.001Z",
+            "outcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": true
+              }
+            }
+          }
+        ],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "override rejects projectId",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [
+          {
+            "id": "50000000-0000-4000-8000-000000000001",
+            "flagId": "20000000-0000-4000-8000-000000000001",
+            "projectId": "30000000-0000-4000-8000-000000000002",
+            "environmentId": "40000000-0000-4000-8000-000000000001",
+            "tenantId": "tenant",
+            "subjectId": "subject",
+            "owner": "Owner",
+            "reason": "Support",
+            "createdAt": "2026-11-01T00:00:00.000Z",
+            "revokedAt": null,
+            "expiresAt": "2026-11-04T12:00:00.001Z",
+            "outcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": true
+              }
+            }
+          }
+        ],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "override rejects flagId",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [
+          {
+            "id": "50000000-0000-4000-8000-000000000001",
+            "flagId": "20000000-0000-4000-8000-000000000002",
+            "projectId": "30000000-0000-4000-8000-000000000001",
+            "environmentId": "40000000-0000-4000-8000-000000000001",
+            "tenantId": "tenant",
+            "subjectId": "subject",
+            "owner": "Owner",
+            "reason": "Support",
+            "createdAt": "2026-11-01T00:00:00.000Z",
+            "revokedAt": null,
+            "expiresAt": "2026-11-04T12:00:00.001Z",
+            "outcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": true
+              }
+            }
+          }
+        ],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "ordered first match",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              },
+              {
+                "id": "10000000-0000-4000-8000-000000000002",
+                "name": "First",
+                "conditions": [],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": false
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "segment AND matches",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [],
+                "segmentIds": ["60000000-0000-4000-8000-000000000001"],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": [
+              {
+                "id": "60000000-0000-4000-8000-000000000001",
+                "key": "gold",
+                "name": "Gold",
+                "revision": 1,
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "eq",
+                    "values": ["gold"]
+                  },
+                  {
+                    "attribute": "count",
+                    "operator": "gte",
+                    "values": [5]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "context": {
+          "attributes": {
+            "tier": "gold",
+            "count": 5
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "10000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "segment AND fails",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [],
+                "segmentIds": ["60000000-0000-4000-8000-000000000001"],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": [
+              {
+                "id": "60000000-0000-4000-8000-000000000001",
+                "key": "gold",
+                "name": "Gold",
+                "revision": 1,
+                "conditions": [
+                  {
+                    "attribute": "tier",
+                    "operator": "eq",
+                    "values": ["gold"]
+                  },
+                  {
+                    "attribute": "count",
+                    "operator": "gte",
+                    "values": [5]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "context": {
+          "attributes": {
+            "tier": "gold",
+            "count": 4
+          }
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "unknown flag",
+      "input": {
+        "flag": null,
+        "context": {
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "error": "unknown_flag"
+    },
+    {
+      "name": "variant interval boundary 4999",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "weighted"
+            },
+            "variants": [
+              {
+                "id": "zero",
+                "name": "Zero",
+                "weightBasisPoints": 0,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "control",
+                "name": "Control",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "treatment",
+                "name": "Treatment",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": true
+                }
+              }
+            ],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "6240",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": "control",
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "variant interval boundary 0",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "weighted"
+            },
+            "variants": [
+              {
+                "id": "zero",
+                "name": "Zero",
+                "weightBasisPoints": 0,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "control",
+                "name": "Control",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "treatment",
+                "name": "Treatment",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": true
+                }
+              }
+            ],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "7707",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": "control",
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "variant interval boundary 5000",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "weighted"
+            },
+            "variants": [
+              {
+                "id": "zero",
+                "name": "Zero",
+                "weightBasisPoints": 0,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "control",
+                "name": "Control",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "treatment",
+                "name": "Treatment",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": true
+                }
+              }
+            ],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "10159",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": "treatment",
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "variant interval boundary 9999",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "weighted"
+            },
+            "variants": [
+              {
+                "id": "zero",
+                "name": "Zero",
+                "weightBasisPoints": 0,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "control",
+                "name": "Control",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": false
+                }
+              },
+              {
+                "id": "treatment",
+                "name": "Treatment",
+                "weightBasisPoints": 5000,
+                "value": {
+                  "type": "boolean",
+                  "value": true
+                }
+              }
+            ],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "23664",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": "treatment",
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "disabled dominates active override",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": false,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [
+          {
+            "id": "50000000-0000-4000-8000-000000000001",
+            "flagId": "20000000-0000-4000-8000-000000000001",
+            "projectId": "30000000-0000-4000-8000-000000000001",
+            "environmentId": "40000000-0000-4000-8000-000000000001",
+            "tenantId": "tenant",
+            "subjectId": "subject",
+            "owner": "Owner",
+            "reason": "Support",
+            "createdAt": "2026-11-01T00:00:00.000Z",
+            "revokedAt": null,
+            "expiresAt": "2026-11-04T12:00:00.001Z",
+            "outcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": true
+              }
+            }
+          }
+        ],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "disabled",
+        "enabled": false,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "archived dominates active override",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": false,
+          "archived": true,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [
+          {
+            "id": "50000000-0000-4000-8000-000000000001",
+            "flagId": "20000000-0000-4000-8000-000000000001",
+            "projectId": "30000000-0000-4000-8000-000000000001",
+            "environmentId": "40000000-0000-4000-8000-000000000001",
+            "tenantId": "tenant",
+            "subjectId": "subject",
+            "owner": "Owner",
+            "reason": "Support",
+            "createdAt": "2026-11-01T00:00:00.000Z",
+            "revokedAt": null,
+            "expiresAt": "2026-11-04T12:00:00.001Z",
+            "outcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": true
+              }
+            }
+          }
+        ],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "archived",
+        "enabled": false,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "override dominates matching rule",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "10000000-0000-4000-8000-000000000001",
+                "name": "First",
+                "conditions": [],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": false
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [
+          {
+            "id": "50000000-0000-4000-8000-000000000001",
+            "flagId": "20000000-0000-4000-8000-000000000001",
+            "projectId": "30000000-0000-4000-8000-000000000001",
+            "environmentId": "40000000-0000-4000-8000-000000000001",
+            "tenantId": "tenant",
+            "subjectId": "subject",
+            "owner": "Owner",
+            "reason": "Support",
+            "createdAt": "2026-11-01T00:00:00.000Z",
+            "revokedAt": null,
+            "expiresAt": "2026-11-04T12:00:00.001Z",
+            "outcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": true
+              }
+            }
+          }
+        ],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "override",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": "50000000-0000-4000-8000-000000000001"
+      }
+    },
+    {
+      "name": "typed string default",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "string",
+              "value": "off"
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "string",
+                "value": "configured"
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "string",
+          "value": "configured"
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "typed number default",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "number",
+              "value": 0
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "number",
+                "value": 42
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "number",
+          "value": 42
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "typed json default",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "json",
+              "value": {}
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "json",
+                "value": {
+                  "nested": [1, true, "x"]
+                }
+              }
+            },
+            "variants": [],
+            "rules": [],
+            "catalogRevision": 2,
+            "contextDefinitions": [
+              {
+                "key": "tier",
+                "type": "string",
+                "description": "Tier"
+              },
+              {
+                "key": "count",
+                "type": "number",
+                "description": "Count"
+              },
+              {
+                "key": "staff",
+                "type": "boolean",
+                "description": "Staff"
+              }
+            ],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "json",
+          "value": {
+            "nested": [1, true, "x"]
+          }
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "built-in tenant and subject are read from top-level context",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "90000000-0000-4000-8000-000000000001",
+                "name": "Built-in identity",
+                "conditions": [
+                  {
+                    "attribute": "tenantId",
+                    "operator": "eq",
+                    "values": ["tenant"]
+                  },
+                  {
+                    "attribute": "subjectId",
+                    "operator": "eq",
+                    "values": ["subject"]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "90000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "missing built-in tenant does not satisfy negative membership",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "90000000-0000-4000-8000-000000000001",
+                "name": "Built-in identity",
+                "conditions": [
+                  {
+                    "attribute": "tenantId",
+                    "operator": "not_in",
+                    "values": ["other"]
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [],
+            "segments": []
+          }
+        },
+        "context": {
+          "subjectId": "subject",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": false
+        },
+        "reason": "default",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": null,
+        "matchedOverrideId": null
+      }
+    },
+    {
+      "name": "explicit built-in subject absence matches missing identity",
+      "input": {
+        "flag": {
+          "id": "20000000-0000-4000-8000-000000000001",
+          "key": "sample",
+          "projectId": "30000000-0000-4000-8000-000000000001",
+          "environmentId": "40000000-0000-4000-8000-000000000001",
+          "enabled": true,
+          "archived": false,
+          "revision": 7,
+          "configuration": {
+            "allocationNamespace": "release",
+            "hashVersion": "sha256-v1",
+            "offValue": {
+              "type": "boolean",
+              "value": false
+            },
+            "defaultOutcome": {
+              "kind": "value",
+              "value": {
+                "type": "boolean",
+                "value": false
+              }
+            },
+            "variants": [],
+            "rules": [
+              {
+                "id": "90000000-0000-4000-8000-000000000001",
+                "name": "Built-in identity",
+                "conditions": [
+                  {
+                    "attribute": "subjectId",
+                    "operator": "absent",
+                    "values": []
+                  }
+                ],
+                "segmentIds": [],
+                "rolloutBasisPoints": 10000,
+                "outcome": {
+                  "kind": "value",
+                  "value": {
+                    "type": "boolean",
+                    "value": true
+                  }
+                }
+              }
+            ],
+            "catalogRevision": 2,
+            "contextDefinitions": [],
+            "segments": []
+          }
+        },
+        "context": {
+          "tenantId": "tenant",
+          "attributes": {}
+        },
+        "overrides": [],
+        "now": "2026-11-04T12:00:00.000Z"
+      },
+      "expected": {
+        "value": {
+          "type": "boolean",
+          "value": true
+        },
+        "reason": "rule",
+        "enabled": true,
+        "variantId": null,
+        "matchedRuleId": "90000000-0000-4000-8000-000000000001",
+        "matchedOverrideId": null
+      }
+    }
+  ]
+}

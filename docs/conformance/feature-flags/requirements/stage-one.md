@@ -1,5 +1,7 @@
 # Stage 1 observable requirements
 
+Historical Stage 1 baseline. [Stage 2](stage-two.md) retains lifecycle/security requirements but supersedes §3.1–§3.2's boolean-only decisions with tagged values and configured typed off values. Its POST evaluation contract replaces the preproduction GET API; use current local-development commands rather than historical examples.
+
 ## §1 Scope and identity
 
 - **§1.1** Startup requires explicit local-development mode, binds to loopback and refuses production mode. The browser identifies the environment as synthetic development.

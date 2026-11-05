@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Upgrade Zod to 4.6.7 and publish provider 0.1.1 with versioned compiled JS/declarations, removing consumer-side preparation scripts and build approvals from the Git-pinned distribution.
 - Add bounded string-list context and exact any/all membership targeting throughout validation, the evaluator, catalogs and the advanced playground.
 - Add an independently packaged server OpenFeature provider with typed detail methods, scope/response validation, bounded deadlines and explicit authorization-versus-recovery policy.
 - Add a reusable loopback consumer lab with server-owned synthetic personas, real persisted flag decisions, typed configuration, explicit transport-failure scenarios and private scoped credential provisioning.

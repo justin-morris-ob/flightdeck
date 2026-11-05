@@ -115,7 +115,7 @@ Pass Playwright options through the command, for example `pnpm demo:record --hea
 
 ### OpenFeature backend use
 
-The independent `packages/openfeature-provider` package builds distributable JS/types and has only public package dependencies. Its own workspace boundary and lockfile keep Git-subdirectory preparation from installing Flightdeck's private Atlas dependencies. Consumers pin the exact Git commit/subdirectory and explicitly approve only that source's preparation script under their package-manager policy. Its peer is `@openfeature/server-sdk` `^1.23.0` (SDK core peer `^1.12.0`). Use the typed detail API, then enforce the application's non-fallback policy:
+The independent `packages/openfeature-provider` package includes distributable JS/types and has only public package dependencies. Its compiled `dist/index.js` and `dist/index.d.ts` are versioned release assets: run the provider build before publishing a new immutable Git pin. Consumers do not run a preparation script or install Flightdeck's private Atlas dependencies; no provider build-script approval is required. Its peer is `@openfeature/server-sdk` `^1.23.0` (SDK core peer `^1.12.0`). Use the typed detail API, then enforce the application's non-fallback policy:
 
 ```ts
 await OpenFeature.setProviderAndWait(

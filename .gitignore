@@ -5,6 +5,9 @@ node_modules/
 !.env.example
 build/
 dist/
+!packages/openfeature-provider/dist/
+!packages/openfeature-provider/dist/index.js
+!packages/openfeature-provider/dist/index.d.ts
 coverage/
 coverage-db/
 test-results/

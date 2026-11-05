@@ -9,15 +9,15 @@ const locationSchema = z
     projectId: z.uuid().optional(),
     flagKey: flagKeySchema.optional(),
     environmentId: z.uuid().optional(),
-    view: z.enum(['flags', 'catalog', 'credentials']).default('flags'),
+    view: z.enum(['flags', 'segments', 'audit']).default('flags'),
   })
   .superRefine((value, context) => {
     if ((value.flagKey || value.environmentId) && !value.projectId)
       context.addIssue({ code: 'custom', message: 'Project is required for this location' });
     if (value.view !== 'flags' && value.flagKey)
       context.addIssue({ code: 'custom', message: 'A flag belongs to the flags view' });
-    if (value.environmentId && value.view === 'catalog')
-      context.addIssue({ code: 'custom', message: 'The catalog is project-wide' });
+    if (value.environmentId && value.view !== 'flags')
+      context.addIssue({ code: 'custom', message: 'This section is project-wide' });
     if (value.environmentId && value.view === 'flags' && !value.flagKey)
       context.addIssue({ code: 'custom', message: 'Choose a flag before its environment' });
   });
@@ -26,7 +26,7 @@ export interface FlightdeckLocation {
   projectId: string;
   flagKey: string | null;
   environmentId: string;
-  view: 'flags' | 'catalog' | 'credentials';
+  view: 'flags' | 'segments' | 'audit';
 }
 export interface LocationResult {
   location: FlightdeckLocation | null;
@@ -78,14 +78,8 @@ export function locationSearch(location: FlightdeckLocation): string {
 
 export function locationRef(location: FlightdeckLocation): ObjectRef {
   const { projectId, flagKey, environmentId, view } = location;
-  if (view === 'catalog')
-    return { appId: 'flightdeck', entityType: 'catalog', entityId: projectId };
-  if (view === 'credentials')
-    return {
-      appId: 'flightdeck',
-      entityType: 'credentials',
-      entityId: `${projectId}/${environmentId}`,
-    };
+  if (view !== 'flags')
+    return { appId: 'flightdeck', entityType: view, entityId: projectId || 'all' };
   if (!flagKey) return { appId: 'flightdeck', entityType: 'flags', entityId: projectId || 'all' };
   return {
     appId: 'flightdeck',
@@ -104,9 +98,10 @@ export function locationFromRef(ref: ObjectRef): LocationResult {
     return parseLocation({ projectId: parts[0], flagKey: parts[1] });
   if (ref.entityType === 'configuration' && parts.length === 3)
     return parseLocation({ projectId: parts[0], flagKey: parts[1], environmentId: parts[2] });
-  if (ref.entityType === 'catalog' && parts.length === 1)
-    return parseLocation({ projectId: parts[0], view: 'catalog' });
-  if (ref.entityType === 'credentials' && parts.length === 2)
-    return parseLocation({ projectId: parts[0], environmentId: parts[1], view: 'credentials' });
+  if (['segments', 'audit'].includes(ref.entityType) && parts.length === 1)
+    return parseLocation({
+      ...(ref.entityId === 'all' ? {} : { projectId: ref.entityId }),
+      view: ref.entityType,
+    });
   return { location: null, error: 'Unknown Flightdeck reference.' };
 }

@@ -20,8 +20,10 @@ describe('Flightdeck scope locations', () => {
     '?flagKey=workspace_navigation',
     `?environmentId=${environmentId}`,
     `?projectId=${projectId}&environmentId=${environmentId}`,
-    `?projectId=${projectId}&view=catalog&environmentId=${environmentId}`,
-    `?projectId=${projectId}&view=credentials&flagKey=workspace_navigation`,
+    `?projectId=${projectId}&view=segments&environmentId=${environmentId}`,
+    `?projectId=${projectId}&view=audit&flagKey=workspace_navigation`,
+    `?projectId=${projectId}&view=credentials`,
+    `?projectId=${projectId}&view=catalog`,
     '?projectId=not-a-project',
     `?projectId=${projectId}&flagKey=bad/key`,
     `?projectId=${projectId}&view=unknown`,
@@ -36,10 +38,16 @@ describe('Flightdeck scope locations', () => {
     expect(readLocation(`?projectId=${projectId}&projectId=${projectId}`).location).toBeNull();
   });
 
-  it('accepts a project catalog without inventing an environment scope', () => {
-    const result = readLocation(`?projectId=${projectId}&view=catalog`);
-    expect(result.location).toMatchObject({ view: 'catalog', environmentId: '', flagKey: null });
-  });
+  it.each(['segments', 'audit'] as const)(
+    'opens project-wide %s without an environment',
+    (view) => {
+      const result = readLocation(`?projectId=${projectId}&view=${view}`);
+      expect(result.location).toEqual({ projectId, view, environmentId: '', flagKey: null });
+      expect(
+        locationFromRef({ appId: 'flightdeck', entityType: view, entityId: projectId }).location
+      ).toEqual(result.location);
+    }
+  );
 
   it.each([
     { appId: 'another-app', entityType: 'flag', entityId: `${projectId}/workspace_navigation` },

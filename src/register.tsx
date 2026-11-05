@@ -32,11 +32,11 @@ const register: RegisterApp = (registrar, platform) => {
         instanceId,
         flagKey
           ? `${flagKey} · ${environmentId ? 'Configuration' : 'Overview'}`
-          : view === 'catalog'
-            ? 'Targeting catalog'
-            : view === 'credentials'
-              ? 'Evaluation credentials'
-              : 'Feature flags'
+          : view === 'segments'
+            ? 'Segments'
+            : view === 'audit'
+              ? 'Audit log'
+              : 'Flags'
       );
     }, [instanceId, objectRef.entityType, objectRef.entityId]);
     return (
@@ -52,11 +52,25 @@ const register: RegisterApp = (registrar, platform) => {
   registrar.app({
     id: 'flightdeck',
     menu: async () => ({
-      views: [{ id: 'flags', label: 'Feature flags', icon: 'flag', ref: inventoryRef }],
+      views: [
+        { id: 'flags', label: 'Flags', icon: 'flag', ref: inventoryRef },
+        {
+          id: 'segments',
+          label: 'Segments',
+          icon: 'sliders',
+          ref: { appId: 'flightdeck', entityType: 'segments', entityId: 'all' },
+        },
+        {
+          id: 'audit',
+          label: 'Audit log',
+          icon: 'approval',
+          ref: { appId: 'flightdeck', entityType: 'audit', entityId: 'all' },
+        },
+      ],
       collections: [],
     }),
   });
-  for (const entityType of ['flags', 'flag', 'configuration', 'catalog', 'credentials']) {
+  for (const entityType of ['flags', 'flag', 'configuration', 'segments', 'audit']) {
     registrar.page({ entityType, component: FlagsPage });
   }
 };

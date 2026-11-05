@@ -3,8 +3,8 @@ import './styles.css';
 import { useEffect, useState } from 'react';
 import { z } from 'zod';
 
-import { Badge, Button, Empty, Notice } from '@onebrief/atlas-ui';
-import { AppShell, ContextBar, Header, Icon, MenuItem, MenuSection, Rail } from '@onebrief/ux-kit';
+import { Badge, Button, Empty, Notice, ViewBar } from '@onebrief/atlas-ui';
+import { AppShell, Header, Icon } from '@onebrief/ux-kit';
 
 import {
   operatorSchema,
@@ -15,7 +15,6 @@ import {
 } from '../shared/contracts.ts';
 import { errorMessage, get, send, type Request } from './api.ts';
 import { Catalog } from './Catalog.tsx';
-import { Credentials } from './Credentials.tsx';
 import { useDraftNavigation } from './draft-context.ts';
 import { DraftNavigationProvider } from './DraftNavigation.tsx';
 import { FlagDetail } from './FlagDetail.tsx';
@@ -124,7 +123,6 @@ function FlightdeckContent({
   const projectScope = project?.environments[0]
     ? scopePath(project.id, project.environments[0].id)
     : '';
-  const role = session?.operator.role;
   async function login(operatorId: string) {
     setBusy(true);
     setError('');
@@ -160,20 +158,9 @@ function FlightdeckContent({
       setBusy(false);
     }
   }
-  function navigate(id: string) {
-    if (id === view && !flagKey) return;
-    const nextView =
-      id === 'credentials' && role === 'administrator'
-        ? 'credentials'
-        : id === 'catalog'
-          ? 'catalog'
-          : 'flags';
-    goTo({
-      ...emptyLocation,
-      projectId,
-      view: nextView,
-      environmentId: nextView === 'credentials' ? (project?.environments[0]?.id ?? '') : '',
-    });
+  function navigate(nextView: FlightdeckLocation['view']) {
+    if (nextView === view && !flagKey) return;
+    goTo({ ...emptyLocation, projectId, view: nextView });
   }
   const projectPicker = (
     <label className="fd-project-picker">
@@ -182,7 +169,7 @@ function FlightdeckContent({
         className="input"
         value={projectId}
         disabled={scopeLoading}
-        onChange={(event) => goTo({ ...emptyLocation, projectId: event.target.value })}
+        onChange={(event) => goTo({ ...emptyLocation, projectId: event.target.value, view })}
       >
         <option value="" disabled>
           Choose project
@@ -200,47 +187,8 @@ function FlightdeckContent({
       </select>
     </label>
   );
-  const appMenu = (
-    <nav className="fd-project-menu" aria-label="Flightdeck menu">
-      <MenuSection kind="shared" className="fd-menu-heading">
-        <h2 className="fd-menu-title">Flightdeck</h2>
-      </MenuSection>
-      <div className="fd-project-menu-scroll">
-        <MenuSection title="Views" kind="app">
-          <MenuItem
-            label="Feature flags"
-            icon="flag"
-            current={view === 'flags'}
-            onSelect={() => navigate('flags')}
-          />
-          <MenuItem
-            label="Project targeting catalog"
-            icon="sliders"
-            current={view === 'catalog'}
-            onSelect={() => navigate('catalog')}
-          />
-          {role === 'administrator' && (
-            <MenuItem
-              label="Evaluation credentials"
-              icon="approval"
-              current={view === 'credentials'}
-              onSelect={() => navigate('credentials')}
-            />
-          )}
-        </MenuSection>
-      </div>
-    </nav>
-  );
-  const banner = (
-    <div className="fd-dev-banner">
-      <Icon name="flag" size="sm" />
-      <strong>LOCAL DEVELOPMENT</strong>
-      <span>Disposable identities and synthetic data only · Not production authentication</span>
-    </div>
-  );
   const content = (
     <div className="fd-app" data-embedded={embedded || undefined}>
-      {banner}
       {loading ? (
         <div className="fd-loading" role="status">
           Loading local development session…
@@ -250,11 +198,8 @@ function FlightdeckContent({
           <div className="fd-signin-mark">
             <Icon name="flag" />
           </div>
-          <p className="fd-eyebrow">ENABLEMENTS & EXPERIMENTS</p>
-          <h1>Welcome to Flightdeck</h1>
-          <p className="fd-signin-intro">
-            Control typed configuration and targeting, inspect decisions, and trace every change.
-          </p>
+          <h1>Flightdeck</h1>
+          <p className="fd-signin-intro">Manage flags and reusable audiences.</p>
           <section className="fd-signin-card">
             <h2>Local development sign-in</h2>
             <p>
@@ -306,40 +251,27 @@ function FlightdeckContent({
                 <strong>{session.organization.name}</strong>
               </span>
               {projectPicker}
-              {flagKey && environmentId && (
-                <Button size="sm" onClick={() => goTo({ ...location, environmentId: '' })}>
-                  Flag overview
-                </Button>
-              )}
-              {(view === 'credentials' || (view === 'flags' && flagKey && environmentId)) && (
-                <label>
-                  Configuration environment
-                  <select
-                    className="input"
-                    value={environmentId}
-                    onChange={(event) => goTo({ ...location, environmentId: event.target.value })}
-                    disabled={scopeLoading}
-                  >
-                    <option value="" disabled>
-                      Choose environment
-                    </option>
-                    {project?.environments.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
             </div>
             <div className="fd-session">
-              <span>{session.operator.name}</span>
-              <Badge>{role}</Badge>
-              <Button size="sm" onClick={() => setAccount(true)}>
-                Local account
-              </Button>
+              <Badge>Local POC</Badge>
+              {embedded && (
+                <Button size="sm" onClick={() => setAccount(true)}>
+                  Account
+                </Button>
+              )}
             </div>
           </div>
+          <nav className="fd-section-nav" aria-label="Project sections">
+            <ViewBar
+              tabs={[
+                { id: 'flags', label: 'Flags' },
+                { id: 'segments', label: 'Segments' },
+                { id: 'audit', label: 'Audit log' },
+              ]}
+              value={view}
+              onChange={navigate}
+            />
+          </nav>
           {error && (
             <div className="fd-inline-error">
               <Notice tone="danger">{error}</Notice>
@@ -364,8 +296,6 @@ function FlightdeckContent({
                 ? 'Project is unavailable in this organization. Choose an authorized project.'
                 : 'No authorized projects are available.'}
             </Empty>
-          ) : view === 'credentials' && role !== 'administrator' ? (
-            <Notice tone="danger">Evaluation credentials require administrator access.</Notice>
           ) : environmentId && !environment ? (
             <Notice tone="danger">
               Environment is unavailable in this project. Choose a valid environment or return to
@@ -373,31 +303,7 @@ function FlightdeckContent({
             </Notice>
           ) : (
             <>
-              {embedded && (
-                <nav className="fd-section-nav" aria-label="Flightdeck sections">
-                  <Button
-                    variant={view === 'flags' ? 'primary' : 'quiet'}
-                    onClick={() => navigate('flags')}
-                  >
-                    Feature flags
-                  </Button>
-                  <Button
-                    variant={view === 'catalog' ? 'primary' : 'quiet'}
-                    onClick={() => navigate('catalog')}
-                  >
-                    Project targeting catalog
-                  </Button>
-                  {role === 'administrator' && (
-                    <Button
-                      variant={view === 'credentials' ? 'primary' : 'quiet'}
-                      onClick={() => navigate('credentials')}
-                    >
-                      Evaluation credentials
-                    </Button>
-                  )}
-                </nav>
-              )}
-              {view === 'catalog' ? (
+              {view === 'segments' ? (
                 <Catalog
                   key={`${project.id}:${session.operator.id}`}
                   request={request}
@@ -405,15 +311,12 @@ function FlightdeckContent({
                   projectName={project.name}
                   role={session.operator.role}
                 />
-              ) : view === 'credentials' && role === 'administrator' && environment ? (
-                <Credentials
-                  key={`${scope}:${session.operator.id}`}
-                  request={request}
-                  scope={scope}
-                  projectName={project.name}
-                  environmentName={environment.name}
-                />
-              ) : view === 'flags' ? (
+              ) : view === 'audit' ? (
+                <section className="fd-audit-placeholder" aria-labelledby="audit-title">
+                  <h1 id="audit-title">Audit log</h1>
+                  <p>Not implemented in this POC.</p>
+                </section>
+              ) : (
                 <>
                   <div className="fd-inventory-panel" hidden={Boolean(flagKey)}>
                     <Inventory
@@ -452,12 +355,28 @@ function FlightdeckContent({
                       project={project}
                       environmentId={environment.id}
                       role={session.operator.role}
+                      environmentControl={
+                        <label className="fd-environment-picker">
+                          Environment
+                          <select
+                            className="input"
+                            value={environmentId}
+                            onChange={(event) =>
+                              goTo({ ...location, environmentId: event.target.value })
+                            }
+                          >
+                            {project.environments.map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      }
                       onBack={() => goTo({ ...location, flagKey: null, environmentId: '' })}
                     />
                   )}
                 </>
-              ) : (
-                <Empty>Choose an environment to inspect evaluation credentials.</Empty>
               )}
             </>
           )}
@@ -494,7 +413,8 @@ function FlightdeckContent({
     <div className="ob-root fd-standalone" data-theme={theme}>
       <AppShell
         size="desktop"
-        menu={session ? 'docked' : 'hidden'}
+        menu="hidden"
+        rail={null}
         header={
           <Header
             currentLabel="Flightdeck"
@@ -520,42 +440,6 @@ function FlightdeckContent({
               </>
             }
           />
-        }
-        rail={
-          <Rail
-            items={[
-              {
-                id: 'flags',
-                label: 'Feature flags',
-                shortLabel: 'Flags',
-                icon: 'flag',
-                tone: 'atom',
-                appId: 'flightdeck',
-                appName: 'Flightdeck',
-              },
-            ]}
-            currentId="flags"
-            onSelect={() => navigate('flags')}
-          />
-        }
-        appMenu={session && appMenu}
-        contextBar={
-          session && (
-            <ContextBar
-              scope={project?.name ?? 'No project'}
-              time={
-                view === 'catalog'
-                  ? 'Targeting library'
-                  : view === 'credentials'
-                    ? 'Service credentials'
-                    : flagKey
-                      ? environmentId
-                        ? `Configuration · ${environment?.name ?? 'Unavailable'}`
-                        : 'Flag overview'
-                      : 'Shared flag inventory'
-              }
-            />
-          )
         }
       >
         {content}

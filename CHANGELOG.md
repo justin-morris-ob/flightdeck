@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Reset the visible POC to three project sections: Flags, Segments and an explicit Audit log placeholder; remove competing standalone sidebar/context navigation and repeated scope/revision information.
+- Reduce flag settings to environment availability and basic segment audiences, and give Segments a focused list/editor that preserves attributes and unrelated segments. Remove advanced/typed authoring, credentials, schema editing, exception/history/diagnostic and lifecycle tools from the UI without changing their APIs or stored configuration.
 - Resolve administrative organization names from authenticated server scope on every session response, and add operator-only project flag overview reads with shared metadata and stored environment gates.
 - Replace duplicate project navigation and ambient inventory environment selection with one project selector, read-only flag overview, exact environment links and restorable standalone/Atlas object locations.
 - Preserve inventory search/page across flag visits and guard unpublished configuration, metadata, exception and catalog edits through navigation/reload/revision changes; distinguish shared metadata/lifecycle actions from environment gates.

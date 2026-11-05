@@ -1,13 +1,36 @@
 # Project scope and navigation verification
 
+## POC subtraction pass
+
+The current visible UI is Flags, Segments and an explicitly unimplemented Audit log placeholder. See [local development](local-development.md#projects-and-the-shared-flag-inventory) for the reduced surface.
+
+Observed checks: `pnpm check`, `pnpm db:setup`, and `pnpm test` passed; 261 tests across eight files. Location coverage now exercises project-wide Segments/Audit log and rejection of retired catalog/credential UI locations. Backend contracts, database schema and evaluation code are unchanged in this pass.
+
+Actual browser scenarios used isolated standalone and unmodified Atlas-shell previews. Writes were limited to a newly created synthetic flag and segment:
+
+- Created a flag; both environment gates initially showed Off.
+- Changed Development availability, saved an empty Selected segments audience, reloaded, and observed the selection persist. Production remained independently Off with Everyone until explicitly preparing its separate advanced fixture.
+- A dirty environment transition offered Stay, which retained both selected environment and audience draft.
+- Created and edited a focused segment. HTTP comparison confirmed attributes and all pre-existing segments were preserved. Escape/Stay retained an edited name; save survived reload.
+- A concurrent write to the owned segment made the stale form save fail with a revision conflict while retaining its draft. The analogous flag-publication conflict retained the reviewed audience and did not falsely report success.
+- Held a real preview request pending: attempted section navigation was blocked by Save in progress, and completing validation opened the correct environment confirmation.
+- Prepared a string configuration on the owned flag through its existing authorized API. The UI exposed no simple audience radios; changing availability preserved its entire stored configuration.
+- Verified viewer creation/save controls absent and segment inspection read-only.
+- Opened all three sections through actual Atlas object references, including the truthful Audit log placeholder; no page errors were reported.
+- Visually inspected standalone dark/light and an 800px viewport, with the project selector and three sections visible.
+
+The following FD-UX-01 evidence predates this subtraction pass and does not assert that retired controls remain present.
+
+## Historical FD-UX-01
+
 FD-UX-01 clarifies administrative organization → project → shared flag → environment configuration. It does not change targeting evaluation or introduce initiative-sized projects.
 
-## Automated checks
+### Automated checks
 
 - `pnpm check`: lint, browser/server type checks, runtime/OpenAPI agreement, standalone/remote/consumer builds and formatting.
 - `pnpm test`: 258 tests across eight files, against the dedicated local test database. New coverage exercises organization resolution on session-producing HTTP paths, missing-organization rejection, operator-only project overview reads, organization isolation, stored/missing environment configurations, and standalone/Atlas location validation.
 
-## Actual browser scenarios exercised
+### Actual browser scenarios exercised
 
 The standalone build and a separately installed, unmodified Atlas shell were run on isolated loopback ports. All mutations used a newly created synthetic flag; existing flag configuration and catalog records were not changed.
 

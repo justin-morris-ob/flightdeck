@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } fr
 
 import { Button, Notice } from '@onebrief/atlas-ui';
 
-import { createFlagSchema, type Flag } from '../shared/contracts.ts';
+import { createFlagSchema } from '../shared/contracts.ts';
 import { errorMessage } from './api.ts';
 import { useDraftNavigation, useDraftSource } from './draft-context.ts';
 
@@ -42,7 +42,6 @@ export function Modal({ title, children, onClose }: ModalProps) {
 }
 
 interface FlagFormProps {
-  flag?: Flag;
   busy: boolean;
   onCancel: () => void;
   onSave: (data: {
@@ -53,7 +52,7 @@ interface FlagFormProps {
   }) => Promise<void>;
 }
 
-export function FlagForm({ flag, busy, onCancel, onSave }: FlagFormProps) {
+export function FlagForm({ busy, onCancel, onSave }: FlagFormProps) {
   const id = useId();
   const [error, setError] = useState('');
   const form = useRef<HTMLFormElement>(null);
@@ -70,9 +69,7 @@ export function FlagForm({ flag, busy, onCancel, onSave }: FlagFormProps) {
     if (!form.current) return;
     const data = new FormData(form.current);
     setDirty(
-      (['key', 'name', 'description', 'owner'] as const).some(
-        (field) => String(data.get(field) ?? '') !== (flag?.[field] ?? '')
-      )
+      ['key', 'name', 'description', 'owner'].some((field) => String(data.get(field) ?? '') !== '')
     );
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -101,15 +98,7 @@ export function FlagForm({ flag, busy, onCancel, onSave }: FlagFormProps) {
       {error && <Notice tone="danger">{error}</Notice>}
       <label htmlFor={`${id}-name`}>
         Name
-        <input
-          id={`${id}-name`}
-          name="name"
-          className="input"
-          required
-          maxLength={120}
-          defaultValue={flag?.name}
-          autoFocus
-        />
+        <input id={`${id}-name`} name="name" className="input" required maxLength={120} autoFocus />
       </label>
       <label htmlFor={`${id}-key`}>
         Flag key
@@ -120,8 +109,6 @@ export function FlagForm({ flag, busy, onCancel, onSave }: FlagFormProps) {
           required
           maxLength={100}
           pattern="[a-z][a-z0-9_-]*"
-          readOnly={Boolean(flag)}
-          defaultValue={flag?.key}
           aria-describedby={`${id}-key-help`}
         />
       </label>
@@ -131,14 +118,7 @@ export function FlagForm({ flag, busy, onCancel, onSave }: FlagFormProps) {
       </p>
       <label htmlFor={`${id}-owner`}>
         Owner
-        <input
-          id={`${id}-owner`}
-          name="owner"
-          className="input"
-          required
-          maxLength={120}
-          defaultValue={flag?.owner}
-        />
+        <input id={`${id}-owner`} name="owner" className="input" required maxLength={120} />
       </label>
       <label htmlFor={`${id}-description`}>
         Description
@@ -148,20 +128,15 @@ export function FlagForm({ flag, busy, onCancel, onSave }: FlagFormProps) {
           className="textarea"
           rows={4}
           maxLength={1000}
-          defaultValue={flag?.description ?? ''}
         />
       </label>
-      <p className="fd-help">
-        {flag
-          ? `All project environments · Metadata is shared. Current flag version: ${flag.revision}.`
-          : 'All project environments · Created disabled everywhere. Choose Everyone or selected audiences after creation.'}
-      </p>
+      <p className="fd-help">Created Off in every environment.</p>
       <div className="fd-actions">
         <Button onClick={() => confirmTransition(onCancel)} disabled={busy || saving}>
           Cancel
         </Button>
         <Button variant="primary" type="submit" disabled={busy || saving}>
-          {busy || saving ? 'Saving…' : flag ? 'Save metadata' : 'Create flag'}
+          {busy || saving ? 'Saving…' : 'Create flag'}
         </Button>
       </div>
     </form>

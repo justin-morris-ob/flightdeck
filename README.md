@@ -4,7 +4,7 @@ Enablements and Experiments for Onebrief: feature flags, targeted enablements, c
 
 ## Current status
 
-**Stage 3 consumer checkpoint, on top of Stage 2 targeting.** Author typed flags, pinned segments, overrides, deterministic rollouts and variants; use the same Onebrief-toolkit pages standalone and inside Atlas. Generic string-list targeting, a server OpenFeature provider and a reusable consumer lab now exercise the backend contract.
+**Simplified POC UI over the Stage 2/3 backend.** The visible application has three project-level sections: **Flags**, **Segments**, and **Audit log** (an explicitly unimplemented placeholder). Typed evaluation, overrides, deterministic rollouts, variants, the OpenFeature provider and consumer lab remain backend capabilities; the POC no longer exposes their advanced management tools.
 
 Flightdeck remains loopback-only with synthetic management identities and credential-scoped tenant grants. The real BC adapter lives in a separate BC change; local integration evidence is not production authentication or a deployed Atlas service. Assignment is not experiment exposure or results.
 
@@ -21,13 +21,13 @@ pnpm start
 
 Open **http://localhost:4721**. Select **Alex Morgan** for administrator access, **Ellis Chen** for editor access or **Vera Singh** for read-only access. All are synthetic local identities. The isolated **Jordan Rivera** identity demonstrates a different organization's scope.
 
-Choose a project with the **Project** selector. Its Feature flags page is one shared inventory with a status column for every environment—not a different flag collection per environment. A flag's name opens its read-only **Flag overview**; an environment status opens that exact configuration. The inventory and overview have no ambient environment selector. Creation initializes the flag disabled everywhere; metadata and archival remain shared across the project.
+Choose a project with the **Project** selector. **Flags** lists flag names, descriptions and per-environment statuses. A name opens a small environment overview; a status opens that exact environment's settings. Creation initializes the flag Off everywhere.
 
-The scope bar shows the administrative organization resolved by Flightdeck's server. Standalone project/flag/environment locations survive reload and browser Back/Forward. Unsaved flag, metadata, exception and catalog changes ask **Stay** or **Discard and leave** before a Flightdeck navigation would lose them; ordinary detail-tab inspection preserves them. Signing out clears identity-bound edits. Embedded views use published Atlas object references rather than rewriting shell URLs.
+The scope bar shows the authenticated administrative organization. Standalone locations survive reload and Back/Forward; embedded pages use published Atlas object references. Unpublished creation, audience and segment changes use **Stay / Discard and leave** protection. Signing out clears identity-bound edits.
 
-The default **Targeting** tab keeps Boolean flags simple: choose **Everyone** or **Selected audiences**, select existing Flightdeck segments, then review and publish. Any selected segment can qualify; an empty selection matches nobody. BC email, organization and group pickers are visibly unavailable until a real directory connection is built—there is no copied or synthetic BC directory behind them.
+Compatible Boolean flags have an On/Off availability control and **Everyone / Selected segments** audience controls. Save validates through the existing server preview and requires confirmation for the named environment. Empty selection means nobody qualifies through audience targeting. Existing advanced/typed configurations remain preserved and read-only here, apart from their availability gate.
 
-Working typed values, ordered rules, rollouts, variants and the playground remain under **Advanced controls**, collapsed by default. Complex existing configurations are preserved and are never automatically converted to the simple editor. Individual overrides remain in **Exceptions (advanced)**. Project targeting catalog owns reusable attributes/segments; publication still explicitly pins their definitions. The Flightdeck and Sandbox names are demo projects, not environments or separate deployments.
+**Segments** provides a focused list and create/edit form using existing attributes. It preserves the underlying attribute schema and unrelated segments; saving a segment does not automatically update a flag's pinned targeting. Credentials, attribute-schema editing, individual exceptions, advanced editors, diagnostics, activity and lifecycle actions are intentionally absent from the POC UI. Their authorized APIs and stored data are unchanged.
 
 ### Separate backend consumer
 

@@ -14,6 +14,7 @@ import {
   type Project,
 } from '../shared/contracts.ts';
 import { errorMessage, get, send, type Request } from './api.ts';
+import { Catalog } from './Catalog.tsx';
 import { Credentials } from './Credentials.tsx';
 import { FlagDetail } from './FlagDetail.tsx';
 import { Modal } from './forms.tsx';
@@ -34,7 +35,7 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
   const [projectId, setProjectId] = useState(initialProjectId ?? '');
   const [environmentId, setEnvironmentId] = useState('');
   const [flagKey, setFlagKey] = useState<string | null>(null);
-  const [view, setView] = useState<'flags' | 'credentials'>('flags');
+  const [view, setView] = useState<'flags' | 'credentials' | 'catalog'>('flags');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [loading, setLoading] = useState(true);
   const [scopeLoading, setScopeLoading] = useState(false);
@@ -139,6 +140,7 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
   function navigate(id: string) {
     setFlagKey(null);
     if (id === 'credentials' && role === 'administrator') setView('credentials');
+    else if (id === 'catalog') setView('catalog');
     else {
       setView('flags');
       if (projects.some((item) => item.id === id)) {
@@ -157,6 +159,7 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
     pinned: [],
     views: [
       { id: 'flags', label: 'Feature flags', icon: 'flag' },
+      { id: 'catalog', label: 'Project targeting catalog', icon: 'sliders' },
       ...(role === 'administrator'
         ? [{ id: 'credentials', label: 'Evaluation credentials', icon: 'approval' as const }]
         : []),
@@ -185,7 +188,7 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
           <p className="fd-eyebrow">ENABLEMENTS & EXPERIMENTS</p>
           <h1>Welcome to Flightdeck</h1>
           <p className="fd-signin-intro">
-            Control boolean flags, inspect decisions, and trace every configuration change.
+            Control typed configuration and targeting, inspect decisions, and trace every change.
           </p>
           <section className="fd-signin-card">
             <h2>Local development sign-in</h2>
@@ -309,6 +312,12 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
                 >
                   Feature flags
                 </Button>
+                <Button
+                  variant={view === 'catalog' ? 'primary' : 'quiet'}
+                  onClick={() => navigate('catalog')}
+                >
+                  Project targeting catalog
+                </Button>
                 {role === 'administrator' && (
                   <Button
                     variant={view === 'credentials' ? 'primary' : 'quiet'}
@@ -318,7 +327,15 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
                   </Button>
                 )}
               </nav>
-              {view === 'credentials' && role === 'administrator' ? (
+              {view === 'catalog' ? (
+                <Catalog
+                  key={`${scope}:${session.operator.id}`}
+                  request={request}
+                  scope={scope}
+                  projectName={project.name}
+                  role={session.operator.role}
+                />
+              ) : view === 'credentials' && role === 'administrator' ? (
                 <Credentials
                   key={`${scope}:${session.operator.id}`}
                   request={request}

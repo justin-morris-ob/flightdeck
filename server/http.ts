@@ -117,7 +117,7 @@ export function createApplication({
       const url = new URL(req.url ?? '/', `http://localhost:${port}`);
       if (req.method === 'OPTIONS') {
         res.setHeader('access-control-allow-headers', 'authorization, content-type');
-        res.setHeader('access-control-allow-methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+        res.setHeader('access-control-allow-methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
         return send(204);
       }
       if (url.pathname === '/healthz' && req.method === 'GET') {
@@ -165,7 +165,7 @@ export function createApplication({
           const params = Object.fromEntries(
             route.names.map((name, index) => [name, decodeURIComponent(match[index + 1])])
           );
-          const body = ['POST', 'PATCH'].includes(req.method ?? '')
+          const body = ['POST', 'PUT', 'PATCH'].includes(req.method ?? '')
             ? await readJson(req)
             : undefined;
           const result = await route.handler({ principal, params, query: url.searchParams, body });

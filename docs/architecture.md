@@ -1,6 +1,6 @@
 # Flightdeck architecture
 
-Status: Stage 1 is implemented and locally exercised for boolean flags. This document also describes later-stage design decisions and production gates; see [the verification record](stage-one-verification.md) and [the stage plan](plan.md) to distinguish shipped behavior from planned capabilities.
+Status: Stages 1 and 2 are implemented and locally exercised. Typed configuration, targeting, pinned segments, scoped overrides and deterministic assignment are current behavior. Later-stage design and production gates remain explicit; see [Stage 2 evidence](stage-two-verification.md) and [the stage plan](plan.md).
 
 ## Product boundary
 
@@ -50,7 +50,7 @@ Flightdeck does not trust a tenant identifier merely because BC can reach its ne
 
 ## Stack and integration
 
-Implemented Stage 1 stack: TypeScript, React, Vite, Node's HTTP server, published Atlas BFF error utilities, PostgreSQL through `pg`, Zod-validated versioned OpenAPI contracts and Vitest behavior tests. The app owns its bounded request reader, loopback/origin checks and development-session verification rather than inheriting the demo BFF's unrestricted listener and shell-name authentication.
+Implemented stack: TypeScript, React, Vite, Node's HTTP server, published Atlas BFF error utilities, PostgreSQL through `pg`, Zod-validated versioned OpenAPI contracts and Vitest behavior tests. The app owns its bounded request reader, loopback/origin checks and development-session verification rather than inheriting the demo BFF's unrestricted listener and shell-name authentication.
 
 Use published `@onebrief/atlas-sdk`, `@onebrief/atlas-ui`, `@onebrief/atlas-bff-kit`, `@onebrief/atlas-vite-config` and the appropriate shell contract, with published `@onebrief/ux-kit` primitives. Keep all versions explicit and compatible as one set with the target shell. The Todo reference proved the `0.1.0` family with React `19.2.7` and Vite `8.2.1`; this is a starting compatibility candidate, not permission to choose independent latest releases.
 
@@ -64,21 +64,21 @@ Private package installation requires approved Nexus read credentials outside th
 
 ## Domain and scope
 
-Proposed conceptual model, to be translated into a reviewed migration in Stage 1:
+Implemented local domain (experiment records remain planned):
 
-| Concept                    | Ownership and purpose                                                                                       |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Control-plane organization | Administrative security boundary for operators and projects; not implicitly a BC tenant                     |
-| Project                    | Owns flag definitions, context schema and consumer bindings                                                 |
-| Environment                | Independently scoped configuration such as development or production, within a project                      |
-| Flag                       | Stable project-scoped key, description, owner and lifecycle metadata                                        |
-| Environment configuration  | Enabled state, off variation, rules, variants and a monotonic revision for a flag/environment               |
-| Segment                    | Reusable, typed targeting conditions within an explicit project scope                                       |
-| Consumer credential        | Explicit organization/project/environment/operation permissions; store a verifier, not a recoverable secret |
-| Audit change               | Actor, scope, action, timestamp, before/after configuration and resulting revision                          |
-| Experiment                 | Versioned hypothesis, allocation, variants, unit, metrics and analysis policy                               |
+| Concept                    | Ownership and purpose                                                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Control-plane organization | Administrative security boundary for operators and projects; not implicitly a BC tenant                           |
+| Project                    | Owns flag definitions, context schema and consumer bindings                                                       |
+| Environment                | Independently scoped configuration such as development or production, within a project                            |
+| Flag                       | Stable project-scoped key, description, owner and lifecycle metadata                                              |
+| Environment configuration  | Enabled state, off variation, rules, variants and a monotonic revision for a flag/environment                     |
+| Segment                    | Reusable, typed targeting conditions within an explicit project scope                                             |
+| Consumer credential        | Explicit organization/project/environment/operation and tenant grants; store a verifier, not a recoverable secret |
+| Audit change               | Actor, scope, action, timestamp, before/after configuration and resulting revision                                |
+| Experiment                 | Versioned hypothesis, allocation, variants, unit, metrics and analysis policy                                     |
 
-Start with boolean flags. Add typed values, segments, overrides, rules, variants and experiment records only in their corresponding stages. Keys must have a documented uniqueness scope and rename policy; do not use display names as immutable identifiers.
+Boolean, string, number and JSON values are implemented. The value type belongs to an environment configuration; all its outcomes, variants and active overrides must agree. Keys are immutable and unique within a project. Flag metadata/archive/revision are project-wide; configuration and overrides are environment-scoped. Experiment records are not implemented.
 
 Separate three identities:
 
@@ -96,32 +96,34 @@ Operator permissions start with viewer, editor and administrator capabilities sc
 
 If the current shell only provides demo identity, a local-only demonstration may use an explicit isolated development identity configuration. It must be visibly labeled, bind to loopback, use disposable data and refuse production mode. It does not pass the production identity gate or permit real BC integration. There must be no automatic authentication downgrade.
 
-The service-to-service contract must define how a BC credential's scope restricts permitted tenant subjects. An arbitrary `tenantId` body field cannot grant access. Rotation and revocation are mandatory before shared-environment usage.
+Service credentials explicitly grant 1–20 tenant IDs. Evaluation requires a matching tenant before flag lookup; an arbitrary `tenantId` body field cannot expand the grant. The bootstrap credential permits only `local-tenant`. Custom traits remain asserted by the trusted backend in this local demonstration. Authoritative BC tenant/user mapping, delegated identity and production credential lifecycle are Stage 3/shared-environment gates, not proven by this allowlist.
 
 ## Evaluation contract
 
-Stage 1 has only boolean enabled/off evaluation; Stage 2 introduces the richer semantics below. Freeze exact input/output schemas and examples before implementing either stage.
+The implemented [evaluation specification](evaluation-spec.md) freezes exact precedence, missing-data behavior and the `sha256-v1` byte encoding. The OpenAPI document is version `2.0.0`: this is an intentional breaking cutover of the preproduction development contract, while routes remain `/api/v1`. GET evaluation is removed; POST accepts explicit context and returns tagged values.
 
-- Select the project/environment from authorized consumer scope; reject attempts to expand it through request parameters.
-- A known flag disabled in that environment returns its defined off value and a disabled reason. It cannot be re-enabled by a targeting override.
-- A targeting override, ordered rules and a default outcome need explicit precedence. Recommended starting precedence: environment disable, explicit subject override, first matching ordered rule, then configured default outcome.
-- Inside a rule, all conditions must match; alternative rules provide OR semantics. Missing attributes do not satisfy a condition, including negated operators, unless an explicit presence/absence operator requests that behavior.
-- Validate attribute types and operators at authoring time; do not silently coerce strings into booleans or numbers.
-- Percentage allocation uses a documented, versioned deterministic hash, stable subject key, flag/experiment salt and bucket range. Do not use request-time randomness. Specify behavior when the stickiness key is missing; the initial recommendation is no percentage-rule match with an explainable reason.
-- Variants have stable IDs, validated weights and a deterministic assignment separate from the enabled/off decision. Configuration edits must have defined effects on assignment and experiment eligibility.
+- Select project/environment from authorized consumer scope; reject a tenant outside credential grants before flag lookup.
+- Precedence is archived → environment disabled → active exact tenant/subject override → first eligible ordered rule → configured default.
+- Gates return the configured typed off value. `enabled` describes the environment master gate, not whether a returned boolean happens to be true.
+- AND every rule condition and attached segment predicate. Missing/wrong-type values do not satisfy negated comparisons; presence/absence is explicit, with no coercion.
+- Publication pins context definitions and referenced segment predicates. Project catalog edits cannot silently change live behavior. Previewing/publishing a refreshed catalog explicitly reports the risk.
+- Rollout admission and variant selection have separate deterministic hash purposes. Immutable namespaces, stable IDs and integer basis points define allocation. Partial rollouts and every variant selection require tenant plus stable subject; full-rollout fixed values do not require a subject.
+- All declared variants have weights totaling 10000 basis points. No automatic redistribution occurs. Current/draft previews and warnings expose assignment-sensitive changes; they are not population estimates or experiment results.
 - Return a configuration revision and explainable reason. A permission failure, unknown key or malformed context is not a successful false evaluation.
 - Start with server-side remote evaluation. Consumer clients require bounded requests, timeouts and explicit error behavior. A consumer may apply its declared fallback for an unavailable/unknown decision, but must not hide a failed authorization as ordinary targeting.
 - Never prescribe global `false` as a safe failure policy. Some features are safety or access controls whose safe fallback differs. Flag evaluation is not a substitute for authorization or entitlement enforcement.
 
-Record missing/malformed context handling, precedence, numeric boundaries, percentage boundaries, changes in rollout percentage and variant reassignment in permanent behavior tests when implemented. Evaluation must not create one durable row per request by default.
+Permanent language-neutral vectors cover precedence, types, missing data, gates, expiry and allocation boundaries. The same evaluator serves backend decisions and operator previews. The backend client validates scope, key and tagged type, applies only its declared fallback for unavailable/unknown decisions, and throws on authorization failure. Evaluation does not persist a context/exposure row.
 
 ## Writes, audit and storage
 
 Use PostgreSQL transactions for configuration changes, revision increments and audit records. Use expected revisions to reject lost updates rather than silently overwriting another operator's edit. Keep evaluation credentials read-only at the API boundary. Use separate migration and restricted runtime roles; parameterized SQL only.
 
-Every table needs a documented owner, access pattern, index, expected growth and retention rule at introduction. Start with a project/environment-scoped list ordered by an indexed stable key and bounded pagination. Do not hide unbounded history, contexts or event streams in JSON columns.
+Tables have explicit ownership and growth/index documentation in [local development](local-development.md). Inventory is bounded to 20 rows/page; activity, catalog history, credentials and override lists are bounded to 100. Configurations are bounded snapshots, not unbounded event streams.
 
-Proposed policy for initial development: retain active configuration until explicit archival; archive flags without immediately removing referenced keys; audit history is append-only through runtime APIs and may contain only allowlisted configuration metadata. Do not retain raw evaluation subject/context data by default. Decide numeric retention periods, deletion obligations and backup/recovery objectives with the deployment owner before admitting shared or production data. Experiment event retention and deduplication are separate Stage 5 decisions.
+Migration `002-targeting.sql` preserves existing flag IDs, enabled/archive state and revisions, adds typed boolean defaults, and restricts existing development credentials to `local-tenant`. Current catalogs and append-only catalog history are project-scoped. Overrides require exact environment/tenant/subject, owner, reason and expiry; runtime permits only revocation, not arbitrary mutation. Configuration/catalog/override writes are transactional with optimistic revision checks and audit records.
+
+Local policy retains configuration until explicit archival and retains audit/revoked override rows. Evaluation traits are not logged; stored override targets are intentional management data. Numeric retention, deletion obligations and backup/recovery objectives remain deployment gates. Experiment events/deduplication remain Stage 5.
 
 ## UI direction
 
@@ -146,4 +148,4 @@ The inspected checkout revisions are recorded so later stages can detect drift. 
 | [Unleash](https://github.com/Unleash/unleash)                | `6e416ef757455bbf531661ef73fec61d33539055` | Feature domain and frontend workflows; detailed comparison in the plan                                |
 | [Flagsmith](https://github.com/Flagsmith/flagsmith)          | `45cfd1026a35deeab3454de56aeb2c88877451c7` | Feature/environment/segment/identity model and product documentation; detailed comparison in the plan |
 
-No Flightdeck conformance documents existed at repository creation. [Stage 1 feature requirements](conformance/feature-flags/README.md) now describe implemented local behavior; later-stage designs above are not passing conformance claims.
+[Current feature requirements](conformance/feature-flags/README.md) describe implemented local behavior. Later-stage designs above are not passing conformance claims. Container/image/chart ownership is a future delivery responsibility, not evidence that those deployment artifacts exist today.

@@ -18,7 +18,8 @@ const configSchema = z.strictObject({
   evaluationToken: z.string().regex(/^fd_[a-f0-9]{64}$/),
 });
 type LocalConfig = z.infer<typeof configSchema>;
-const usage = 'Usage: node scripts/local.ts setup|start|test|consumer <key> [true|false]|stop-db';
+const usage =
+  'Usage: node scripts/local.ts setup|start|test|consumer <key> <tagged-fallback-json> [context-json]|stop-db';
 
 function hasCode(error: unknown, code: string): boolean {
   return error instanceof Error && 'code' in error && error.code === code;
@@ -148,19 +149,14 @@ async function main(): Promise<void> {
     throw new Error(usage);
   }
   if (command !== 'consumer' && process.argv.length > 3) throw new Error(usage);
-  if (
-    command === 'consumer' &&
-    (!process.argv[3] ||
-      process.argv.length > 5 ||
-      (process.argv[4] !== undefined && !['true', 'false'].includes(process.argv[4])))
-  )
+  if (command === 'consumer' && (!process.argv[3] || !process.argv[4] || process.argv.length > 6))
     throw new Error(usage);
   const config = await loadConfig(command === 'setup');
   if (command === 'setup') {
     await setupDatabases(config);
   } else if (command === 'start') {
     if (process.env.NODE_ENV === 'production')
-      throw new Error('Stage 1 local startup refuses NODE_ENV=production.');
+      throw new Error('Local development startup refuses NODE_ENV=production.');
     await runCommand(process.execPath, ['server/index.ts'], {
       cwd: root,
       env: {

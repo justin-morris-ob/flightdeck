@@ -25,7 +25,10 @@ import {
   type Role,
 } from '../shared/contracts.ts';
 import { dateTime, errorMessage, get, send, type Request } from './api.ts';
+import { ConfigurationEditor } from './ConfigurationEditor.tsx';
+import { Decision } from './Decision.tsx';
 import { Confirm, FlagForm, Modal } from './forms.tsx';
+import { Overrides } from './Overrides.tsx';
 
 interface Props {
   request: Request;
@@ -50,7 +53,7 @@ export function FlagDetail({
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [activity, setActivity] = useState<AuditEntry[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [tab, setTab] = useState<'configuration' | 'activity'>('configuration');
+  const [tab, setTab] = useState<'configuration' | 'overrides' | 'activity'>('configuration');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [moreBusy, setMoreBusy] = useState(false);
@@ -67,7 +70,13 @@ export function FlagDetail({
     setError('');
     Promise.all([
       get(request, path, flagSchema),
-      get(request, `${scope}/evaluate/${encodeURIComponent(flagKey)}`, evaluationSchema),
+      send(
+        request,
+        `${scope}/evaluate/${encodeURIComponent(flagKey)}`,
+        'POST',
+        { context: { attributes: {} } },
+        evaluationSchema
+      ),
       get(request, `${path}/activity?limit=20`, activitySchema),
     ])
       .then(([nextFlag, decision, entries]) => {
@@ -176,13 +185,15 @@ export function FlagDetail({
             {error && <Notice tone="danger">{error}</Notice>}
             {role === 'viewer' && (
               <Notice tone="primary">
-                Viewer access · Configuration and activity are read-only.
+                Viewer access · Configuration and activity are read-only. You may simulate
+                decisions.
               </Notice>
             )}
             {flag.archived && (
               <Notice>
-                Archived in every environment · Evaluation returns false with reason archived.
-                Restoring preserves each environment’s configured state.
+                Archived in every environment · Evaluation returns the configured typed off value
+                with enabled:false and reason archived. Restoring preserves environment
+                configuration.
               </Notice>
             )}
           </Notices>
@@ -191,6 +202,7 @@ export function FlagDetail({
           <ViewBar
             tabs={[
               { id: 'configuration', label: 'Configuration' },
+              { id: 'overrides', label: 'Subject overrides' },
               { id: 'activity', label: 'Activity' },
             ]}
             value={tab}
@@ -198,13 +210,13 @@ export function FlagDetail({
           />
         }
         main={
-          tab === 'configuration' ? (
-            <>
+          <>
+            <div className="fd-configuration-panel" hidden={tab !== 'configuration'}>
               <Block name="content" label="Environment configuration" icon="sliders">
                 <div className="fd-config-state">
                   <div>
                     <h2>{environment.name}</h2>
-                    <p>Boolean enablement · This environment only</p>
+                    <p>Environment gate · Separate from selected configuration value</p>
                   </div>
                   <Badge tone={flag.enabled && !flag.archived ? 'success' : 'secondary'}>
                     {flag.archived ? 'Archived · evaluates off' : flag.enabled ? 'On' : 'Off'}
@@ -231,7 +243,21 @@ export function FlagDetail({
                   </div>
                 )}
               </Block>
-              <Block name="reply" label="Lifecycle" icon="flag">
+              <ConfigurationEditor
+                key={flag.revision}
+                request={request}
+                scope={scope}
+                path={path}
+                flag={flag}
+                writable={writable}
+                projectName={project.name}
+                environmentName={environment.name}
+                onChanged={(next) => {
+                  setFlag(next);
+                  setVersion((value) => value + 1);
+                }}
+              />
+              <Block name="content" label="Lifecycle" icon="flag">
                 <p>
                   Archiving applies to every environment. The immutable key and audit history remain
                   available.
@@ -244,70 +270,74 @@ export function FlagDetail({
                   )}
                 </div>
               </Block>
-            </>
-          ) : (
-            <Block name="content" label="Activity history" icon="clock">
-              <p className="fd-help">
-                Project-wide history · Each change identifies its environment and verified local
-                actor.
-              </p>
-              {activity.length === 0 ? (
-                <Empty>No activity has been recorded.</Empty>
-              ) : (
-                <ol className="fd-activity">
-                  {activity.map((entry) => (
-                    <li key={entry.id}>
-                      <div className="fd-activity-head">
-                        <strong>{entry.actorName}</strong>
-                        <Badge>{entry.action}</Badge>
-                        <code>r{entry.revision}</code>
-                      </div>
-                      <p>
-                        {project.environments.find((item) => item.id === entry.environmentId)
-                          ?.name ?? entry.environmentId}{' '}
-                        · <time dateTime={entry.createdAt}>{dateTime(entry.createdAt)}</time>
-                      </p>
-                      <details>
-                        <summary>Configuration change · {entry.actorId}</summary>
-                        <div className="fd-change-grid">
-                          <div>
-                            <h3>Before</h3>
-                            <pre>{JSON.stringify(entry.previous, null, 2)}</pre>
-                          </div>
-                          <div>
-                            <h3>After</h3>
-                            <pre>{JSON.stringify(entry.next, null, 2)}</pre>
-                          </div>
+            </div>
+            {tab === 'overrides' ? (
+              <Overrides
+                request={request}
+                path={path}
+                flag={flag}
+                writable={writable}
+                environmentName={environment.name}
+                onChanged={(next) => {
+                  setFlag(next);
+                  setVersion((value) => value + 1);
+                }}
+              />
+            ) : tab === 'activity' ? (
+              <Block name="content" label="Activity history" icon="clock">
+                <p className="fd-help">
+                  Project-wide history · Each change identifies its environment and verified local
+                  actor.
+                </p>
+                {activity.length === 0 ? (
+                  <Empty>No activity has been recorded.</Empty>
+                ) : (
+                  <ol className="fd-activity">
+                    {activity.map((entry) => (
+                      <li key={entry.id}>
+                        <div className="fd-activity-head">
+                          <strong>{entry.actorName}</strong>
+                          <Badge>{entry.action}</Badge>
+                          <code>r{entry.revision}</code>
                         </div>
-                      </details>
-                    </li>
-                  ))}
-                </ol>
-              )}
-              {nextCursor && (
-                <Button onClick={() => void loadMore()} disabled={moreBusy}>
-                  {moreBusy ? 'Loading…' : 'Load older activity'}
-                </Button>
-              )}
-            </Block>
-          )
+                        <p>
+                          {project.environments.find((item) => item.id === entry.environmentId)
+                            ?.name ?? entry.environmentId}{' '}
+                          · <time dateTime={entry.createdAt}>{dateTime(entry.createdAt)}</time>
+                        </p>
+                        <details>
+                          <summary>Configuration change · {entry.actorId}</summary>
+                          <div className="fd-change-grid">
+                            <div>
+                              <h3>Before</h3>
+                              <pre>{JSON.stringify(entry.previous, null, 2)}</pre>
+                            </div>
+                            <div>
+                              <h3>After</h3>
+                              <pre>{JSON.stringify(entry.next, null, 2)}</pre>
+                            </div>
+                          </div>
+                        </details>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                {nextCursor && (
+                  <Button onClick={() => void loadMore()} disabled={moreBusy}>
+                    {moreBusy ? 'Loading…' : 'Load older activity'}
+                  </Button>
+                )}
+              </Block>
+            ) : null}
+          </>
         }
         aside={
           <>
-            <AsideSection name="status" title="Decision preview" icon="eye">
-              <div className="fd-decision">
-                <span className="fd-decision-value">{String(evaluation.value)}</span>
-                <Badge tone={evaluation.value ? 'success' : 'secondary'}>{evaluation.reason}</Badge>
-              </div>
-              <Properties
-                items={[
-                  ['Environment', environment.name],
-                  ['Evaluated revision', `r${evaluation.revision}`],
-                  ['Decision model', 'Boolean only'],
-                ]}
-              />
+            <AsideSection name="status" title="Published decision · empty context" icon="eye">
+              <Decision decision={evaluation} title="Current published decision" />
               <p className="fd-help">
-                Live operator preview · Not an experiment exposure or a production rollout.
+                Empty-context baseline only. Use the configuration playground to send actual tenant,
+                subject and typed attributes. The gate can be enabled while the value is false.
               </p>
             </AsideSection>
             <AsideSection name="people" title="Ownership" icon="users">
@@ -370,7 +400,7 @@ export function FlagDetail({
           </p>
           <p>
             {confirm === 'archive'
-              ? `This changes the lifecycle in all ${project.environments.length} project environments. ${flag.archived ? 'Saved environment states become effective again.' : 'Every evaluation returns false with reason archived.'}`
+              ? `This changes the lifecycle in all ${project.environments.length} project environments. ${flag.archived ? 'Saved environment configurations become effective again.' : 'Every evaluation returns its typed off value with enabled:false and reason archived.'}`
               : `Only ${environment.name} changes to ${flag.enabled ? 'disabled' : 'enabled'}. Other environments retain their state.`}
           </p>
           {confirm === 'toggle' && environment.key === 'production' && (

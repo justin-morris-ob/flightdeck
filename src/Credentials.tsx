@@ -57,11 +57,18 @@ export function Credentials({ request, scope, projectName, environmentName }: Pr
   async function create(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
-    const parsed = createCredentialSchema.safeParse(
-      Object.fromEntries(new FormData(event.currentTarget).entries())
-    );
+    const data = new FormData(event.currentTarget);
+    const parsed = createCredentialSchema.safeParse({
+      name: data.get('name'),
+      allowedTenantIds: String(data.get('allowedTenantIds') ?? '')
+        .split(/[,\n]/)
+        .map((tenant) => tenant.trim())
+        .filter(Boolean),
+    });
     if (!parsed.success) {
-      setError('Enter a credential name of 1–120 characters.');
+      setError(
+        parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join(' · ')
+      );
       return;
     }
     setBusy(true);
@@ -113,7 +120,8 @@ export function Credentials({ request, scope, projectName, environmentName }: Pr
             {error && <Notice tone="danger">{error}</Notice>}
             <Notice>
               Local development credentials · Never place tokens in browser application code. A
-              credential is restricted to this project and environment and cannot manage flags.
+              credential is restricted to this project, environment and explicit tenant grant list
+              and cannot manage flags.
             </Notice>
           </Notices>
         }
@@ -132,6 +140,7 @@ export function Credentials({ request, scope, projectName, environmentName }: Pr
                 <tr>
                   <th>Name</th>
                   <th>Status</th>
+                  <th scope="col">Allowed tenant IDs</th>
                   <th>Created</th>
                   <th>Action</th>
                 </tr>
@@ -147,6 +156,15 @@ export function Credentials({ request, scope, projectName, environmentName }: Pr
                       <Badge tone={item.revokedAt ? 'warning' : 'success'}>
                         {item.revokedAt ? 'Revoked' : 'Active'}
                       </Badge>
+                    </td>
+                    <td>
+                      <ul>
+                        {item.allowedTenantIds.map((tenant) => (
+                          <li key={tenant}>
+                            <code>{tenant}</code>
+                          </li>
+                        ))}
+                      </ul>
                     </td>
                     <td>
                       <time dateTime={item.createdAt}>{dateTime(item.createdAt)}</time>
@@ -177,6 +195,21 @@ export function Credentials({ request, scope, projectName, environmentName }: Pr
               Credential name
               <input className="input" name="name" maxLength={120} required autoFocus />
             </label>
+            <label>
+              Allowed tenant IDs (comma or newline separated)
+              <textarea
+                className="textarea fd-mono"
+                name="allowedTenantIds"
+                rows={3}
+                required
+                placeholder="local-tenant"
+              />
+            </label>
+            <p className="fd-help">
+              1–20 unique, explicit tenant grants. No wildcard. The trusted backend must send one of
+              these tenant IDs in each POST evaluation context; targeting is not an authorization or
+              entitlement substitute.
+            </p>
             <div className="fd-actions">
               <Button onClick={() => setCreating(false)} disabled={busy}>
                 Cancel

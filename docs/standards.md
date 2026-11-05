@@ -21,7 +21,7 @@ BC's config is a private workspace package, not an established published depende
 
 Only ignore paths differ: keep common generated-output exclusions and BC's YAML exclusion, but omit BC-specific fixture, infrastructure and data-directory exclusions. There is no reason to ignore Flightdeck application data or infrastructure wholesale. YAML remains outside this formatter check, just as it is in the inspected BC config; validate deployment and workflow YAML with the appropriate tooling when those surfaces are exercised.
 
-BC's Node 24 application requirement is not a formatting rule. Flightdeck pins Node `26.12.1` and pnpm `11.23.0` to match the independently built Atlas Todo example's known local toolchain. Atlas package compatibility must still be checked at Stage 1.
+BC's Node 24 application requirement is not a formatting rule. Flightdeck pins Node `26.12.1` and pnpm `11.23.0` to match the independently built Atlas Todo example's known local toolchain. The published Atlas/UX Kit `0.1.0` compatibility set was exercised in Stages 1 and 2; upgrades must recheck the shell's singleton requirements as a set.
 
 ## Commands available now
 
@@ -43,7 +43,7 @@ pnpm fmt
 pnpm fmt:check
 ```
 
-The GitHub Actions workflow installs the same Node/pnpm versions, uses the lockfile and runs `pnpm check`, database setup and behavior tests on pull requests and pushes to `main`. A locally passing command does not prove hosted CI has run. Stage 1 requires approved Nexus read credentials and a runner with the appropriate network access; see [local development](local-development.md).
+The GitHub Actions workflow installs the same Node/pnpm versions, uses the lockfile and runs `pnpm check`, database setup and behavior tests on pull requests and pushes to `main`. A locally passing command does not prove hosted CI has run. CI requires approved Nexus read credentials and a runner with the appropriate network access; see [local development](local-development.md).
 
 Application commands are now real: `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm contracts --check`, `pnpm db:setup`, `pnpm start` and `pnpm test`. The backend/scripts use Node's native TypeScript execution; a separate server typecheck enforces erasable syntax, while Vite compiles the published SDK's frontend TypeScript. No source checkout of Atlas or BC is required for install/build/standalone startup.
 

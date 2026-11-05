@@ -14,12 +14,73 @@ import {
   issuedCredentialSchema,
   operatorSchema,
   projectsSchema,
+  previewSchema,
   sessionSchema,
   updateFlagSchema,
 } from '../shared/contracts.ts';
+import {
+  catalogSchema,
+  catalogUpdateSchema,
+  catalogActivitySchema,
+  publishConfigurationSchema,
+  evaluationRequestSchema,
+  previewRequestSchema,
+  overridesSchema,
+  createOverrideSchema,
+  revokeOverrideSchema,
+} from '../shared/targeting.ts';
 
 const output = new URL('../api/openapi.json', import.meta.url);
-const schema = (value: z.ZodType) => z.toJSONSchema(value, { target: 'draft-2020-12' });
+const componentSchemas: Record<string, unknown> = {};
+const schemaNames = new Map<z.ZodType, string>([
+  [activitySchema, 'FlagActivity'],
+  [apiErrorSchema, 'ApiError'],
+  [createCredentialSchema, 'CreateCredential'],
+  [createFlagSchema, 'CreateFlag'],
+  [credentialsSchema, 'CredentialList'],
+  [evaluationSchema, 'Evaluation'],
+  [flagSchema, 'Flag'],
+  [flagsSchema, 'FlagList'],
+  [issuedCredentialSchema, 'IssuedCredential'],
+  [operatorSchema, 'Operator'],
+  [projectsSchema, 'Projects'],
+  [sessionSchema, 'Session'],
+  [updateFlagSchema, 'UpdateFlag'],
+  [previewSchema, 'Preview'],
+  [catalogSchema, 'TargetingCatalog'],
+  [catalogUpdateSchema, 'UpdateCatalog'],
+  [catalogActivitySchema, 'CatalogActivity'],
+  [publishConfigurationSchema, 'PublishConfiguration'],
+  [evaluationRequestSchema, 'EvaluateContext'],
+  [previewRequestSchema, 'PreviewContext'],
+  [overridesSchema, 'SubjectOverrides'],
+  [createOverrideSchema, 'CreateSubjectOverride'],
+  [revokeOverrideSchema, 'RevokeSubjectOverride'],
+]);
+function rebaseReferences(value: unknown, name: string): unknown {
+  if (Array.isArray(value)) return value.map((item) => rebaseReferences(item, name));
+  if (value === null || typeof value !== 'object') return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [
+      key,
+      key === '$ref' && typeof item === 'string' && item.startsWith('#')
+        ? `#/components/schemas/${name}${item.slice(1)}`
+        : rebaseReferences(item, name),
+    ])
+  );
+}
+const schema = (value: z.ZodType) => {
+  let name = schemaNames.get(value);
+  if (!name) {
+    name = `Auxiliary${schemaNames.size + 1}`;
+    schemaNames.set(value, name);
+  }
+  if (!componentSchemas[name]) {
+    const { $schema: _dialect, ...generated } = z.toJSONSchema(value, { target: 'draft-2020-12' });
+    componentSchemas[name] = rebaseReferences(generated, name);
+  }
+  return { $ref: `#/components/schemas/${name}` };
+};
 const content = (value: z.ZodType) => ({ 'application/json': { schema: schema(value) } });
 const scope = '/api/v1/projects/{projectId}/environments/{environmentId}';
 const parameter = (name: string, location: 'path' | 'query', value: Record<string, unknown>) => ({
@@ -83,12 +144,13 @@ const document = {
   openapi: '3.1.0',
   info: {
     title: 'Flightdeck API',
-    version: '1.0.0',
+    version: '2.0.0',
     description:
-      'Stage 1 local-development API. Signed local sessions are demo-only and cannot be used in production. Flag metadata and revision are project-wide; enabled state is environment-specific. All mutations publish immediately and append transactional audit history. Archived flags evaluate false with reason archived; unknown flags are 404. Flag keys are immutable and never reused after archival.',
+      'Stage 2 local-development API. This development contract replaces Stage 1 boolean GET evaluation with typed POST evaluation and cuts over all local consumers; it is not a production-stable external API. Signed local sessions remain demo-only. Enabled state and typed configuration are environment-specific; metadata, archive state and flag revisions are project-wide. Publication pins project context/segment definitions. Archive/disable return the configured typed off value. Credentials grant explicit tenant contexts within one project/environment. No context is stored as exposure or used as entitlement authorization.',
   },
   servers: [{ url: 'http://localhost:4721' }],
   components: {
+    schemas: componentSchemas,
     securitySchemes: {
       localSession: {
         type: 'apiKey',
@@ -101,7 +163,7 @@ const document = {
         type: 'http',
         scheme: 'bearer',
         description:
-          'Backend-only fd_ token, restricted to one organization/project/environment and evaluation operation; only its SHA256 verifier is stored.',
+          'Backend-only fd_ token, restricted to one organization/project/environment, explicit tenant grants and evaluation; only its SHA256 verifier is stored. Context traits are asserted by the trusted backend caller, not browser authority.',
       },
     },
   },
@@ -152,7 +214,7 @@ const document = {
             type: 'string',
             description: 'Exclusive last flag key from previous page',
           }),
-          parameter('limit', 'query', { type: 'integer', minimum: 1, maximum: 100, default: 20 }),
+          parameter('limit', 'query', { type: 'integer', minimum: 1, maximum: 20, default: 20 }),
           parameter('archived', 'query', {
             type: 'string',
             enum: ['active', 'archived', 'all'],
@@ -195,10 +257,78 @@ const document = {
       ),
     },
     [`${scope}/evaluate/{flagKey}`]: {
-      get: operation(
-        'Evaluate a boolean flag using a scoped service credential or operator preview',
+      post: operation(
+        'Evaluate typed configuration, ordered targeting and deterministic variants',
         evaluationSchema,
-        { service: true, parameters: [...scopeParameters, flagParameter] }
+        {
+          service: true,
+          parameters: [...scopeParameters, flagParameter],
+          body: evaluationRequestSchema,
+        }
+      ),
+    },
+    [`${scope}/catalog`]: {
+      get: operation(
+        'Read the project-wide reusable targeting catalog; running flags stay pinned',
+        catalogSchema,
+        { parameters: scopeParameters }
+      ),
+      put: operation(
+        'Publish a revision-checked catalog edit without changing any environment configuration',
+        catalogSchema,
+        { parameters: scopeParameters, body: catalogUpdateSchema }
+      ),
+    },
+    [`${scope}/catalog/activity`]: {
+      get: operation('Read immutable project catalog history', catalogActivitySchema, {
+        parameters: [
+          ...scopeParameters,
+          parameter('before', 'query', { type: 'integer', minimum: 1 }),
+          parameter('limit', 'query', { type: 'integer', minimum: 1, maximum: 100, default: 20 }),
+        ],
+      }),
+    },
+    [`${scope}/flags/{flagKey}/configuration`]: {
+      put: operation(
+        'Publish typed configuration with expected flag/catalog revisions and immutable allocation namespace',
+        flagSchema,
+        { parameters: [...scopeParameters, flagParameter], body: publishConfigurationSchema }
+      ),
+    },
+    [`${scope}/flags/{flagKey}/preview`]: {
+      post: operation(
+        'Explain current and proposed decisions with the same evaluator, without publishing',
+        previewSchema,
+        { parameters: [...scopeParameters, flagParameter], body: previewRequestSchema }
+      ),
+    },
+    [`${scope}/flags/{flagKey}/overrides`]: {
+      get: operation('List scoped subject overrides with expiry and priority', overridesSchema, {
+        parameters: [
+          ...scopeParameters,
+          flagParameter,
+          parameter('after', 'query', { type: 'string', format: 'uuid' }),
+          parameter('limit', 'query', { type: 'integer', minimum: 1, maximum: 100, default: 20 }),
+        ],
+      }),
+      post: operation(
+        'Create an expiring tenant/subject override against an expected global flag revision',
+        flagSchema,
+        { parameters: [...scopeParameters, flagParameter], body: createOverrideSchema }
+      ),
+    },
+    [`${scope}/flags/{flagKey}/overrides/{overrideId}/revoke`]: {
+      post: operation(
+        'Revoke a scoped subject override with transactional audit and revision conflict detection',
+        flagSchema,
+        {
+          parameters: [
+            ...scopeParameters,
+            flagParameter,
+            parameter('overrideId', 'path', { type: 'string', format: 'uuid' }),
+          ],
+          body: revokeOverrideSchema,
+        }
       ),
     },
     [`${scope}/credentials`]: {
@@ -221,6 +351,25 @@ const document = {
     },
   },
 };
+function validateReferences(value: unknown) {
+  if (Array.isArray(value)) {
+    for (const item of value) validateReferences(item);
+    return;
+  }
+  if (value === null || typeof value !== 'object') return;
+  for (const [key, item] of Object.entries(value)) {
+    if (key === '$ref' && typeof item === 'string' && item.startsWith('#/')) {
+      let resolved: unknown = document;
+      for (const segment of item.slice(2).split('/')) {
+        const name = segment.replace(/~1/g, '/').replace(/~0/g, '~');
+        if (resolved === null || typeof resolved !== 'object' || !Object.hasOwn(resolved, name))
+          throw new Error(`Unresolved OpenAPI reference: ${item}`);
+        resolved = (resolved as Record<string, unknown>)[name];
+      }
+    } else validateReferences(item);
+  }
+}
+validateReferences(document);
 const serialized = JSON.stringify(document, null, 2) + '\n';
 if (process.argv.includes('--check')) {
   const existing = JSON.parse(await readFile(output, 'utf8'));

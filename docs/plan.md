@@ -6,7 +6,7 @@ Build an independently owned Enablements and Experiments application: usable on 
 
 Work one stage at a time. Each stage ends with an executable demonstration, observed validation results, limitations and the proposed next stage. A stage is not complete because its components compile or a mocked screen renders. Do not expand into the next stage before presenting the checkpoint.
 
-Stages 0 and 1 are complete for explicitly local development; [the verification record](stage-one-verification.md) states the observed evidence and limits. Stages 2–6 remain planned and unimplemented. Their checklists are acceptance criteria, not assertions that features already exist.
+Stages 0–2 are complete for explicitly local development; [Stage 1](stage-one-verification.md) and [Stage 2](stage-two-verification.md) record observed evidence and limits. Stages 3–6 remain planned and unimplemented. Their checklists are acceptance criteria, not assertions that features already exist.
 
 ## Stage map
 
@@ -69,15 +69,15 @@ Implement one evaluation model, not an Unleash/Flagsmith hybrid with ambiguous p
 - Environment-scoped subject overrides with owner, reason and expiry. Show their priority; environment disable must dominate them.
 - Deterministic percentage rollout and weighted variants using stable logical IDs, immutable namespace and a versioned hash specification. Use integer basis points with an explicit total.
 - Explain-decision playground using the same evaluator as the API. Summarize “who → what fraction → what outcome,” including missing-data reasons and change/rebucketing previews.
-- A tenant/account enablement workflow using verified subject context, not a second flag engine or an entitlement bypass.
+- A tenant/account enablement workflow constrained by explicit service-credential tenant grants, not a second flag engine or an entitlement bypass. Local context is asserted by a trusted backend; authoritative BC user/tenant mapping is a Stage 3 gate.
 
 Acceptance:
 
-- [ ] Permanent language-neutral evaluation cases cover precedence, missing/wrong-type attributes, negative operators, override expiry, disabled flags and unknown/archived keys.
-- [ ] Fixed subjects receive stable outcomes across requests/restarts; raising a rollout threshold preserves existing eligibility; display-name changes do not rebucket.
-- [ ] Validate weights and payloads before publication; adding/removing a variant previews reassignment rather than silently redistributing an active experiment.
-- [ ] UI playground and consumer API explain the same value, variant, matched rule and revision for the same context.
-- [ ] Segment and override changes cannot leak across organizations, projects or environments.
+- [x] Permanent language-neutral evaluation cases cover precedence, missing/wrong-type attributes, negative operators, override expiry, disabled flags and unknown/archived keys.
+- [x] Fixed subjects receive stable outcomes across requests/restarts; raising a rollout threshold preserves existing eligibility; display-name changes do not rebucket.
+- [x] Validate weights and payloads before publication; adding/removing a variant previews reassignment rather than silently redistributing an active experiment.
+- [x] UI playground and consumer API explain the same value, variant, matched rule and revision for the same context.
+- [x] Segment and override changes cannot leak across organizations, projects or environments.
 
 **Checkpoint:** demonstrate a tenant enablement, a staged rollout and a multivariate configuration against known contexts, including excluded/missing-context cases. Call this targeting and assignment, not experiment results.
 

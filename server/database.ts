@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 
 import pg from 'pg';
 
@@ -28,23 +28,28 @@ export async function migrate(databaseUrl: string): Promise<void> {
       await client.query(
         'REVOKE ALL ON flightdeck.schema_migrations FROM PUBLIC, flightdeck_runtime'
       );
-      const name = '001-initial.sql';
-      const sql = await readFile(new URL(`../migrations/${name}`, import.meta.url), 'utf8');
-      const checksum = createHash('sha256').update(sql).digest('hex');
-      const existing = await client.query<{ checksum: string }>(
-        'SELECT checksum FROM flightdeck.schema_migrations WHERE name = $1',
-        [name]
-      );
-      if (existing.rows[0]) {
-        if (existing.rows[0].checksum !== checksum) {
-          throw new Error(`Migration checksum mismatch: ${name}`);
-        }
-      } else {
-        await client.query(sql);
-        await client.query(
-          'INSERT INTO flightdeck.schema_migrations (name, checksum) VALUES ($1, $2)',
-          [name, checksum]
+      const directory = new URL('../migrations/', import.meta.url);
+      const names = (await readdir(directory))
+        .filter((name) => /^\d+-[a-z0-9-]+\.sql$/.test(name))
+        .sort();
+      for (const name of names) {
+        const sql = await readFile(new URL(name, directory), 'utf8');
+        const checksum = createHash('sha256').update(sql).digest('hex');
+        const existing = await client.query<{ checksum: string }>(
+          'SELECT checksum FROM flightdeck.schema_migrations WHERE name = $1',
+          [name]
         );
+        if (existing.rows[0]) {
+          if (existing.rows[0].checksum !== checksum) {
+            throw new Error(`Migration checksum mismatch: ${name}`);
+          }
+        } else {
+          await client.query(sql);
+          await client.query(
+            'INSERT INTO flightdeck.schema_migrations (name, checksum) VALUES ($1, $2)',
+            [name, checksum]
+          );
+        }
       }
       await client.query('COMMIT');
     } catch (error) {
@@ -80,6 +85,10 @@ export async function seedDatabase(databaseUrl: string, evaluationToken: string)
           'INSERT INTO flightdeck.projects (id, organization_id, key, name) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING',
           [project.id, project.organizationId, project.key, project.name]
         );
+        await client.query(
+          'INSERT INTO flightdeck.project_targeting (project_id) VALUES ($1) ON CONFLICT (project_id) DO NOTHING',
+          [project.id]
+        );
       }
       for (const environment of localEnvironments) {
         await client.query(
@@ -89,8 +98,8 @@ export async function seedDatabase(databaseUrl: string, evaluationToken: string)
       }
       await client.query(
         `INSERT INTO flightdeck.credentials
-        (id, organization_id, project_id, environment_id, name, token_hash)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        (id, organization_id, project_id, environment_id, name, token_hash, allowed_tenant_ids)
+        VALUES ($1, $2, $3, $4, $5, $6, ARRAY['local-tenant'])
         ON CONFLICT (id) DO UPDATE SET token_hash = EXCLUDED.token_hash`,
         [
           '40000000-0000-4000-8000-000000000001',

@@ -4,9 +4,9 @@ Enablements and Experiments for Onebrief: feature flags, targeted enablements, c
 
 ## Current status
 
-**Stage 1 — runnable local vertical slice.** Create and manage boolean flags, publish environment-specific state, evaluate from a separate backend consumer, inspect transactional audit history and retain data across backend restarts. The same application page loads inside an unmodified, separately configured Atlas shell.
+**Stage 2 — enablements, targeting and typed configuration.** Author boolean, string, number and JSON values; publish ordered targeting rules, reusable segments, scoped subject overrides, deterministic rollouts and weighted variants. Compare current and proposed decisions before publication. The same Onebrief-toolkit pages run standalone and inside Atlas.
 
-This is explicitly local development with synthetic identities, not production authentication, a deployed Atlas service or a BC integration. Targeting, percentage rollouts, variants and measured experiments remain later stages.
+This is explicitly local development with synthetic identities and credential-scoped tenant grants, not production authentication, a deployed Atlas service or a real BC integration. Assignment is not experiment exposure or results.
 
 ## Run locally
 
@@ -21,17 +21,17 @@ pnpm start
 
 Open **http://localhost:4721**. Select **Alex Morgan** for administrator access, **Ellis Chen** for editor access or **Vera Singh** for read-only access. All are synthetic local identities. The isolated **Jordan Rivera** identity demonstrates a different organization's scope.
 
-Create a flag in Flightdeck / Development, enable it, inspect its decision and activity, and confirm the simulated production environment is still disabled. Flag metadata and archive state are project-wide; enabled state is environment-specific. Writes require the expected global revision, preventing lost updates.
+Create a flag in Flightdeck / Development, enable it, and use Configuration to author typed values and targeting. Use Project targeting catalog for typed attributes and reusable segments. Preview with a tenant, stable subject and attributes, then review and publish. Catalog edits do not change live decisions until explicitly republished. Flag metadata and archive state are project-wide; configuration and overrides are environment-specific. Writes require the expected global revision.
 
 ### Separate backend consumer
 
 For a flag you created, for example `new-workspace-navigation`:
 
 ```sh
-pnpm consumer new-workspace-navigation false
+pnpm consumer new-workspace-navigation '{"type":"boolean","value":false}' '{"tenantId":"local-tenant","subjectId":"person-0","attributes":{}}'
 ```
 
-The launcher supplies a private environment-scoped evaluation credential to a separate Node process. Output distinguishes a validated decision from the explicitly selected fallback; authentication/permission failures never become a normal fallback. No evaluation secret is shipped in the frontend.
+The launcher supplies a private environment-scoped evaluation credential to a separate Node process. Its tenant grant is `local-tenant`. The fallback is explicitly tagged with the expected value type; context is sent by POST. Output distinguishes a validated decision from fallback; authentication/permission failures never become fallback. No evaluation secret is shipped in the frontend. This replaces Stage 1's boolean argument and GET evaluation API.
 
 ### Load inside Atlas
 
@@ -50,7 +50,7 @@ pnpm check
 pnpm test
 ```
 
-`check` runs Oxlint, frontend/server typechecks, generated OpenAPI consistency, both frontend builds and BC-derived Oxfmt checks. `test` runs behavior tests against the separately provisioned real PostgreSQL test database, plus local-session trust-boundary tests. Run `pnpm db:setup` first.
+`check` runs Oxlint, frontend/server typechecks, generated OpenAPI consistency, both frontend builds and BC-derived Oxfmt checks. `test` runs the portable evaluator corpus, consumer/session boundary tests and real PostgreSQL/API behavior tests against a separately provisioned test database. Run `pnpm db:setup` first.
 
 `pnpm fmt` formats code; `pnpm fmt:check` checks it. `pnpm db:stop` stops the dedicated database without deleting data. The local backend serves built assets; rebuild frontend changes and restart backend changes. See the development guide for mise commands, private-config recovery and CI prerequisites.
 
@@ -58,6 +58,8 @@ pnpm test
 
 - [Local development and onboarding](docs/local-development.md): exact commands, identity boundaries, storage ownership and external gates.
 - [Stage 1 verification](docs/stage-one-verification.md): observed checks, browser scenarios and limitations.
+- [Stage 2 verification](docs/stage-two-verification.md): targeting, persistence, consumer and actual standalone/embedded browser evidence.
+- [Evaluation specification](docs/evaluation-spec.md): exact precedence, context handling and language-neutral allocation algorithm.
 - [Staged delivery plan](docs/plan.md): acceptance criteria and next stages.
 - [Architecture](docs/architecture.md): ownership, identity, evaluation, storage and deployment boundaries.
 - [Engineering standards](docs/standards.md): BC formatting provenance and toolchain.
@@ -66,4 +68,4 @@ pnpm test
 
 ## Next stage
 
-Stage 2 adds explicit typed configuration, ordered targeting rules, segments, environment-scoped overrides, deterministic rollout/variant assignment and a decision playground. A rollout is not an experiment result; actual exposure and measurement have their own later stage.
+Stage 3 connects an actual BC backend feature path, establishes authoritative user/tenant mapping and proves delivery failure behavior. Production identity, shared-environment deployment and measured experiments remain separate gates.

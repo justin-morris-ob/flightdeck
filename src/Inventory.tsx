@@ -21,6 +21,7 @@ import {
 } from '../shared/contracts.ts';
 import { dateTime, errorMessage, get, send, type Request } from './api.ts';
 import { FlagForm, Modal } from './forms.tsx';
+import { ValueDisplay } from './TargetingForms.tsx';
 
 interface Props {
   request: Request;
@@ -82,7 +83,7 @@ export function Inventory({ request, scope, project, environmentId, role, onOpen
           <PageHeader
             title="Feature flags"
             crumbs={[project.name, environment.name]}
-            meta="Boolean release controls · Environment-scoped decisions"
+            meta="Typed configuration and targeting · Environment-scoped decisions"
             actions={
               <>
                 <Button onClick={() => setVersion((value) => value + 1)}>Refresh</Button>
@@ -171,7 +172,7 @@ export function Inventory({ request, scope, project, environmentId, role, onOpen
                   ? 'Try another name or key, or clear the search.'
                   : archived === 'archived'
                     ? 'Archived flags retain their keys and activity here.'
-                    : 'Create a boolean flag to manage its state independently in each environment.'}
+                    : 'Create a flag with boolean defaults, then configure typed outcomes, targeting and assignment per environment.'}
               </p>
               {role !== 'viewer' && !search && archived !== 'archived' && (
                 <Button variant="primary" onClick={() => setCreating(true)}>
@@ -188,9 +189,10 @@ export function Inventory({ request, scope, project, environmentId, role, onOpen
               </caption>
               <thead>
                 <tr>
-                  <th scope="col">State</th>
+                  <th scope="col">Environment gate</th>
                   <th scope="col">Flag / key</th>
                   <th scope="col">Owner</th>
+                  <th scope="col">Configuration</th>
                   <th scope="col">Revision</th>
                   <th scope="col">Updated</th>
                 </tr>
@@ -216,6 +218,25 @@ export function Inventory({ request, scope, project, environmentId, role, onOpen
                       <code className="fd-table-sub">{flag.key}</code>
                     </td>
                     <td>{flag.owner}</td>
+                    <td>
+                      <span className="fd-table-sub">
+                        Off: <ValueDisplay value={flag.configuration.offValue} />
+                      </span>
+                      <span className="fd-table-sub">
+                        Default:{' '}
+                        {flag.configuration.defaultOutcome.kind === 'value' ? (
+                          <ValueDisplay value={flag.configuration.defaultOutcome.value} />
+                        ) : flag.configuration.defaultOutcome.kind === 'variant' ? (
+                          `Variant ${flag.configuration.defaultOutcome.variantId}`
+                        ) : (
+                          'Weighted variants'
+                        )}
+                      </span>
+                      <span className="fd-table-sub">
+                        {flag.configuration.rules.length} rules · Catalog r
+                        {flag.configuration.catalogRevision}
+                      </span>
+                    </td>
                     <td>
                       <code>r{flag.revision}</code>
                     </td>

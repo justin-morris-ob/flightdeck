@@ -10,7 +10,7 @@ import { z, ZodError } from 'zod';
 
 import { HttpError } from '@onebrief/atlas-bff-kit';
 
-import { sessionSchema } from '../shared/contracts.ts';
+import { sessionSchema, type OperatorPrincipal } from '../shared/contracts.ts';
 import { localOperators } from '../shared/fixtures.ts';
 import {
   assertLocalDevelopment,
@@ -33,6 +33,19 @@ const contentTypes: Record<string, string> = {
   '.woff2': 'font/woff2',
   '.png': 'image/png',
 };
+
+async function readSession(pool: Pool, operator: OperatorPrincipal) {
+  const result = await pool.query<{ id: string; name: string }>(
+    'SELECT id, name FROM flightdeck.organizations WHERE id = $1',
+    [operator.organizationId]
+  );
+  if (!result.rowCount) throw new HttpError(401, 'Local development session required');
+  return sessionSchema.parse({
+    mode: 'local-development',
+    operator,
+    organization: result.rows[0],
+  });
+}
 
 async function readJson(req: IncomingMessage): Promise<unknown> {
   if (!req.headers['content-type']?.startsWith('application/json'))
@@ -133,7 +146,7 @@ export function createApplication({
         if (url.pathname === '/api/v1/dev/session' && req.method === 'GET') {
           const operator = readOperator(req, sessionSecret);
           return send(200, {
-            session: operator ? sessionSchema.parse({ mode: 'local-development', operator }) : null,
+            session: operator ? await readSession(pool, operator) : null,
           });
         }
         if (url.pathname === '/api/v1/dev/session' && req.method === 'POST') {
@@ -142,8 +155,9 @@ export function createApplication({
             .parse(await readJson(req));
           const operator = localOperators.find((item) => item.id === operatorId);
           if (!operator) throw new HttpError(400, 'Unknown development operator');
+          const session = await readSession(pool, operator);
           res.setHeader('set-cookie', sessionCookie(signSession(operator.id, sessionSecret)));
-          return send(200, sessionSchema.parse({ mode: 'local-development', operator }));
+          return send(200, session);
         }
         if (url.pathname === '/api/v1/session') {
           if (req.method === 'DELETE') {
@@ -153,7 +167,7 @@ export function createApplication({
           if (req.method === 'GET') {
             const operator = readOperator(req, sessionSecret);
             if (!operator) throw new HttpError(401, 'Local development session required');
-            return send(200, sessionSchema.parse({ mode: 'local-development', operator }));
+            return send(200, await readSession(pool, operator));
           }
         }
         const principal = await authenticate(req, pool, sessionSecret);

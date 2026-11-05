@@ -1,3 +1,5 @@
 import { defineConfig } from 'vitest/config';
 
-export default defineConfig({ test: { include: ['server/**/*.test.ts'], fileParallelism: false } });
+export default defineConfig({
+  test: { include: ['server/**/*.test.ts', 'src/**/*.test.ts'], fileParallelism: false },
+});

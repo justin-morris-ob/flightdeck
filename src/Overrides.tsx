@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 
-import { useEffect, useId, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 
 import { Button, Notice } from '@onebrief/atlas-ui';
 
@@ -12,6 +12,7 @@ import {
   type SubjectOverride,
 } from '../shared/targeting.ts';
 import { dateTime, errorMessage, get, send, type Request } from './api.ts';
+import { useDraftNavigation, useDraftSource } from './draft-context.ts';
 import { Confirm } from './forms.tsx';
 import { OutcomeEditor, ValueDisplay } from './TargetingForms.tsx';
 
@@ -46,16 +47,52 @@ export function Overrides({ request, path, flag, writable, environmentName, onCh
     expectedRevision: number;
   } | null>(null);
   const [formKey, setFormKey] = useState(0);
+  const form = useRef<HTMLFormElement>(null);
+  const [dirtyFields, setDirtyFields] = useState(false);
+  const [invalidOutcomeFields, setInvalidOutcomeFields] = useState(false);
+  const [writing, setWriting] = useState(false);
+  const { confirmTransition } = useDraftNavigation();
+  const dirty =
+    dirtyFields ||
+    invalidOutcomeFields ||
+    JSON.stringify(outcome) !==
+      JSON.stringify({ kind: 'value', value: flag.configuration.offValue });
+  const sourceId = useDraftSource(dirty, discard, refreshing || writing);
   const after = cursors[cursors.length - 1];
 
   useEffect(() => {
     setCursors([null]);
+    discard();
+  }, [path]);
+
+  useEffect(formChanged, [outcome]);
+
+  function discard() {
     setCreation(null);
     setRevocation(null);
     setOutcome({ kind: 'value', value: flag.configuration.offValue });
     setFormKey((key) => key + 1);
     setFormError('');
-  }, [path]);
+    setDirtyFields(false);
+    setInvalidOutcomeFields(false);
+  }
+
+  function formChanged() {
+    if (!form.current) return;
+    const data = new FormData(form.current);
+    setDirtyFields(
+      ['tenantId', 'subjectId', 'owner', 'reason', 'expiresAt'].some(
+        (field) => String(data.get(field) ?? '') !== ''
+      )
+    );
+    setInvalidOutcomeFields(
+      Array.from(
+        form.current.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+          'input:not([name]), select:not([name]), textarea:not([name])'
+        )
+      ).some((field) => !field.validity.valid)
+    );
+  }
 
   useEffect(() => {
     let current = true;
@@ -130,7 +167,7 @@ export function Overrides({ request, path, flag, writable, environmentName, onCh
       setFormError('Outcome type must match the current configuration. Select a matching value.');
       return;
     }
-    setCreation(parsed.data);
+    confirmTransition(() => setCreation(parsed.data), sourceId);
   }
 
   function changed(updated: Flag) {
@@ -177,7 +214,10 @@ export function Overrides({ request, path, flag, writable, environmentName, onCh
         <Notice tone="primary">Read-only access. You can inspect all overrides.</Notice>
       )}
       <div className="fd-actions">
-        <Button onClick={() => void reload()} disabled={loading || refreshing}>
+        <Button
+          onClick={() => confirmTransition(() => void reload())}
+          disabled={loading || refreshing || writing}
+        >
           {refreshing ? 'Refreshing…' : 'Refresh overrides and flag revision'}
         </Button>
       </div>
@@ -225,7 +265,11 @@ export function Overrides({ request, path, flag, writable, environmentName, onCh
                       <td>
                         {writable && !item.revokedAt ? (
                           <Button
-                            onClick={() => setRevocation({ item, expectedRevision: flag.revision })}
+                            onClick={() =>
+                              confirmTransition(() =>
+                                setRevocation({ item, expectedRevision: flag.revision })
+                              )
+                            }
                           >
                             Revoke
                           </Button>
@@ -258,10 +302,16 @@ export function Overrides({ request, path, flag, writable, environmentName, onCh
         </Button>
       </div>
       {writable && (
-        <form key={`${path}-${formKey}`} className="fd-form" onSubmit={prepare}>
+        <form
+          key={`${path}-${formKey}`}
+          ref={form}
+          className="fd-form"
+          onSubmit={prepare}
+          onChange={formChanged}
+        >
           <h4>Create exact subject override</h4>
           {formError && <Notice tone="danger">{formError}</Notice>}
-          <fieldset className="fd-fieldset" disabled={Boolean(creation)}>
+          <fieldset className="fd-fieldset" disabled={Boolean(creation) || writing}>
             <legend>
               Target · {flag.key} · {environmentName}
             </legend>
@@ -325,7 +375,7 @@ export function Overrides({ request, path, flag, writable, environmentName, onCh
             />
           </fieldset>
           <div className="fd-actions">
-            <Button type="submit" variant="primary" disabled={Boolean(creation)}>
+            <Button type="submit" variant="primary" disabled={Boolean(creation) || writing}>
               Review override
             </Button>
           </div>
@@ -337,10 +387,20 @@ export function Overrides({ request, path, flag, writable, environmentName, onCh
           action="Create override"
           onClose={() => setCreation(null)}
           onConfirm={async () => {
-            const updated = await send(request, `${path}/overrides`, 'POST', creation, flagSchema);
-            changed(updated);
-            setFormKey((key) => key + 1);
-            setOutcome({ kind: 'value', value: updated.configuration.offValue });
+            setWriting(true);
+            try {
+              const updated = await send(
+                request,
+                `${path}/overrides`,
+                'POST',
+                creation,
+                flagSchema
+              );
+              discard();
+              changed(updated);
+            } finally {
+              setWriting(false);
+            }
           }}
         >
           <p>
@@ -367,14 +427,19 @@ export function Overrides({ request, path, flag, writable, environmentName, onCh
           action="Revoke override"
           onClose={() => setRevocation(null)}
           onConfirm={async () => {
-            const updated = await send(
-              request,
-              `${path}/overrides/${encodeURIComponent(revocation.item.id)}/revoke`,
-              'POST',
-              { expectedRevision: revocation.expectedRevision },
-              flagSchema
-            );
-            changed(updated);
+            setWriting(true);
+            try {
+              const updated = await send(
+                request,
+                `${path}/overrides/${encodeURIComponent(revocation.item.id)}/revoke`,
+                'POST',
+                { expectedRevision: revocation.expectedRevision },
+                flagSchema
+              );
+              changed(updated);
+            } finally {
+              setWriting(false);
+            }
           }}
         >
           <p>

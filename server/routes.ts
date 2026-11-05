@@ -15,6 +15,7 @@ import {
   flagKeySchema,
   flagSchema,
   flagsSchema,
+  flagSummarySchema,
   issuedCredentialSchema,
   projectsSchema,
   previewSchema,
@@ -94,6 +95,16 @@ const noQuery = z.strictObject({});
 const overridesQuery = z.strictObject({ after: z.uuid().optional(), limit: limitSchema });
 const flagColumns = `f.id, f.project_id, c.environment_id, f.key, f.name, f.description,
   f.owner, f.archived, f.revision, c.enabled, c.configuration, f.updated_at`;
+const flagSummaryColumns = `f.id, f.project_id, f.key, f.name, f.description, f.owner,
+  f.archived, f.revision, f.updated_at`;
+const flagSummaryGates = `LEFT JOIN LATERAL (
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'environmentId', e.id, 'enabled', c.enabled
+  ) ORDER BY e.key, e.id), '[]'::jsonb) AS environments
+  FROM flightdeck.configurations c
+  JOIN flightdeck.environments e ON e.id = c.environment_id AND e.project_id = p.id
+  WHERE c.flag_id = f.id AND c.project_id = p.id
+) gates ON true`;
 
 function query<T>(context: RouteContext, schema: z.ZodType<T>): T {
   const input: Record<string, string> = {};
@@ -148,6 +159,20 @@ function flag(row: FlagRow): Flag {
     enabled: row.enabled,
     configuration: row.configuration,
     updatedAt: row.updated_at.toISOString(),
+  });
+}
+function flagSummary(row: FlagSummaryRow): FlagSummary {
+  return flagSummarySchema.parse({
+    id: row.id,
+    projectId: row.project_id,
+    key: row.key,
+    name: row.name,
+    description: row.description,
+    owner: row.owner,
+    archived: row.archived,
+    revision: row.revision,
+    updatedAt: row.updated_at.toISOString(),
+    environments: row.environments,
   });
 }
 function credential(row: CredentialRow) {
@@ -305,8 +330,7 @@ export function createRoutes(pool: Pool): Routes {
       const projectId = z.uuid().parse(context.params.projectId);
       const input = query(context, inventoryQuery);
       const result = await pool.query<FlagSummaryRow>(
-        `SELECT f.id, f.project_id, f.key, f.name, f.description, f.owner, f.archived,
-          f.revision, f.updated_at, gates.environments
+        `SELECT ${flagSummaryColumns}, gates.environments
         FROM flightdeck.projects p
         LEFT JOIN LATERAL (
           SELECT f.id, f.project_id, f.key, f.name, f.description, f.owner, f.archived,
@@ -318,14 +342,7 @@ export function createRoutes(pool: Pool): Routes {
           AND ($5 = '' OR strpos(lower(f.key || ' ' || f.name || ' ' || f.description || ' ' || f.owner), lower($5)) > 0)
           ORDER BY f.key LIMIT $6
         ) f ON true
-        LEFT JOIN LATERAL (
-          SELECT COALESCE(jsonb_agg(jsonb_build_object(
-            'environmentId', e.id, 'enabled', c.enabled
-          ) ORDER BY e.key, e.id), '[]'::jsonb) AS environments
-          FROM flightdeck.configurations c
-          JOIN flightdeck.environments e ON e.id = c.environment_id AND e.project_id = p.id
-          WHERE c.flag_id = f.id AND c.project_id = p.id
-        ) gates ON true
+        ${flagSummaryGates}
         WHERE p.id = $1 AND p.organization_id = $2
         ORDER BY f.key`,
         [
@@ -339,22 +356,27 @@ export function createRoutes(pool: Pool): Routes {
       );
       if (!result.rowCount) throw new HttpError(404, 'Project not found');
       const rows = result.rows.filter((row) => row.id !== null);
-      const items = rows.slice(0, input.limit).map((row) => ({
-        id: row.id,
-        projectId: row.project_id,
-        key: row.key,
-        name: row.name,
-        description: row.description,
-        owner: row.owner,
-        archived: row.archived,
-        revision: row.revision,
-        updatedAt: row.updated_at.toISOString(),
-        environments: row.environments,
-      }));
+      const items = rows.slice(0, input.limit).map(flagSummary);
       return flagsSchema.parse({
         items,
         nextCursor: rows.length > input.limit ? items.at(-1)!.key : null,
       });
+    },
+    'GET /api/v1/projects/:projectId/flags/:flagKey': async (context) => {
+      const actor = operator(context);
+      const projectId = z.uuid().parse(context.params.projectId);
+      const key = flagKeySchema.parse(context.params.flagKey);
+      query(context, noQuery);
+      const result = await pool.query<FlagSummaryRow>(
+        `SELECT ${flagSummaryColumns}, gates.environments
+        FROM flightdeck.projects p
+        JOIN flightdeck.flags f ON f.project_id = p.id AND f.key = $3
+        ${flagSummaryGates}
+        WHERE p.id = $1 AND p.organization_id = $2`,
+        [projectId, actor.organizationId, key]
+      );
+      if (!result.rowCount) throw new HttpError(404, 'Flag not found');
+      return flagSummary(result.rows[0]!);
     },
     [`POST ${base}/flags`]: async (context) => {
       const actor = operator(context, 'write');

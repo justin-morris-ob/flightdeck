@@ -1,6 +1,6 @@
 import type { Role } from '../shared/contracts.ts';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { z } from 'zod';
 
 import {
@@ -21,6 +21,7 @@ import {
   type Catalog as ProjectCatalog,
 } from '../shared/targeting.ts';
 import { dateTime, errorMessage, get, send, type Request } from './api.ts';
+import { useDraftSource } from './draft-context.ts';
 import { Confirm } from './forms.tsx';
 import { ConditionsEditor, newCondition } from './TargetingForms.tsx';
 
@@ -62,10 +63,17 @@ function CatalogEditor({ request, scope, projectName, role }: Props) {
   const [activityError, setActivityError] = useState('');
   const [cursor, setCursor] = useState<string | null>(null);
   const [activityVersion, setActivityVersion] = useState(0);
+  const form = useRef<HTMLFormElement>(null);
+  const [fieldsVersion, setFieldsVersion] = useState(0);
+  const [invalidFields, setInvalidFields] = useState(false);
   const readonly = role === 'viewer';
   const dirty = Boolean(
-    catalog && draft && JSON.stringify(input(catalog)) !== JSON.stringify(draft)
+    invalidFields || (catalog && draft && JSON.stringify(input(catalog)) !== JSON.stringify(draft))
   );
+  useDraftSource(dirty, reset, busy);
+  useEffect(() => {
+    setInvalidFields(form.current?.matches(':invalid') ?? false);
+  }, [draft, fieldsVersion]);
 
   useEffect(() => {
     let current = true;
@@ -79,6 +87,8 @@ function CatalogEditor({ request, scope, projectName, role }: Props) {
         setRemoved([]);
         setIssues([]);
         setSaved('');
+        setInvalidFields(false);
+        setFieldsVersion((value) => value + 1);
       })
       .catch((cause: unknown) => {
         if (current) setError(errorMessage(cause));
@@ -111,16 +121,6 @@ function CatalogEditor({ request, scope, projectName, role }: Props) {
     };
   }, [request, scope, cursor, activityVersion]);
 
-  useEffect(() => {
-    if (!dirty) return;
-    const warn = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [dirty]);
-
   function change(next: Draft) {
     setDraft(next);
     setSaved('');
@@ -137,6 +137,9 @@ function CatalogEditor({ request, scope, projectName, role }: Props) {
     setIssues([]);
     setSaved('');
     setError('');
+    setInvalidFields(false);
+    setFieldsVersion((value) => value + 1);
+    setDiscard(null);
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -160,6 +163,8 @@ function CatalogEditor({ request, scope, projectName, role }: Props) {
       setCatalog(result);
       setDraft(input(result));
       setRemoved([]);
+      setInvalidFields(false);
+      setFieldsVersion((value) => value + 1);
       setSaved(`Saved project catalog revision ${result.revision}. Running flags are unchanged.`);
       setCursor(null);
       setActivityVersion((value) => value + 1);
@@ -227,7 +232,13 @@ function CatalogEditor({ request, scope, projectName, role }: Props) {
         ) : !catalog || !draft ? (
           <Empty>Catalog unavailable. Reload to try again.</Empty>
         ) : (
-          <form className="fd-form" onSubmit={save}>
+          <form
+            key={fieldsVersion}
+            ref={form}
+            className="fd-form"
+            onSubmit={save}
+            onChange={() => setInvalidFields(form.current?.matches(':invalid') ?? false)}
+          >
             {issues.length > 0 && (
               <Notice tone="danger">
                 <ul>
@@ -531,8 +542,8 @@ function CatalogEditor({ request, scope, projectName, role }: Props) {
           action={discard === 'reload' ? 'Discard and reload' : 'Discard draft'}
           onClose={() => setDiscard(null)}
           onConfirm={async () => {
+            reset();
             if (discard === 'reload') reload();
-            else reset();
           }}
         >
           <p>

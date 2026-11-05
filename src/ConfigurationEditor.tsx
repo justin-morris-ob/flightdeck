@@ -19,6 +19,7 @@ import {
 } from '../shared/targeting.ts';
 import { errorMessage, get, send, type Request } from './api.ts';
 import { Decision } from './Decision.tsx';
+import { useDraftNavigation, useDraftSource } from './draft-context.ts';
 import { Confirm } from './forms.tsx';
 import { SimpleTargeting } from './SimpleTargeting.tsx';
 import {
@@ -70,12 +71,29 @@ export function ConfigurationEditor({
   const [reviewDraft, setReviewDraft] = useState<ConfigurationInput | null>(null);
   const [reviewMode, setReviewMode] = useState<'audience' | 'simulation'>('audience');
   const [invalidConfigurationFields, setInvalidConfigurationFields] = useState(false);
+  const [fieldsVersion, setFieldsVersion] = useState(0);
   const requestVersion = useRef(0);
   const form = useRef<HTMLFormElement>(null);
   const configurationFields = useRef<HTMLFieldSetElement>(null);
   const advancedControls = useRef<HTMLDetailsElement>(null);
   const dirty = JSON.stringify(draft) !== JSON.stringify(configurationInput(flag.configuration));
   const weightTotal = draft.variants.reduce((sum, variant) => sum + variant.weightBasisPoints, 0);
+  const { confirmTransition } = useDraftNavigation();
+  const sourceId = useDraftSource(dirty || invalidConfigurationFields, discard, busy);
+  function discard() {
+    setDraft(configurationInput(flag.configuration));
+    setUndoDraft(null);
+    setPreview(null);
+    setReviewDraft(null);
+    setConfirm(false);
+    setError('');
+    setInvalidConfigurationFields(false);
+    setFieldsVersion((value) => value + 1);
+    requestVersion.current++;
+  }
+  useEffect(() => {
+    setInvalidConfigurationFields(configurationFields.current?.matches(':invalid') ?? false);
+  }, [draft, fieldsVersion, catalog]);
   useEffect(() => {
     let current = true;
     setCatalogLoading(true);
@@ -277,8 +295,8 @@ export function ConfigurationEditor({
             {writable && (
               <div className="fd-actions">
                 <Button
-                  disabled={!dirty || busy}
-                  onClick={() => change(configurationInput(flag.configuration))}
+                  disabled={(!dirty && !invalidConfigurationFields) || busy}
+                  onClick={discard}
                 >
                   Discard draft changes
                 </Button>
@@ -369,6 +387,7 @@ export function ConfigurationEditor({
                 }
               >
                 <fieldset
+                  key={fieldsVersion}
                   ref={configurationFields}
                   className="fd-fieldset"
                   disabled={!writable || busy}
@@ -972,7 +991,7 @@ export function ConfigurationEditor({
                     form.current?.reportValidity();
                     return;
                   }
-                  setConfirm(true);
+                  confirmTransition(() => setConfirm(true), sourceId);
                 }}
               >
                 Review and publish to {environmentName}
@@ -987,13 +1006,18 @@ export function ConfigurationEditor({
           action={`Publish to ${environmentName}`}
           onClose={() => setConfirm(false)}
           onConfirm={async () => {
-            const input = publishConfigurationSchema.parse({
-              expectedRevision: flag.revision,
-              expectedCatalogRevision: catalog.revision,
-              configuration: reviewDraft,
-            });
-            const next = await send(request, `${path}/configuration`, 'PUT', input, flagSchema);
-            onChanged(next);
+            setBusy(true);
+            try {
+              const input = publishConfigurationSchema.parse({
+                expectedRevision: flag.revision,
+                expectedCatalogRevision: catalog.revision,
+                configuration: reviewDraft,
+              });
+              const next = await send(request, `${path}/configuration`, 'PUT', input, flagSchema);
+              onChanged(next);
+            } finally {
+              setBusy(false);
+            }
           }}
         >
           <p>

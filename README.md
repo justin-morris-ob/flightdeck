@@ -21,7 +21,9 @@ pnpm start
 
 Open **http://localhost:4721**. Select **Alex Morgan** for administrator access, **Ellis Chen** for editor access or **Vera Singh** for read-only access. All are synthetic local identities. The isolated **Jordan Rivera** identity demonstrates a different organization's scope.
 
-Choose a project under **Projects**. Its Feature flags page is one shared flag inventory with a status column for every environment—not a different flag collection per environment. Click an environment's status to review that configuration; **Configuration environment** determines which configuration opens when you click a flag's name. Creating a flag initializes it disabled everywhere. Enable/configure it independently per environment; metadata and archival apply across the project.
+Choose a project with the **Project** selector. Its Feature flags page is one shared inventory with a status column for every environment—not a different flag collection per environment. A flag's name opens its read-only **Flag overview**; an environment status opens that exact configuration. The inventory and overview have no ambient environment selector. Creation initializes the flag disabled everywhere; metadata and archival remain shared across the project.
+
+The scope bar shows the administrative organization resolved by Flightdeck's server. Standalone project/flag/environment locations survive reload and browser Back/Forward. Unsaved flag, metadata, exception and catalog changes ask **Stay** or **Discard and leave** before a Flightdeck navigation would lose them; ordinary detail-tab inspection preserves them. Signing out clears identity-bound edits. Embedded views use published Atlas object references rather than rewriting shell URLs.
 
 The default **Targeting** tab keeps Boolean flags simple: choose **Everyone** or **Selected audiences**, select existing Flightdeck segments, then review and publish. Any selected segment can qualify; an empty selection matches nobody. BC email, organization and group pickers are visibly unavailable until a real directory connection is built—there is no copied or synthetic BC directory behind them.
 

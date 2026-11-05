@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Badge, Button, Notice } from '@onebrief/atlas-ui';
 
 import {
+  stringListSchema,
   valueSchema,
   type AttributeDefinition,
   type Condition,
@@ -298,6 +299,52 @@ function ScalarEditor({
   );
 }
 
+function StringListEditor({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: EvaluationContext['attributes'][string];
+  onChange: (value: string[]) => void;
+}) {
+  const [json, setJson] = useState(() => JSON.stringify(value));
+  const [error, setError] = useState('');
+  const input = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    setJson(JSON.stringify(value));
+    setError('');
+    input.current?.setCustomValidity('');
+  }, [value]);
+  return (
+    <label>
+      {label}
+      <textarea
+        ref={input}
+        className="textarea fd-mono"
+        rows={3}
+        required
+        value={json}
+        onChange={(event) => {
+          setJson(event.target.value);
+          try {
+            const parsed = stringListSchema.parse(JSON.parse(event.target.value));
+            onChange(parsed);
+            setError('');
+            event.target.setCustomValidity('');
+          } catch {
+            const message =
+              'Enter a JSON array of at most 100 strings, each at most 500 characters.';
+            setError(message);
+            event.target.setCustomValidity(message);
+          }
+        }}
+      />
+      {error && <span role="alert">{error}</span>}
+    </label>
+  );
+}
+
 interface ConditionsEditorProps {
   conditions: Condition[];
   attributes: AttributeDefinition[];
@@ -327,14 +374,16 @@ export function ConditionsEditor({
         const definition = definitions.find((item) => item.key === condition.attribute);
         const type = definition?.type ?? 'string';
         const operators: Condition['operator'][] = [
-          'eq',
-          'not_eq',
-          'in',
-          'not_in',
+          ...(type === 'string_list'
+            ? (['contains_any', 'contains_all'] as const)
+            : (['eq', 'not_eq', 'in', 'not_in'] as const)),
           ...(type === 'number' ? (['gt', 'gte', 'lt', 'lte'] as const) : []),
           'present',
           'absent',
         ];
+        const multipleOperands = ['in', 'not_in', 'contains_any', 'contains_all'].includes(
+          condition.operator
+        );
         return (
           <div className="fd-condition" key={index}>
             <label>
@@ -346,7 +395,7 @@ export function ConditionsEditor({
                   const next = definitions.find((item) => item.key === event.target.value)!;
                   update(index, {
                     attribute: next.key,
-                    operator: 'eq',
+                    operator: next.type === 'string_list' ? 'contains_any' : 'eq',
                     values: [scalarDefault(next.type)],
                   });
                 }}
@@ -379,6 +428,11 @@ export function ConditionsEditor({
                   });
                 }}
               >
+                {!operators.includes(condition.operator) && (
+                  <option value={condition.operator}>
+                    {condition.operator} · Invalid for type
+                  </option>
+                )}
                 {operators.map((operator) => (
                   <option key={operator} value={operator}>
                     {operator}
@@ -389,8 +443,8 @@ export function ConditionsEditor({
             {condition.values.map((value, valueIndex) => (
               <div className="fd-inline-fields" key={valueIndex}>
                 <ScalarEditor
-                  label={`Operand ${valueIndex + 1} (${type})`}
-                  type={type}
+                  label={`Operand ${valueIndex + 1} (${type === 'string_list' ? 'string' : type})`}
+                  type={type === 'string_list' ? 'string' : type}
                   value={value}
                   onChange={(next) =>
                     update(index, {
@@ -401,7 +455,7 @@ export function ConditionsEditor({
                     })
                   }
                 />
-                {['in', 'not_in'].includes(condition.operator) && condition.values.length > 1 && (
+                {multipleOperands && condition.values.length > 1 && (
                   <Button
                     aria-label={`Remove operand ${valueIndex + 1} from condition ${index + 1}`}
                     onClick={() =>
@@ -416,7 +470,7 @@ export function ConditionsEditor({
                 )}
               </div>
             ))}
-            {['in', 'not_in'].includes(condition.operator) && (
+            {multipleOperands && (
               <Button
                 disabled={condition.values.length >= 20}
                 onClick={() =>
@@ -445,8 +499,9 @@ export function ConditionsEditor({
         Add condition
       </Button>
       <p className="fd-help">
-        Missing or wrongly typed attributes never satisfy negative comparisons. Use present / absent
-        explicitly. Tenant enablement is targeting, not authorization.
+        Missing or wrongly typed attributes never satisfy negative comparisons. String-list
+        membership uses exact strings; an empty list matches neither contains_any nor contains_all.
+        Use present / absent explicitly. Tenant enablement is targeting, not authorization.
       </p>
     </fieldset>
   );
@@ -498,32 +553,51 @@ export function ContextEditor({
                 checked={present}
                 onChange={(event) => {
                   const next = { ...context.attributes };
-                  if (event.target.checked) next[attribute.key] = scalarDefault(attribute.type);
+                  if (event.target.checked)
+                    next[attribute.key] =
+                      attribute.type === 'string_list' ? [] : scalarDefault(attribute.type);
                   else delete next[attribute.key];
                   onChange({ ...context, attributes: next });
                 }}
               />
               Include {attribute.key}
             </label>
-            {present && (
-              <ScalarEditor
-                label={`${attribute.key} (${attribute.type})`}
-                type={attribute.type}
-                value={context.attributes[attribute.key]!}
-                onChange={(value) =>
-                  onChange({
-                    ...context,
-                    attributes: { ...context.attributes, [attribute.key]: value },
-                  })
-                }
-              />
-            )}
+            {present &&
+              (attribute.type === 'string_list' ? (
+                <StringListEditor
+                  label={`${attribute.key} (JSON string array)`}
+                  value={context.attributes[attribute.key]!}
+                  onChange={(value) =>
+                    onChange({
+                      ...context,
+                      attributes: { ...context.attributes, [attribute.key]: value },
+                    })
+                  }
+                />
+              ) : (
+                <ScalarEditor
+                  label={`${attribute.key} (${attribute.type})`}
+                  type={attribute.type}
+                  value={
+                    Array.isArray(context.attributes[attribute.key])
+                      ? scalarDefault(attribute.type)
+                      : (context.attributes[attribute.key] as string | number | boolean)
+                  }
+                  onChange={(value) =>
+                    onChange({
+                      ...context,
+                      attributes: { ...context.attributes, [attribute.key]: value },
+                    })
+                  }
+                />
+              ))}
           </div>
         );
       })}
       <p className="fd-help">
-        Leave identifiers blank or uncheck attributes to test missing data. Context is sent only for
-        this simulation; it is not saved in configuration or activity.
+        Leave identifiers blank or uncheck attributes to test missing data. String lists use JSON
+        arrays, not comma-separated text. Context is limited to 32 attributes and 32 KiB and is sent
+        only for this simulation; it is not saved in configuration or activity.
       </p>
     </fieldset>
   );

@@ -4,9 +4,9 @@ Enablements and Experiments for Onebrief: feature flags, targeted enablements, c
 
 ## Current status
 
-**Stage 2 — enablements, targeting and typed configuration.** Author boolean, string, number and JSON values; publish ordered targeting rules, reusable segments, scoped subject overrides, deterministic rollouts and weighted variants. Compare current and proposed decisions before publication. The same Onebrief-toolkit pages run standalone and inside Atlas.
+**Stage 3 consumer checkpoint, on top of Stage 2 targeting.** Author typed flags, pinned segments, overrides, deterministic rollouts and variants; use the same Onebrief-toolkit pages standalone and inside Atlas. Generic string-list targeting, a server OpenFeature provider and a reusable consumer lab now exercise the backend contract.
 
-This is explicitly local development with synthetic identities and credential-scoped tenant grants, not production authentication, a deployed Atlas service or a real BC integration. Assignment is not experiment exposure or results.
+Flightdeck remains loopback-only with synthetic management identities and credential-scoped tenant grants. The real BC adapter lives in a separate BC change; local integration evidence is not production authentication or a deployed Atlas service. Assignment is not experiment exposure or results.
 
 ## Run locally
 
@@ -37,6 +37,28 @@ pnpm consumer new-workspace-navigation '{"type":"boolean","value":false}' '{"ten
 
 The launcher supplies a private environment-scoped evaluation credential to a separate Node process. Its tenant grant is `local-tenant`. The fallback is explicitly tagged with the expected value type; context is sent by POST. Output distinguishes a validated decision from fallback; authentication/permission failures never become fallback. No evaluation secret is shipped in the frontend. This replaces Stage 1's boolean argument and GET evaluation API.
 
+### Reusable consumer demo
+
+Keep Flightdeck running, then run:
+
+```sh
+pnpm demo:seed
+pnpm demo
+```
+
+Open **http://localhost:4722**. The lab uses an actual backend OpenFeature provider and persisted **Sandbox / Development** flags. Switch synthetic people, exercise Boolean/string/number/object decisions, and compare real decisions with explicitly simulated recovery defaults or real denied-tenant/invalid-credential failures. The backend owns the context and secret; browser requests cannot supply arbitrary memberships. Setup preserves existing flags/configurations and retains its dedicated credential privately. See the [consumer lab guide](docs/local-development.md#reusable-consumer-contract-lab).
+
+### Record captioned demos
+
+With the database initialized and `ffmpeg` on PATH:
+
+```sh
+pnpm demo:install
+pnpm demo:record
+```
+
+Flightdeck's committed Playwright harness records real consumer targeting, typed values, fallback and authorization scenarios with captions and a visible cursor. It starts/reuses the local Flightdeck/lab services without a BC checkout. Passing recordings export to ignored `.local/demos/`; failed assertions or MP4 export errors fail the command. See the [recording workflow](docs/local-development.md#record-flightdeck-owned-demos) for setup, artifacts and adding scenarios.
+
 ### Load inside Atlas
 
 Keep Flightdeck running. Use a separate, installed and built compatible Atlas checkout:
@@ -54,7 +76,7 @@ pnpm check
 pnpm test
 ```
 
-`check` runs Oxlint, frontend/server typechecks, generated OpenAPI consistency, both frontend builds and BC-derived Oxfmt checks. `test` runs the portable evaluator corpus, consumer/session boundary tests and real PostgreSQL/API behavior tests against a separately provisioned test database. Run `pnpm db:setup` first.
+`check` runs Oxlint, frontend/server typechecks, generated OpenAPI consistency, the provider package build, standalone/federation/consumer-demo builds and BC-derived Oxfmt checks. `test` runs the portable evaluator corpus, membership and actual OpenFeature SDK boundaries, consumer/session tests and real PostgreSQL/API behavior. Run `pnpm db:setup` first.
 
 `pnpm fmt` formats code; `pnpm fmt:check` checks it. `pnpm db:stop` stops the dedicated database without deleting data. The local backend serves built assets; rebuild frontend changes and restart backend changes. See the development guide for mise commands, private-config recovery and CI prerequisites.
 
@@ -72,4 +94,4 @@ pnpm test
 
 ## Next stage
 
-Stage 3 connects an actual BC backend feature path, establishes authoritative user/tenant mapping and proves delivery failure behavior. Production identity, shared-environment deployment and measured experiments remain separate gates.
+Complete Stage 3 through the separate, opt-in BC homepage-filter adapter and its failure-boundary walkthrough. The optional BC directory authoring connection remains a separate next slice; production identity, shared-environment deployment and measured experiments remain external gates.

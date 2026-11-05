@@ -289,6 +289,7 @@ function CatalogEditor({ request, scope, projectName, role }: Props) {
                         <option value="string">String</option>
                         <option value="number">Number</option>
                         <option value="boolean">Boolean</option>
+                        <option value="string_list">String list</option>
                       </select>
                     </label>
                   </div>

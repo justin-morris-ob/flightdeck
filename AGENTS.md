@@ -29,8 +29,10 @@ Use Oxfmt, not Prettier. `oxfmt.config.ts` snapshots the formatting rules from B
 
 ## Verification and documentation
 
-Stage 2 is a real local application. Run `pnpm check` for lint, frontend/server typechecks, API-contract consistency, both frontend builds and formatting. Run `pnpm db:setup` then `pnpm test` for real PostgreSQL/API behavior, deterministic evaluation vectors and consumer/session boundaries. Follow [local development](docs/local-development.md), [evaluation semantics](docs/evaluation-spec.md) and the [feature requirements](docs/conformance/feature-flags/README.md); do not add placeholder validation scripts.
+Stage 2 targeting and the Stage 3 consumer lab are real local applications. Run `pnpm check` for lint, frontend/server typechecks, API-contract consistency, the provider package and standalone/federation/consumer-demo builds, and formatting. Run `pnpm db:setup` then `pnpm test` for real PostgreSQL/HTTP behavior, actual OpenFeature SDK calls, deterministic evaluation and consumer/session boundaries. Follow [local development](docs/local-development.md), [evaluation semantics](docs/evaluation-spec.md) and the [feature requirements](docs/conformance/feature-flags/README.md); do not add placeholder validation scripts.
 
 When introducing implementation, add real build, lint, typecheck and relevant test commands in the same stage. Verify behavior by running the application and exercising the changed path. Use deterministic behavior tests for evaluation boundaries, authorization, persistence and concurrency. Do not test source text or mock forwarding as a substitute for behavior.
+
+Reusable Flightdeck recording scenarios belong in committed `demo/recordings/*.demo.ts`, not BC's PR-local demo directory. Use the owned presentation fixture and page models, assert real browser outcomes, and run `pnpm demo:record` after `pnpm demo:install` with the local database initialized and ffmpeg available. Keep generated artifacts under ignored `.local/demos/` and do not import BC harness source.
 
 Update documentation and the changelog with permanent changes. Report only checks actually run and distinguish local proofs from production guarantees. Never replace an unresolved production integration with a permissive fallback.

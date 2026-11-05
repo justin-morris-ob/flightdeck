@@ -1,0 +1,127 @@
+:root {
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  background: var(--ob-sys-bg-canvas);
+  color: var(--ob-sys-fg-primary);
+  font-family: var(--ob-sys-type-body-family);
+}
+* {
+  box-sizing: border-box;
+}
+.consumer-demo {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 32px;
+}
+.demo-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.demo-heading h1 {
+  margin: 6px 0 10px;
+  font-size: 30px;
+}
+.demo-heading p {
+  margin: 0;
+}
+.demo-eyebrow {
+  color: var(--ob-sys-fg-secondary);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.demo-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr);
+  gap: 24px;
+  margin-top: 24px;
+  align-items: start;
+}
+.demo-controls,
+.demo-surface {
+  display: grid;
+  gap: 20px;
+}
+.consumer-demo form {
+  display: grid;
+  gap: 18px;
+  margin: 16px 0;
+}
+.consumer-demo label {
+  display: grid;
+  gap: 8px;
+  font-weight: 500;
+}
+.consumer-demo .input {
+  width: 100%;
+}
+.consumer-demo .card {
+  padding: 20px;
+  min-width: 0;
+}
+.consumer-demo .card-head {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.consumer-demo p {
+  line-height: 1.5;
+}
+.consumer-demo pre {
+  font-size: 12px;
+  overflow: auto;
+  padding: 12px;
+  background: var(--ob-sys-bg-raised);
+  border: 1px solid var(--ob-sys-border-subtle);
+  border-radius: 6px;
+  max-height: 320px;
+}
+.demo-value {
+  font-size: 30px;
+  margin: 20px 0;
+  overflow-wrap: anywhere;
+}
+.consumer-demo dl {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 10px;
+  font-size: 13px;
+}
+.consumer-demo dt {
+  color: var(--ob-sys-fg-secondary);
+}
+.consumer-demo dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.consumer-demo li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ob-sys-border-subtle);
+}
+.consumer-demo footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 32px;
+  font-size: 12px;
+  color: var(--ob-sys-fg-secondary);
+}
+.consumer-demo summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+@media (max-width: 800px) {
+  .consumer-demo {
+    padding: 16px;
+  }
+  .demo-grid {
+    grid-template-columns: 1fr;
+  }
+}

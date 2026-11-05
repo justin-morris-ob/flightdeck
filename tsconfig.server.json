@@ -3,5 +3,12 @@
   "compilerOptions": {
     "erasableSyntaxOnly": true
   },
-  "include": ["server", "shared", "scripts", "examples"]
+  "include": [
+    "server",
+    "shared",
+    "scripts",
+    "examples",
+    "demo/consumer/server.ts",
+    "demo/consumer/seed.ts"
+  ]
 }

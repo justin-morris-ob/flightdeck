@@ -52,7 +52,15 @@ export function validateConditions(
   for (const condition of conditions) {
     const type = types.get(condition.attribute);
     if (!type) throw new HttpError(400, `Undeclared context attribute: ${condition.attribute}`);
-    if (condition.values.some((value) => typeof value !== type))
+    const membership = ['contains_any', 'contains_all'].includes(condition.operator);
+    const presence = ['present', 'absent'].includes(condition.operator);
+    if (membership && type !== 'string_list')
+      throw new HttpError(400, 'List membership requires a string-list attribute');
+    if (type === 'string_list' && !membership && !presence)
+      throw new HttpError(400, 'String-list attributes support only membership and presence');
+    if (
+      condition.values.some((value) => typeof value !== (type === 'string_list' ? 'string' : type))
+    )
       throw new HttpError(400, `Operand type does not match attribute: ${condition.attribute}`);
     if (['gt', 'gte', 'lt', 'lte'].includes(condition.operator) && type !== 'number')
       throw new HttpError(400, 'Ordered comparisons require a numeric attribute');

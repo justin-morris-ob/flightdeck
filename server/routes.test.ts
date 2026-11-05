@@ -2,7 +2,10 @@ import type { Pool } from 'pg';
 
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { createServer as createPortReservation, type AddressInfo } from 'node:net';
 
+import { FlightdeckProvider, enforceFlightdeckPolicy } from '@flightdeck/openfeature-provider';
+import { NOOP_PROVIDER, OpenFeature } from '@openfeature/server-sdk';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -26,6 +29,7 @@ import {
 } from '../shared/fixtures.ts';
 import {
   catalogActivitySchema,
+  byteLength,
   catalogSchema,
   configurationInput,
   defaultConfiguration,
@@ -33,7 +37,9 @@ import {
   type ConfigurationInput,
   type EvaluationContext,
 } from '../shared/targeting.ts';
+import { sessionCookie, signSession } from './auth.ts';
 import { connectDatabase, migrate, seedDatabase } from './database.ts';
+import { createApplication } from './http.ts';
 import { createRoutes } from './routes.ts';
 
 const runtimeUrl = process.env.FLIGHTDECK_TEST_DATABASE_URL;
@@ -1330,6 +1336,119 @@ describe('PostgreSQL routes and storage', () => {
     );
     expect(history.items.map((entry) => entry.revision)).toEqual([1]);
     expect(history.nextCursor).toBeNull();
+  });
+
+  it('evaluates and previews a maximum-sized context through the actual HTTP boundary', async () => {
+    const reservation = createPortReservation();
+    await new Promise<void>((done) => reservation.listen(0, '127.0.0.1', done));
+    const port = (reservation.address() as AddressInfo).port;
+    await new Promise<void>((done) => reservation.close(() => done()));
+    const oldMode = process.env.FLIGHTDECK_MODE;
+    process.env.FLIGHTDECK_MODE = 'local-development';
+    const secret = 'http-boundary-test-session-secret-at-least-32-characters';
+    const app = createApplication({ pool: runtime, sessionSecret: secret, port });
+    const origin = `http://127.0.0.1:${port}`;
+    const domain = 'flightdeck-http-context-boundary';
+    await new Promise<void>((done) => app.listen(port, '127.0.0.1', done));
+    try {
+      await invoke(`PUT ${base}/catalog`, {
+        body: {
+          expectedRevision: 1,
+          catalog: {
+            attributes: [{ key: 'groupIds', type: 'string_list', description: 'Memberships' }],
+            segments: [],
+          },
+        },
+      });
+      const created = await create();
+      const configuration = configurationInput(created.configuration);
+      configuration.defaultOutcome = { kind: 'value', value: { type: 'boolean', value: false } };
+      configuration.rules = [
+        {
+          id: '50000000-0000-4000-8000-000000000505',
+          name: 'Target membership',
+          conditions: [{ attribute: 'groupIds', operator: 'contains_any', values: ['target'] }],
+          segmentIds: [],
+          rolloutBasisPoints: 10000,
+          outcome: { kind: 'value', value: { type: 'boolean', value: true } },
+        },
+      ];
+      const published = await publish(created, configuration, 2);
+      const enabled = await update({ expectedRevision: published.revision, enabled: true });
+      const context = {
+        tenantId: 'local-tenant',
+        subjectId: 'http-boundary-subject',
+        attributes: {
+          groupIds: Array.from({ length: 100 }, (_, index): string =>
+            index === 0 ? 'target' : ''
+          ),
+        },
+      };
+      let remaining = 32768 - byteLength(context);
+      for (let index = 1; remaining > 0; index++) {
+        const length = Math.min(500, remaining);
+        context.attributes.groupIds[index] = 'x'.repeat(length);
+        remaining -= length;
+      }
+      expect(byteLength(context)).toBe(32768);
+      await OpenFeature.setProviderAndWait(
+        domain,
+        new FlightdeckProvider({
+          baseUrl: origin,
+          token,
+          projectId,
+          environmentId,
+        })
+      );
+      const details = enforceFlightdeckPolicy(
+        await OpenFeature.getClient(domain).getBooleanDetails('sample', false, {
+          tenantId: context.tenantId,
+          targetingKey: context.subjectId,
+          groupIds: context.attributes.groupIds,
+        })
+      );
+      expect(details).toMatchObject({
+        value: true,
+        reason: 'TARGETING_MATCH',
+        flagMetadata: { flightdeckSource: 'decision', revision: enabled.revision },
+      });
+      const preview = await fetch(
+        `${origin}/api/v1/projects/${projectId}/environments/${environmentId}/flags/sample/preview`,
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            cookie: sessionCookie(signSession(administrator.id, secret)).split(';')[0],
+          },
+          body: JSON.stringify({
+            context,
+            expectedRevision: enabled.revision,
+            expectedCatalogRevision: 2,
+            proposedConfiguration: configuration,
+          }),
+        }
+      );
+      expect(preview.status).toBe(200);
+      expect(previewSchema.parse(await preview.json())).toMatchObject({
+        current: { value: { type: 'boolean', value: true } },
+        proposed: { value: { type: 'boolean', value: true } },
+      });
+      context.attributes.groupIds[99] = 'x';
+      const oversized = await fetch(
+        `${origin}/api/v1/projects/${projectId}/environments/${environmentId}/evaluate/sample`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+          body: JSON.stringify({ context }),
+        }
+      );
+      expect(oversized.status).toBe(400);
+    } finally {
+      OpenFeature.setProvider(domain, NOOP_PROVIDER);
+      await new Promise<void>((done) => app.close(() => done()));
+      if (oldMode === undefined) delete process.env.FLIGHTDECK_MODE;
+      else process.env.FLIGHTDECK_MODE = oldMode;
+    }
   });
 
   it('persists only credential verifiers, returns secrets only at issuance and scopes revocation', async () => {

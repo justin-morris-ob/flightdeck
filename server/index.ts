@@ -1,5 +1,6 @@
 import { assertLocalDevelopment } from './auth.ts';
 import { connectDatabase } from './database.ts';
+import { DirectoryClient, loadDirectoryConnections } from './directory.ts';
 import { createApplication } from './http.ts';
 
 assertLocalDevelopment();
@@ -11,11 +12,15 @@ if (!Number.isInteger(port) || port < 1024 || port > 65535)
   throw new Error('PORT must be an integer between 1024 and 65535');
 const pool = connectDatabase(databaseUrl);
 await pool.query('SELECT 1');
+const directory = new DirectoryClient(
+  await loadDirectoryConnections(process.env.FLIGHTDECK_BC_DIRECTORY_CONFIG)
+);
 const server = createApplication({
   pool,
   sessionSecret,
   port,
   shellOrigin: process.env.ATLAS_SHELL_ORIGIN ?? 'http://localhost:4720',
+  directory,
 });
 server.listen(port, '127.0.0.1', () => {
   console.log(`Flightdeck local-development http://localhost:${port}`);

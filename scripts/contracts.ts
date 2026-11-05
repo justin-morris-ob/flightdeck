@@ -2,6 +2,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 
 import { z } from 'zod';
 
+import { directoryResolveRequestSchema } from '../server/directory.ts';
 import {
   activitySchema,
   apiErrorSchema,
@@ -19,6 +20,12 @@ import {
   sessionSchema,
   updateFlagSchema,
 } from '../shared/contracts.ts';
+import {
+  directoryKindSchema,
+  directoryResolveSchema,
+  directorySearchSchema,
+  directoryStatusSchema,
+} from '../shared/directory.ts';
 import {
   catalogSchema,
   catalogUpdateSchema,
@@ -58,6 +65,10 @@ const schemaNames = new Map<z.ZodType, string>([
   [overridesSchema, 'SubjectOverrides'],
   [createOverrideSchema, 'CreateSubjectOverride'],
   [revokeOverrideSchema, 'RevokeSubjectOverride'],
+  [directoryStatusSchema, 'DirectoryStatus'],
+  [directorySearchSchema, 'DirectorySearch'],
+  [directoryResolveSchema, 'DirectoryResolve'],
+  [directoryResolveRequestSchema, 'ResolveDirectory'],
 ]);
 function rebaseReferences(value: unknown, name: string): unknown {
   if (Array.isArray(value)) return value.map((item) => rebaseReferences(item, name));
@@ -123,7 +134,13 @@ const errors = Object.fromEntries(
 function operation(
   summary: string,
   response: z.ZodType | null,
-  options: { body?: z.ZodType; public?: boolean; service?: boolean; parameters?: unknown[] } = {}
+  options: {
+    body?: z.ZodType;
+    public?: boolean;
+    service?: boolean;
+    parameters?: unknown[];
+    directory?: boolean;
+  } = {}
 ) {
   return {
     summary,
@@ -139,6 +156,18 @@ function operation(
         ? { description: 'Success', content: content(response) }
         : { description: 'Success, no content' },
       ...errors,
+      ...(options.directory
+        ? {
+            502: {
+              description: 'Directory authentication, scope or response contract rejected',
+              content: content(apiErrorSchema),
+            },
+            503: {
+              description: 'Directory disconnected or unavailable',
+              content: content(apiErrorSchema),
+            },
+          }
+        : {}),
     },
   };
 }
@@ -206,6 +235,51 @@ const document = {
     },
     '/api/v1/projects': {
       get: operation('List projects and environments in the operator organization', projectsSchema),
+    },
+    [`${scope}/directory`]: {
+      get: operation(
+        'Read optional directory binding; operator viewer or above; configured is not a health claim',
+        directoryStatusSchema,
+        { parameters: scopeParameters }
+      ),
+    },
+    [`${scope}/directory/search`]: {
+      get: operation(
+        'Search the bound BC tenant directory; editor or administrator only; no evaluation dependency',
+        directorySearchSchema,
+        {
+          directory: true,
+          parameters: [
+            ...scopeParameters,
+            {
+              ...parameter('kind', 'query', { type: 'string', enum: directoryKindSchema.options }),
+              required: true,
+            },
+            {
+              ...parameter('q', 'query', {
+                type: 'string',
+                minLength: 2,
+                maxLength: 128,
+                description: 'Trimmed search text',
+              }),
+              required: true,
+            },
+            parameter('offset', 'query', {
+              type: 'integer',
+              minimum: 0,
+              maximum: 10000,
+              default: 0,
+            }),
+          ],
+        }
+      ),
+    },
+    [`${scope}/directory/resolve`]: {
+      post: operation(
+        'Resolve up to 20 unique canonical IDs in the bound BC tenant; editor or administrator only',
+        directoryResolveSchema,
+        { directory: true, parameters: scopeParameters, body: directoryResolveRequestSchema }
+      ),
     },
     '/api/v1/projects/{projectId}/flags': {
       get: operation(

@@ -6,7 +6,7 @@ Build an independently owned Enablements and Experiments application: usable on 
 
 Work one stage at a time. Each stage ends with an executable demonstration, observed validation results, limitations and the proposed next stage. A stage is not complete because its components compile or a mocked screen renders. Do not expand into the next stage before presenting the checkpoint.
 
-Stages 0–2 are complete for explicitly local development; [Stage 1](stage-one-verification.md) and [Stage 2](stage-two-verification.md) record observed evidence and limits. Stages 3–6 remain planned and unimplemented. Their checklists are acceptance criteria, not assertions that features already exist.
+Stages 0–2 are complete for explicitly local development. Stage 3 has locally exercised consumer and directory-authoring checkpoints; its production identity and operational qualification gates remain open. Stages 4–6 remain planned. [Verification](stage-two-verification.md) distinguishes observed evidence from acceptance criteria and deployment guarantees.
 
 ## Stage map
 
@@ -99,13 +99,13 @@ Acceptance:
 - [x] Browser code does not receive an evaluation secret or call Flightdeck with one. The provider is backend-only; management sessions remain separate.
 - [x] Exercise cold start, timeout, malformed response, authorization and scope failures through real SDK/HTTP boundary tests. An actual BC outage/recovery and dedicated-credential revocation were also exercised; revoked authorization was an explicit 502, not false. Expired-cache behavior is inapplicable because no cache is implemented.
 - [x] Provider scope is fixed per instance and wrong-scope responses are rejected. There is no decision cache that can satisfy another project/environment.
-- [ ] When an optional directory connection is introduced, disconnect it and prove existing rules still evaluate consumer-supplied context; new searches show unavailable rather than fabricated results.
+- [x] Stop the optional directory authoring transport and prove saved rules still evaluate consumer-supplied context. The owned connected recording observes new search HTTP 503 while fresh real BC bootstraps remain successful and keep the title filter visible.
 - [x] Exercise exact collection membership, missing/wrong-type data and scope isolation. BC bootstrap supplies effective memberships; singular current organization is deliberately omitted because this route has no server-validated selection.
 - [x] Verify Boolean/string/number/object decisions and context/error/default behavior through actual OpenFeature SDK calls, rather than inferring compatibility from API shape.
 
 **Checkpoint:** BC walkthrough plus service interruption and credential revocation. This is the first proof of BC integration, not something inferred from a command-line API sample.
 
-The first consumer checkpoint includes a reusable local contract lab and a separate opt-in BC change for `HOMEPAGE_CARDS_SHARED_TEXT_FILTER`. The fresh isolated BC database migrated from 0 to 760; the existing inconsistent shared database was not repaired, reset or reused. A managed Flightdeck update changed only the selected BC bootstrap flag. Production identity/delegation, rollout operational signals and shared-environment onboarding remain qualification work; the directory acceptance item above remains deferred until that optional integration is built. Execution details are in the [verification record](stage-two-verification.md#stage-3-consumer-checkpoint).
+The first consumer checkpoint includes a reusable local contract lab and a separate opt-in BC change for `HOMEPAGE_CARDS_SHARED_TEXT_FILTER`. The fresh isolated BC database migrated from 0 to 760; the existing inconsistent shared database was not repaired, reset or reused. A managed Flightdeck update changed only the selected BC bootstrap flag. Optional directory authoring is now implemented: private scope-bound connections, editor/admin search/resolve, direct person/organization/group branches and a reusable segment helper author ordinary tenant/source-guarded predicates. Catalog preparation and flag publication remain separate explicit writes. The supported BC directory credential API requires a separate BC PR, not a currently released capability. Production identity/delegation, rollout operational signals and shared-environment onboarding remain qualification work; the directory disconnect evidence item remains open pending observed runtime proof. The opt-in connected recording is not claimed complete. Execution details remain in the [verification record](stage-two-verification.md#stage-3-consumer-checkpoint).
 
 ## Stage 4 — Lifecycle and operational controls
 

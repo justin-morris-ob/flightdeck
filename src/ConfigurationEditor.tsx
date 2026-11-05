@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { Badge, Block, Button, Empty, Notice } from '@onebrief/atlas-ui';
 
 import { flagSchema, previewSchema, type Flag } from '../shared/contracts.ts';
+import { directoryAttributes } from '../shared/directory.ts';
 import { readSimpleAudience } from '../shared/simple-targeting.ts';
 import {
   catalogSchema,
@@ -109,6 +110,50 @@ export function ConfigurationEditor({
     setPreview(null);
     setReviewDraft(null);
     requestVersion.current++;
+  }
+  async function prepareDirectory() {
+    if (!catalog || busy || !writable) return;
+    if (
+      directoryAttributes.some((definition) =>
+        catalog.attributes.some(
+          (item) => item.key === definition.key && item.type !== definition.type
+        )
+      )
+    ) {
+      setError(
+        'BC targeting fields conflict with existing project context types. No fields were changed.'
+      );
+      return;
+    }
+    const missing = directoryAttributes.filter(
+      (definition) => !catalog.attributes.some((item) => item.key === definition.key)
+    );
+    if (!missing.length) return;
+    setBusy(true);
+    setError('');
+    try {
+      const next = await send(
+        request,
+        `${scope}/catalog`,
+        'PUT',
+        {
+          expectedRevision: catalog.revision,
+          catalog: {
+            attributes: [...catalog.attributes, ...missing],
+            segments: catalog.segments.map(({ revision: _revision, ...segment }) => segment),
+          },
+        },
+        catalogSchema
+      );
+      setCatalog(next);
+      setPreview(null);
+      setReviewDraft(null);
+      requestVersion.current++;
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setBusy(false);
+    }
   }
   function updateRule(index: number, rule: Rule) {
     change({
@@ -216,11 +261,18 @@ export function ConfigurationEditor({
     if (!audience)
       return `Advanced ${configuration.offValue.type} configuration preserved · ${configuration.rules.length} ordered rules · ${configuration.variants.length} variants. Review its full behavior in Advanced controls.`;
     if (audience.mode === 'everyone') return 'Everyone · enabled for all evaluation subjects.';
-    if (!audience.segmentIds.length) return 'Nobody selected · the audience default is off.';
+    if (!audience.segmentIds.length && !audience.directoryTargets.length)
+      return 'Nobody selected · the audience default is off.';
     const names = audience.segmentIds.map((id) => {
       const segment = segments.find((item) => item.id === id);
       return segment ? segment.name : `Unavailable segment (${id})`;
     });
+    names.push(
+      ...audience.directoryTargets.map(
+        (target) =>
+          `${target.ids.length} ${target.kind} (source ${target.sourceId}, tenant ${target.tenantId})`
+      )
+    );
     return `Selected audiences · matches any of: ${names.join(', ')}. Everyone else receives off.`;
   }
   return (
@@ -265,6 +317,10 @@ export function ConfigurationEditor({
                 </Notice>
               )}
             <SimpleTargeting
+              request={request}
+              scope={scope}
+              environmentName={environmentName}
+              onPrepareDirectory={() => void prepareDirectory()}
               draft={draft}
               published={flag.configuration}
               catalog={catalog}

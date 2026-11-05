@@ -21,13 +21,16 @@ import {
   type Catalog as ProjectCatalog,
 } from '../shared/targeting.ts';
 import { dateTime, errorMessage, get, send, type Request } from './api.ts';
+import { DirectoryConnectionNotice, useDirectoryConnection } from './DirectoryPicker.tsx';
+import { DirectorySegmentBuilder, DirectorySegmentSummary } from './DirectorySegmentBuilder.tsx';
 import { Confirm } from './forms.tsx';
-import { ConditionsEditor, newCondition } from './TargetingForms.tsx';
+import { ConditionsEditor } from './TargetingForms.tsx';
 
 interface Props {
   request: Request;
   scope: string;
   projectName: string;
+  environmentName: string;
   role: Role;
 }
 type Draft = z.infer<typeof catalogUpdateSchema>['catalog'];
@@ -46,7 +49,8 @@ export function Catalog(props: Props) {
   return <CatalogEditor key={props.scope} {...props} />;
 }
 
-function CatalogEditor({ request, scope, projectName, role }: Props) {
+function CatalogEditor({ request, scope, projectName, environmentName, role }: Props) {
+  const directory = useDirectoryConnection(request, scope);
   const [catalog, setCatalog] = useState<ProjectCatalog | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [removed, setRemoved] = useState<Removed[]>([]);
@@ -216,6 +220,16 @@ function CatalogEditor({ request, scope, projectName, role }: Props) {
               configuration publish in each environment pins the refreshed catalog and referenced
               segment revisions.
             </Notice>
+            <Notice>
+              BC directory authoring uses the selected environment: {environmentName}. Segment
+              definitions and context attributes remain project-wide.
+            </Notice>
+            <DirectoryConnectionNotice status={directory.status} error={directory.error} />
+            {directory.error && (
+              <Button type="button" onClick={directory.reload}>
+                Retry directory connection
+              </Button>
+            )}
             {readonly && <Notice>Viewer access · Catalog and activity are read-only.</Notice>}
             {error && <Notice tone="danger">{error}</Notice>}
             {saved && <Notice tone="primary">{saved}</Notice>}
@@ -389,6 +403,34 @@ function CatalogEditor({ request, scope, projectName, role }: Props) {
                         />
                       </label>
                     </div>
+                    <DirectorySegmentSummary conditions={segment.conditions} />
+                    {!readonly && directory.status?.status === 'configured' && (
+                      <DirectorySegmentBuilder
+                        key={`${directory.status.binding.sourceId}:${directory.status.binding.tenantId}`}
+                        request={request}
+                        scope={scope}
+                        environmentName={environmentName}
+                        binding={directory.status.binding}
+                        attributes={draft.attributes}
+                        conditions={segment.conditions}
+                        disabled={busy}
+                        onAdd={(attributes, conditions) =>
+                          change({
+                            ...draft,
+                            attributes,
+                            segments: draft.segments.map((item, position) =>
+                              position === index ? { ...item, conditions } : item
+                            ),
+                          })
+                        }
+                      />
+                    )}
+                    {segment.conditions.length === 0 && (
+                      <Notice tone="warning">
+                        This segment is empty and cannot be saved. Add a directory selection or an
+                        advanced condition below.
+                      </Notice>
+                    )}
                     <ConditionsEditor
                       label="Segment conditions (AND)"
                       conditions={segment.conditions}
@@ -425,7 +467,7 @@ function CatalogEditor({ request, scope, projectName, role }: Props) {
                           id: crypto.randomUUID(),
                           key: '',
                           name: '',
-                          conditions: [newCondition(draft.attributes)],
+                          conditions: [],
                         },
                       ],
                     })

@@ -39,6 +39,11 @@ import {
   type Configuration,
   type SubjectOverride,
 } from '../shared/targeting.ts';
+import {
+  DirectoryClient,
+  directoryResolveRequestSchema,
+  directorySearchQuerySchema,
+} from './directory.ts';
 import { configurationWarnings, evaluate } from './evaluator.ts';
 import {
   matchingOverrides,
@@ -247,9 +252,27 @@ async function audit(
   );
 }
 
-export function createRoutes(pool: Pool): Routes {
+export function createRoutes(pool: Pool, directory = new DirectoryClient([])): Routes {
   const base = '/api/v1/projects/:projectId/environments/:environmentId';
   const routes: Routes = {
+    [`GET ${base}/directory`]: async (context) => {
+      operator(context);
+      query(context, noQuery);
+      const binding = await scope(pool, context);
+      return directory.publicStatus(binding.projectId, binding.environmentId);
+    },
+    [`GET ${base}/directory/search`]: async (context) => {
+      operator(context, 'write');
+      const input = query(context, directorySearchQuerySchema);
+      const binding = await scope(pool, context);
+      return directory.search(binding, input);
+    },
+    [`POST ${base}/directory/resolve`]: async (context) => {
+      operator(context, 'write');
+      query(context, noQuery);
+      const binding = await scope(pool, context);
+      return directory.resolve(binding, directoryResolveRequestSchema.parse(context.body));
+    },
     'GET /api/v1/projects': async (context) => {
       const actor = operator(context);
       query(context, noQuery);

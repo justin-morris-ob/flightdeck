@@ -362,6 +362,7 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
                   request={request}
                   scope={scope}
                   projectName={project.name}
+                  environmentName={environment.name}
                   role={session.operator.role}
                 />
               ) : view === 'credentials' && role === 'administrator' ? (

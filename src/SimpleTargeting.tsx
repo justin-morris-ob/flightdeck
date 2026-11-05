@@ -1,12 +1,27 @@
 import type { Catalog, Configuration, ConfigurationInput, Segment } from '../shared/targeting.ts';
+import type { Request } from './api.ts';
 
 import { useId } from 'react';
 
 import { Badge, Button, Notice } from '@onebrief/atlas-ui';
 
+import {
+  directoryAttributes,
+  type DirectoryAudience,
+  type DirectoryKind,
+} from '../shared/directory.ts';
 import { readSimpleAudience, setSimpleAudience } from '../shared/simple-targeting.ts';
+import {
+  DirectoryConnectionNotice,
+  DirectoryPicker,
+  useDirectoryConnection,
+} from './DirectoryPicker.tsx';
 
 interface Props {
+  request: Request;
+  scope: string;
+  environmentName: string;
+  onPrepareDirectory: () => void;
   draft: ConfigurationInput;
   published: Configuration;
   catalog: Catalog;
@@ -18,6 +33,10 @@ interface Props {
 }
 
 export function SimpleTargeting({
+  request,
+  scope,
+  environmentName,
+  onPrepareDirectory,
   draft,
   published,
   catalog,
@@ -28,6 +47,7 @@ export function SimpleTargeting({
   onOpenAdvanced,
 }: Props) {
   const inputId = useId();
+  const connection = useDirectoryConnection(request, scope);
   const audience = readSimpleAudience(draft);
   if (!audience)
     return (
@@ -54,6 +74,44 @@ export function SimpleTargeting({
   const missingIds = audience.segmentIds.filter(
     (id) => !selectableSegments.some((segment) => segment.id === id)
   );
+  const configured = connection.status?.status === 'configured' ? connection.status : null;
+  const matchingBinding = (target: DirectoryAudience) =>
+    configured !== null &&
+    target.sourceId === configured.binding.sourceId &&
+    target.tenantId === configured.binding.tenantId;
+  const unconnected = audience.directoryTargets.filter((target) => !matchingBinding(target));
+  const missingAttributes = directoryAttributes.filter(
+    (definition) =>
+      !catalog.attributes.some(
+        (item) => item.key === definition.key && item.type === definition.type
+      )
+  );
+  const conflictingAttributes = directoryAttributes.filter((definition) =>
+    catalog.attributes.some((item) => item.key === definition.key && item.type !== definition.type)
+  );
+  const branches = audience.segmentIds.length + audience.directoryTargets.length;
+  function setDirectory(target: DirectoryAudience, ids: string[]) {
+    if (!audience) return;
+    const others = audience.directoryTargets.filter(
+      (item) =>
+        !(
+          item.kind === target.kind &&
+          item.sourceId === target.sourceId &&
+          item.tenantId === target.tenantId
+        )
+    );
+    onChange(
+      setSimpleAudience(
+        draft,
+        {
+          ...audience,
+          directoryTargets: ids.length ? [...others, { ...target, ids }] : others,
+        },
+        selectableSegments,
+        () => crypto.randomUUID()
+      )
+    );
+  }
 
   return (
     <>
@@ -72,7 +130,7 @@ export function SimpleTargeting({
               onChange(
                 setSimpleAudience(
                   draft,
-                  { mode: 'everyone', segmentIds: [] },
+                  { mode: 'everyone', segmentIds: [], directoryTargets: [] },
                   selectableSegments,
                   () => crypto.randomUUID()
                 )
@@ -93,7 +151,7 @@ export function SimpleTargeting({
               onChange(
                 setSimpleAudience(
                   draft,
-                  { mode: 'selected', segmentIds: [] },
+                  { mode: 'selected', segmentIds: [], directoryTargets: [] },
                   selectableSegments,
                   () => crypto.randomUUID()
                 )
@@ -102,40 +160,91 @@ export function SimpleTargeting({
           />
           <span>
             <strong>Selected audiences</strong>
-            <span className="fd-table-sub">Any selected segment can qualify (OR).</span>
+            <span className="fd-table-sub">
+              Any selected person, organization, group or segment can qualify (OR).
+            </span>
           </span>
         </label>
       </fieldset>
-      <fieldset className="fd-fieldset fd-bc-directory" disabled>
-        <legend>BC people, organizations and groups</legend>
-        <Badge tone="warning">BC directory not connected</Badge>
-        <p className="fd-help">
-          BC email, organization and group selection is unavailable. No BC directory or membership
-          data is connected to Flightdeck.
-        </p>
-        <div className="fd-inline-fields">
-          {['People by email', 'Organizations', 'Groups'].map((label) => (
-            <label key={label}>
-              {label}
-              <input
-                className="input"
-                disabled
-                readOnly
-                value=""
-                placeholder="BC directory not connected"
-              />
-            </label>
+      {audience.mode === 'selected' && (
+        <fieldset className="fd-fieldset fd-bc-directory" disabled={disabled}>
+          <legend>BC people, organizations and groups · {environmentName}</legend>
+          <DirectoryConnectionNotice status={connection.status} error={connection.error} />
+          <Button onClick={connection.reload}>Refresh directory connection</Button>
+          {configured && missingAttributes.length > 0 && (
+            <Notice tone="warning">
+              {conflictingAttributes.length
+                ? `Incompatible project context fields: ${conflictingAttributes.map((item) => item.key).join(', ')}. Existing types will not be overwritten.`
+                : 'Prepare the standard source and membership context fields before adding directory audiences. This saves a project catalog revision, not flag targeting.'}
+              {!conflictingAttributes.length && (
+                <Button onClick={onPrepareDirectory}>Prepare BC targeting fields</Button>
+              )}
+            </Notice>
+          )}
+          {configured &&
+            (['people', 'organizations', 'groups'] as const).map((kind: DirectoryKind) => {
+              const target = audience.directoryTargets.find(
+                (item) => item.kind === kind && matchingBinding(item)
+              );
+              return (
+                <DirectoryPicker
+                  key={`${kind}:${configured.binding.sourceId}:${configured.binding.tenantId}`}
+                  request={request}
+                  scope={scope}
+                  kind={kind}
+                  binding={configured.binding}
+                  ids={target?.ids ?? []}
+                  disabled={
+                    !writable || missingAttributes.length > 0 || (!target && branches >= 20)
+                  }
+                  onChange={(ids) =>
+                    setDirectory(target ?? { ...configured.binding, kind, ids: [] }, ids)
+                  }
+                />
+              );
+            })}
+          {unconnected.map((target) => (
+            <fieldset
+              className="fd-fieldset"
+              key={`${target.kind}:${target.sourceId}:${target.tenantId}`}
+            >
+              <legend>Saved {target.kind} · unavailable directory binding</legend>
+              <Notice tone="warning">
+                IDs remain active for source {target.sourceId}, tenant {target.tenantId}. Changing
+                the connection does not migrate saved targeting.
+              </Notice>
+              <ul>
+                {target.ids.map((id) => (
+                  <li key={id}>
+                    {id}{' '}
+                    <Button
+                      onClick={() =>
+                        setDirectory(
+                          target,
+                          target.ids.filter((value) => value !== id)
+                        )
+                      }
+                    >
+                      Remove saved {id}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+              <p className="fd-help">
+                Undo draft change restores a removed selection before publication.
+              </p>
+            </fieldset>
           ))}
-        </div>
-      </fieldset>
+        </fieldset>
+      )}
       {audience.mode === 'selected' && (
         <fieldset className="fd-fieldset" disabled={disabled}>
           <legend>Flightdeck segments · any match (OR)</legend>
           <p className="fd-help">
-            Existing predicate-based segments work now. Each selected segment is an independent way
-            to qualify; conditions within a segment must all match. Select up to 20 segments.
+            Each selected segment is another independent way to qualify; conditions within a segment
+            must all match. Up to 20 audience branches total are supported.
           </p>
-          {audience.segmentIds.length === 0 && (
+          {branches === 0 && (
             <Notice tone="warning">
               No audiences selected · nobody qualifies through audience targeting. This does not
               switch back to Everyone. Individual exceptions can still apply.
@@ -157,13 +266,13 @@ export function SimpleTargeting({
                   <input
                     type="checkbox"
                     checked={checked}
-                    disabled={!checked && audience.segmentIds.length >= 20}
+                    disabled={!checked && branches >= 20}
                     onChange={(event) =>
                       onChange(
                         setSimpleAudience(
                           draft,
                           {
-                            mode: 'selected',
+                            ...audience,
                             segmentIds: event.target.checked
                               ? [...audience.segmentIds, segment.id]
                               : audience.segmentIds.filter((id) => id !== segment.id),
@@ -202,7 +311,7 @@ export function SimpleTargeting({
                       setSimpleAudience(
                         draft,
                         {
-                          mode: 'selected',
+                          ...audience,
                           segmentIds: audience.segmentIds.filter((segmentId) => segmentId !== id),
                         },
                         selectableSegments,
@@ -221,8 +330,8 @@ export function SimpleTargeting({
             ))}
           </div>
           <p className="fd-help" aria-live="polite">
-            {audience.segmentIds.length} of 20 segments selected. Publication validates current
-            catalog references and explicitly refreshes pinned definitions.
+            {branches} of 20 audience branches selected. Publication validates current catalog
+            references and explicitly refreshes pinned definitions.
           </p>
         </fieldset>
       )}

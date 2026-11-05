@@ -1145,7 +1145,12 @@ describe('PostgreSQL routes and storage', () => {
     );
     expect(foreignProjects.items.map((project) => project.id)).toEqual([localProjects[2]!.id]);
     for (const route of Object.keys(routes).filter((route) => route.includes(':projectId'))) {
-      await expect(invoke(route, { principal: outsider })).rejects.toMatchObject({ status: 404 });
+      await expect(
+        invoke(route, {
+          principal: outsider,
+          ...(route.endsWith('/directory/search') ? { query: 'kind=people&q=demo' } : {}),
+        })
+      ).rejects.toMatchObject({ status: 404 });
     }
     await expect(
       invoke(`GET ${base}/flags/:flagKey`, {

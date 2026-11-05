@@ -1,3 +1,4 @@
+import type { DirectoryClient } from './directory.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Pool } from 'pg';
 
@@ -66,11 +67,13 @@ export function createApplication({
   sessionSecret,
   port = 4721,
   shellOrigin = 'http://localhost:4720',
+  directory,
 }: {
   pool: Pool;
   sessionSecret: string;
   port?: number;
   shellOrigin?: string;
+  directory?: DirectoryClient;
 }) {
   assertLocalDevelopment();
   if (sessionSecret.length < 32)
@@ -84,7 +87,7 @@ export function createApplication({
     shellOrigin,
   ]);
   const allowedHosts = new Set([`localhost:${port}`, `127.0.0.1:${port}`]);
-  const routes = Object.entries(createRoutes(pool)).map(([key, handler]) => {
+  const routes = Object.entries(createRoutes(pool, directory)).map(([key, handler]) => {
     const [method, path] = key.split(' ');
     const names: string[] = [];
     const pattern = new RegExp(

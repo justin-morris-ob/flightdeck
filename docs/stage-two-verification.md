@@ -307,3 +307,12 @@ This later refinement supersedes the drawer-specific layout and review steps in 
 - Actual browser transport interception held a schema PUT before forwarding: before the fix the textarea stayed editable; afterward it was disabled while pending. Aborting the held request re-enabled editing and retained the draft; Discard restored the original. No schema write reached the service.
 - Captured fresh light/dark PNGs of the actual local flag inventory, lifecycle groups, flag detail, unified audience search, segment library/definition and grouped audit/impact views in `~/Downloads/flightdeck-unified-design/screenshots/`. These are presentation evidence, not production deployment or BC publish/outage replay.
 - Release `pnpm check` passed lint with zero warnings/errors, both typechecks, runtime/OpenAPI consistency, provider/standalone/federation/consumer builds and formatting. `pnpm test` passed **358 tests across 10 files**. The existing non-failing Vite chunk-size advisory remains.
+
+### Library-owned creation actions
+
+- Actual standalone inspection showed no sidebar creation shortcuts and one header action group containing Create flag / Reload flags. Create segment remains in the segment library. The compact navigation also contains no creation actions.
+- Opened flag creation from its library header, retained an edited Name when cancelling discard, explicitly discarded it and reopened an empty form. Opened segment creation from its library and returned through Back to segments without saving.
+- At 600px in light theme, both flag header actions remained on screen and the document width stayed 600px. Desktop dark and narrow light layouts were visually inspected. Viewer inspection exposed neither flag nor segment creation actions.
+- The independently built remote rendered the same action group inside the unmodified Atlas shell (`data-embedded=true`), with no other creation buttons on the inventory surface. Create / Back / Reload worked in the embedded Flags view.
+- Updated the captioned demo's segment discard workflow to use Back to segments, Cancel and explicit Discard, then reopen creation through the library. Removed its obsolete confirmation-wording assertion; the scenario still checks retained versus discarded draft contents.
+- The revised captioned unified Playwright scenario passed in 2.9 minutes and exported its MP4, including library creation, Cancel/discard/reopen, real publication/evaluation and history restore-as-draft.

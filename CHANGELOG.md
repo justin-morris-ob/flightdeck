@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Remove global flag/segment creation shortcuts from sidebar and compact navigation. Place Create flag beside Reload flags in the flag library header, matching segment library actions, while preserving authorization and unsaved-creation guards.
 - Integrate the approved unified redesign: deployment-fixed local Flags/Segments/Audit trail, secondary settings and read-only master observation. Record successful integrated local checks, 353 tests, standalone/Atlas browser flows and four recordings; earlier entries below remain historical checkpoints, not production qualification.
 - Align flag and segment creation with the unified mockup's dedicated screens, retaining project/environment context, unsaved-change guards, Off-only local flag creation and non-live segment drafts. Keep short confirmations and existing-draft editing in dialogs.
 - Present lifecycle choices as large, keyboard-accessible cards grouped by temporary delivery versus long-lived purpose. Retain all creation fields and derive lowercase underscore-separated keys from Name until manually customized; existing flag keys remain immutable.

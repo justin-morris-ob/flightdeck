@@ -296,12 +296,12 @@ test('should publish following segments and restore history only as a draft', as
       'FULL-PAGE SEGMENT DRAFT · Build reusable membership and trait rules without leaving project context. Saving is not publication; review remains a separate confirmation.'
     );
     await demo.fill(ui.segmentName, 'Unsaved draft to discard');
-    await demo.click(ui.button('Create segment'));
-    await expect(ui.dialog).toContainText('Discard unpublished changes?');
-    await demo.click(ui.dialogButton('Stay'));
+    await demo.click(ui.button('Back to segments'));
+    await demo.click(ui.dialogButton('Cancel'));
     await expect(ui.segmentName).toHaveValue('Unsaved draft to discard');
-    await demo.click(ui.button('Create segment'));
-    await demo.click(ui.dialogButton('Discard and leave'));
+    await demo.click(ui.button('Back to segments'));
+    await demo.click(ui.dialogButton('Discard changes'));
+    await demo.click(ui.createSegment);
     await expect(ui.segmentName).toHaveValue('');
     await expect(ui.dialog).toHaveCount(0);
     await demo.fill(ui.segmentName, segmentName);

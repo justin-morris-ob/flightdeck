@@ -32,7 +32,6 @@ interface Props {
   role: Role;
   onOpen: (key: string, environmentId: string) => void;
   master?: boolean;
-  createRequest?: number;
   onDirtyChange?: (dirty: boolean) => void;
   onBusyChange?: (busy: boolean) => void;
 }
@@ -45,7 +44,6 @@ export function Inventory({
   role,
   onOpen,
   master = false,
-  createRequest = 0,
   onDirtyChange,
   onBusyChange,
 }: Props) {
@@ -84,12 +82,6 @@ export function Inventory({
   }, [busy, onBusyChange]);
   const after = cursors.at(-1);
   const environment = project.environments.find((item) => item.id === environmentId);
-  useEffect(() => {
-    if (createRequest > 0 && role !== 'viewer' && !master) {
-      setCreating(true);
-      setDirty(false);
-    }
-  }, [createRequest, role, master]);
   useEffect(() => {
     let current = true;
     setLoading(true);
@@ -145,7 +137,6 @@ export function Inventory({
             Starts Off in {environment?.name} only. No other environment is created or changed.
           </Notice>
           <FlagForm
-            key={createRequest}
             busy={busy}
             environmentName={environment?.name}
             onDirtyChange={setDirty}
@@ -216,7 +207,16 @@ export function Inventory({
                 ? 'Master overview · Reported configuration · Read only'
                 : `${environment?.name} · Local dashboard · Organize by lifecycle`
             }
-            actions={<Button onClick={() => setVersion((value) => value + 1)}>Refresh</Button>}
+            actions={
+              <div className="fd-actions" role="group" aria-label="Flag library actions">
+                {role !== 'viewer' && !master && (
+                  <Button variant="primary" onClick={() => setCreating(true)}>
+                    Create flag
+                  </Button>
+                )}
+                <Button onClick={() => setVersion((value) => value + 1)}>Reload flags</Button>
+              </div>
+            }
           />
         }
         viewBar={
@@ -334,17 +334,12 @@ export function Inventory({
             Loading flags…
           </div>
         ) : error ? (
-          <Empty>Flags could not be loaded. Refresh to retry.</Empty>
+          <Empty>Flags could not be loaded. Reload flags to retry.</Empty>
         ) : !items.length ? (
           <Empty>
             <div className="fd-empty">
               <h2>No matching flags</h2>
               <p>Try another search or lifecycle filter.</p>
-              {role !== 'viewer' && !master && (
-                <Button variant="primary" onClick={() => setCreating(true)}>
-                  Create flag
-                </Button>
-              )}
             </div>
           </Empty>
         ) : (

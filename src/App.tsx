@@ -61,8 +61,6 @@ export function FlightdeckApp({
   const [dirty, setDirty] = useState(false);
   const [navigationBusy, setNavigationBusy] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const [createFlag, setCreateFlag] = useState(0);
-  const [createSegment, setCreateSegment] = useState(0);
   const pendingNavigation = useRef<(() => void) | null>(null);
   const reportDirty = useCallback((value: boolean) => setDirty(value), []);
   const reportBusy = useCallback((value: boolean) => setNavigationBusy(value), []);
@@ -192,8 +190,6 @@ export function FlightdeckApp({
       setFlagKey(null);
       setSegmentId(undefined);
       setAuditFilter({});
-      setCreateFlag(0);
-      setCreateSegment(0);
       setView(next);
     });
   }
@@ -201,16 +197,12 @@ export function FlightdeckApp({
     transition(() => {
       setFlagKey(key);
       setObservedEnvironmentId(environmentId);
-      setCreateFlag(0);
-      setCreateSegment(0);
       setView('flags');
     });
   }
   function openAudit(objectType: 'flag' | 'segment', objectId: string) {
     transition(() => {
       setAuditFilter({ objectType, objectId });
-      setCreateFlag(0);
-      setCreateSegment(0);
       setView('audit');
     });
   }
@@ -218,35 +210,6 @@ export function FlightdeckApp({
     <nav className="fd-project-menu" aria-label="Flightdeck menu">
       <MenuSection kind="shared" className="fd-menu-heading">
         <h2 className="fd-menu-title">Flightdeck</h2>
-        {session && writable && (
-          <div className="fd-actions fd-menu-quick-actions">
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() =>
-                transition(() => {
-                  setView('flags');
-                  setFlagKey(null);
-                  setCreateFlag((value) => value + 1);
-                })
-              }
-            >
-              Create flag
-            </Button>
-            <Button
-              size="sm"
-              onClick={() =>
-                transition(() => {
-                  setView('segments');
-                  setSegmentId(undefined);
-                  setCreateSegment((value) => value + 1);
-                })
-              }
-            >
-              Create segment
-            </Button>
-          </div>
-        )}
       </MenuSection>
       <div className="fd-project-menu-scroll">
         <MenuSection title="Views" kind="app">
@@ -378,32 +341,6 @@ export function FlightdeckApp({
                 {item === 'flags' ? 'Flags' : item === 'segments' ? 'Segments' : 'Audit trail'}
               </Button>
             ))}
-            {writable && (
-              <>
-                <Button
-                  onClick={() =>
-                    transition(() => {
-                      setView('flags');
-                      setFlagKey(null);
-                      setCreateFlag((value) => value + 1);
-                    })
-                  }
-                >
-                  Create flag
-                </Button>
-                <Button
-                  onClick={() =>
-                    transition(() => {
-                      setView('segments');
-                      setSegmentId(undefined);
-                      setCreateSegment((value) => value + 1);
-                    })
-                  }
-                >
-                  Create segment
-                </Button>
-              </>
-            )}
             {!master && session.operator.role === 'administrator' && (
               <Button onClick={() => navigate('settings')}>Flightdeck settings</Button>
             )}
@@ -474,7 +411,6 @@ export function FlightdeckApp({
                   onOpenFlag={openFlag}
                   onDirtyChange={reportDirty}
                   onBusyChange={reportBusy}
-                  createRequest={createSegment}
                   initialSegmentId={segmentId}
                 />
               ) : view === 'audit' ? (
@@ -529,11 +465,8 @@ export function FlightdeckApp({
                     setDirty(false);
                     setFlagKey(key);
                     setObservedEnvironmentId(selectedEnvironmentId);
-                    setCreateFlag(0);
-                    setCreateSegment(0);
                   }}
                   master={master}
-                  createRequest={createFlag}
                   onDirtyChange={reportDirty}
                   onBusyChange={reportBusy}
                 />

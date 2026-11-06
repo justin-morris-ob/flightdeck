@@ -763,11 +763,6 @@
   opacity: 0.65;
 }
 
-.fd-menu-quick-actions {
-  margin-top: 1rem;
-  flex-wrap: wrap;
-}
-
 .fd-menu-footer {
   margin-top: auto;
   padding: 0.75rem;

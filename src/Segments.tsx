@@ -36,7 +36,6 @@ export interface Props {
   onOpenFlag: (key: string) => void;
   onDirtyChange?: (dirty: boolean) => void;
   onBusyChange?: (busy: boolean) => void;
-  createRequest?: number;
   initialSegmentId?: string;
 }
 
@@ -167,7 +166,6 @@ export function Segments({
   onOpenFlag,
   onDirtyChange,
   onBusyChange,
-  createRequest = 0,
   initialSegmentId,
 }: Props) {
   const [items, setItems] = useState<SegmentRecord[]>([]);
@@ -196,7 +194,6 @@ export function Segments({
   } | null>(null);
   const [historyPages, setHistoryPages] = useState<Record<string, HistoryPage>>({});
   const historyRequestVersion = useRef(0);
-  const consumedCreate = useRef(0);
   const mutationScope = useRef(scope);
   mutationScope.current = scope;
 
@@ -276,14 +273,6 @@ export function Segments({
     onBusyChange?.(busy);
     return () => onBusyChange?.(false);
   }, [busy, onBusyChange]);
-  useEffect(() => {
-    if (!writable || createRequest <= consumedCreate.current) return;
-    consumedCreate.current = createRequest;
-    setSelectedId(null);
-    setEditor({ record: null, key: '', name: '', description: '', blocks: [] });
-    setEditorError('');
-    setDirty(false);
-  }, [createRequest, writable]);
 
   const selected = items.find((item) => item.id === selectedId && (writable || item.published));
   const historyPage = selected ? historyPages[selected.id] : undefined;

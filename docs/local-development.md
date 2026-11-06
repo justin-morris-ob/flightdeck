@@ -57,6 +57,8 @@ These are distinct from `FLIGHTDECK_MODE=local-development`, which guards this s
 
 ### Author targeting and configuration
 
+Creation actions live with their libraries, not above the navigation views. Open **Flags** and use **Create flag** beside **Reload flags** in the library header, or open **Segments** and use **Create segment** beside **Reload segments**. Creation remains unavailable to viewers and on master dashboards. Both creation screens preserve project/environment context and require confirmation before discarding unsaved edits.
+
 1. Inspect local published behavior, gate, typed outcomes and lifecycle. **Edit audience** opens an unpublished draft; audience changes do not activate the gate.
 2. Compatible Boolean flags offer **Everyone** or **Selected audiences**. Segments and direct people/memberships are OR alternatives; empty selection means nobody. Exceptions retain priority below archive/Off gates.
 3. Use the single audience search for **People**, **Organizations**, **Groups** or **Segments**, with All/type filters, grouped results and shared selection chips. Published Flightdeck segments match locally by name/key even when the BC directory is disconnected or failing; draft-only segments are not selectable. BC results require the private connection and at least two characters; configured is not healthy, and lookup errors remain explicit. Stable IDs, including stale selections, survive search clearing and removal/undo. Each direct branch retains tenant/source guards; selected segments follow current publication. No separate + Segment flow or nested-segment authoring is introduced.

@@ -6,8 +6,12 @@ import {
   catalogSchema,
   configurationInput,
   type AttributeDefinition,
-  type Segment,
 } from '../../shared/targeting.ts';
+import {
+  deploymentSchema,
+  segmentLibrarySchema,
+  segmentRecordSchema,
+} from '../../shared/unified.ts';
 import { demoConfigSchema, demoFlags } from './contracts.ts';
 
 if (process.env.NODE_ENV === 'production' || process.env.FLIGHTDECK_MODE !== 'local-development')
@@ -31,7 +35,7 @@ const scope = scopePath(project.id, environment.id);
 const tenantId = 'consumer-demo';
 const sourceId = 'consumer-demo';
 const owner = 'Flightdeck consumer demo';
-const segmentId = '40000000-0000-4000-8000-000000000501';
+const segmentKey = 'consumer-demo-alpha-pilots';
 const privateDirectory = new URL('../../.local/consumer-demo/', import.meta.url);
 const configFile = new URL('config.json', privateDirectory);
 let cookie = '';
@@ -62,6 +66,9 @@ async function request(
   return response.status === 204 ? null : response.json();
 }
 await request('/api/v1/dev/session', 'POST', { operatorId: 'local-admin' });
+const deployment = deploymentSchema.parse(await request('/api/v1/deployment'));
+if (deployment.mode !== 'local' || deployment.environmentKey !== environment.key)
+  throw new Error('Demo seeding requires the local Development deployment; master is read only.');
 let catalog = catalogSchema.parse(await request(`${scope}/catalog`));
 const attributes: AttributeDefinition[] = [
   { key: 'sourceId', type: 'string', description: 'Trusted consumer deployment/source binding' },
@@ -83,44 +90,54 @@ for (const attribute of attributes) {
       `Sandbox attribute ${attribute.key} has an incompatible type; refusing to overwrite it.`
     );
 }
-const segment: Omit<Segment, 'revision'> = {
-  id: segmentId,
-  key: 'consumer-demo-alpha-pilots',
+const segment = {
+  key: segmentKey,
   name: 'Consumer demo · Alpha pilots',
-  conditions: [
-    { attribute: 'sourceId', operator: 'eq', values: [sourceId] },
-    { attribute: 'groupIds', operator: 'contains_any', values: ['501'] },
+  description: 'Reusable consumer demo audience. Synthetic effective group memberships.',
+  blocks: [
+    {
+      conditions: [
+        { attribute: 'sourceId', operator: 'eq' as const, values: [sourceId] },
+        { attribute: 'groupIds', operator: 'contains_any' as const, values: ['501'] },
+      ],
+    },
   ],
 };
-const existingSegment = catalog.segments.find(
-  (item) => item.id === segment.id || item.key === segment.key
-);
-if (
-  existingSegment &&
-  (existingSegment.id !== segment.id ||
-    existingSegment.key !== segment.key ||
-    JSON.stringify(existingSegment.conditions) !== JSON.stringify(segment.conditions))
-)
-  throw new Error(
-    'Consumer demo segment conflicts with an existing definition; refusing to overwrite it.'
-  );
 const missingAttributes = attributes.filter(
   (attribute) => !catalog.attributes.some((item) => item.key === attribute.key)
 );
-if (missingAttributes.length || !existingSegment) {
+if (missingAttributes.length) {
   catalog = catalogSchema.parse(
     await request(`${scope}/catalog`, 'PUT', {
       expectedRevision: catalog.revision,
       catalog: {
         attributes: [...catalog.attributes, ...missingAttributes],
-        segments: [
-          ...catalog.segments.map(({ revision: _revision, ...item }) => item),
-          ...(!existingSegment ? [segment] : []),
-        ],
       },
     })
   );
 }
+const library = segmentLibrarySchema.parse(await request(`${scope}/segments`));
+let audience = library.items.find((item) => item.key === segmentKey);
+if (!audience) {
+  audience = segmentRecordSchema.parse(await request(`${scope}/segments`, 'POST', segment));
+}
+if (!audience.published) {
+  // Resume only our exact initial draft. Never reset a reusable audience edited by an operator.
+  if (
+    !audience.draft ||
+    audience.draft.name !== segment.name ||
+    JSON.stringify(audience.draft.blocks) !== JSON.stringify(segment.blocks)
+  )
+    throw new Error('Consumer demo segment has an unpublished operator edit; review it manually.');
+  audience = segmentRecordSchema.parse(
+    await request(`${scope}/segments/${audience.id}/publish`, 'POST', {
+      expectedRevision: audience.revision,
+    })
+  );
+}
+// Resolve migrated/server-assigned identity by stable key. Existing published contents stay intact.
+const segmentId = audience.id;
+catalog = catalogSchema.parse(await request(`${scope}/catalog`));
 for (const definition of demoFlags) {
   const path = `${scope}/flags/${definition.key}`;
   const found = await request(path, 'GET', undefined, true);

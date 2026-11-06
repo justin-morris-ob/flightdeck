@@ -1,6 +1,6 @@
 # Evaluation and allocation specification
 
-This is the implemented targeting contract, including the Stage 3 consumer-context extension. The permanent scalar/allocation cases are in `shared/evaluation-vectors.json`; their hash expectations were independently calculated using Python `hashlib.sha256`, not copied from evaluator output. List-membership and HTTP/provider boundaries have additional behavioral tests. [Verification](stage-two-verification.md) records executed tests and runtime/browser scenarios. Assignment is not an exposure, an authorization grant, a measured experiment or an experiment result.
+This is the targeting contract for the unified replacement, including the consumer-context extension. [Unified verification](stage-two-verification.md#unified-redesign-verification) records integrated local checks and browser/SDK evidence; older sections retain historical executions. The permanent scalar/allocation corpus is `shared/evaluation-vectors.json`; its historical hash expectations were independently calculated using Python `hashlib.sha256`. List-membership and HTTP/provider boundaries have additional behavioral tests. Assignment is not exposure, authorization, a measured experiment or an experiment result.
 
 ## Inputs and precedence
 
@@ -16,15 +16,21 @@ The first applicable decision wins:
 
 An active override has no revocation timestamp and `now < expiresAt`. Equality at the expiry instant is expired. Timestamps compare instants, not textual representation. An override selects a typed value or a fixed variant, never weighted allocation. Owner and reason are management metadata, not matching predicates.
 
-For every non-gated result `enabled:true` describes the environment gate, including a false boolean value or a missing-subject off value. Decisions include flag revision, pinned catalog revision, optional selected variant and matched rule/override IDs. Trace entries contain codes, logical IDs, attribute names and allocation buckets only; they do not contain raw context values or tenant/subject identifiers.
+For every non-gated result `enabled:true` describes the environment gate, including a false boolean value or a missing-subject off value. Decisions include flag revision, catalog revision at flag publication, optional selected variant and matched rule/override IDs. Current segment versions are separate from that publication-time catalog revision. Trace entries contain codes, logical IDs, attribute names and allocation buckets only; they do not contain raw context values or tenant/subject identifiers.
 
 ## Conditions, segments and rules
 
-Each rule ANDs all its conditions and all attached pinned segment predicates. Each segment ANDs all its conditions. Empty rule predicates match. Rules use published attribute definitions and segment snapshots, not live project catalog state. Catalog edits alone cannot change a published decision.
+Each rule ANDs all its conditions and attached segment references. A segment matches ANY definition block; every condition inside a block must match (AND). People and membership selections form alternative branches, with source/tenant guards retained inside each branch. Empty rule predicates match. Flag snapshots retain validated attribute definitions, while attached segments follow the current published definition in the same project/environment. A saved segment draft is never used for published evaluation.
+
+Each resolved segment carries its own published `contextDefinitions`; direct flag conditions retain the attribute types validated at flag publication. The evaluator checks raw context independently against each definition, without merging incompatible types, coercing values or rejecting a valid migrated configuration with a type-conflict error. A later following-segment type change can make an AND combination unsatisfiable for a context, but cannot rewrite direct flag bindings or crash evaluation.
+
+Saving/restoring a segment draft leaves live behavior unchanged. Explicit segment publication atomically changes all published local references without per-flag republishing, flag revision increments or changes to gates, direct selections and unrelated drafts. A disabled flag still follows the new definition, but the off gate wins evaluation. Historical published definitions are retained for inspection/restore as draft, not independently pinned by flags.
 
 The built-in `tenantId` and `subjectId` attributes are strings read from the top-level context, not from `context.attributes`. They cannot be redeclared as custom definitions. Their presence, absence and negative-comparison behavior follows the same rules as declared custom attributes.
 
 Presence means an own attribute property exists. A present attribute must have the declared scalar or `string_list` type. No coercion occurs. Missing attributes fail equality, membership, ordered comparisons and their negative forms. A present wrong-type attribute fails every operator, including presence and absence. `absent` succeeds only for a missing attribute; `present` succeeds only for a present correctly typed attribute. `not_eq` and `not_in` require a present correctly typed scalar and correctly typed operands; they are not missing-data fallbacks. Ordered comparisons require numeric values and operands. Scalar equality and membership use exact equality.
+
+For a string trait, `ends_with` requires a present string and a string suffix and uses exact case-sensitive suffix matching. There is no case folding, whitespace normalization or scalar coercion. Missing/wrong-type traits fail the condition.
 
 `string_list` is an array of at most 100 strings, each at most 500 characters. `contains_any` requires at least one exact shared string between the context list and its 1–20 string operands; `contains_all` requires every operand to occur in the context list. Case, whitespace and source-specific identifiers are not normalized. Empty lists are present, but cannot satisfy either nonempty membership predicate. Lists support `present` and `absent`; scalar operators on a list definition and list operators on a scalar definition are rejected during publication. A comma-separated string is not a list. The entire serialized UTF-8 context is bounded to 32 KiB and 32 custom attributes; the HTTP envelope is independently bounded to 64 KiB to accommodate context plus a proposed configuration during preview.
 
@@ -65,7 +71,7 @@ All variant weights are integer basis points totaling exactly 10000; zero weight
 
 A weighted outcome uses the independent variant-purpose bucket. A fixed variant selects its logical ID directly. Both require tenant and subject; if either is absent they return the configured off value and `missing_subject`. A fixed typed value does not require identity. All configured outcomes and variant values share the off value's declared type. Invalid variant references, type mismatches and weight totals must be rejected before publication.
 
-Changing rule admission does not change a subject's variant hash. Reordering variants, changing IDs or weights can change intervals and assignments. `configurationWarnings(current, proposed)` reports assignment-sensitive rule/default changes, variant IDs/order/weights, and refreshed catalog/segment snapshots. Display-name-only rule or variant edits are not allocation changes. Preview warnings are risk explanations, not evidence of measured treatment effects.
+Changing rule admission does not change a subject's variant hash. Reordering variants, changing IDs or weights can change intervals and assignments. `configurationWarnings(current, proposed)` reports assignment-sensitive rule/default changes, variant IDs/order/weights and changed validated definition snapshots. Segment publication has its own before/after and affected-reference review, distinct from flag configuration review. Display-name-only rule or variant edits are not allocation changes. Preview warnings are risk explanations, not measured treatment effects.
 
 ## Portable corpus
 

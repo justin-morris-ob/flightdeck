@@ -1,5 +1,7 @@
 # Stage 1 verification record
 
+Historical evidence only: this original boolean/project-wide workflow predates typed targeting and the unified redesign. Preserve the executions below as recorded; they are not proof of current local lifecycle, fixed-environment or segment-following behavior. See the separate [unified verification](stage-two-verification.md#unified-redesign-verification) for replacement evidence.
+
 Verified locally on 2026-11-04. This is evidence for the local boolean-flag vertical slice, not production readiness. See [local development](local-development.md) for reproducible startup and [requirements](conformance/feature-flags/requirements/stage-one.md) for the observable contract.
 
 ## Toolchain and compatibility

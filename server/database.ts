@@ -97,6 +97,10 @@ export async function seedDatabase(databaseUrl: string, evaluationToken: string)
         );
       }
       await client.query(
+        `INSERT INTO flightdeck.environment_targeting(project_id,environment_id)
+          SELECT project_id,id FROM flightdeck.environments ON CONFLICT(project_id,environment_id) DO NOTHING`
+      );
+      await client.query(
         `INSERT INTO flightdeck.credentials
         (id, organization_id, project_id, environment_id, name, token_hash, allowed_tenant_ids)
         VALUES ($1, $2, $3, $4, $5, $6, ARRAY['local-tenant'])

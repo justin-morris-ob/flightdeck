@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { z } from 'zod';
 
 import { Badge, Block, Button, Empty, Notice } from '@onebrief/atlas-ui';
@@ -40,6 +40,10 @@ interface Props {
   projectName: string;
   environmentName: string;
   onChanged: (flag: Flag) => void;
+  onDirtyChange: (dirty: boolean) => void;
+  editing: boolean;
+  resetVersion: number;
+  children: (panels: { audience: ReactNode; advanced: ReactNode }) => ReactNode;
 }
 
 export function ConfigurationEditor({
@@ -51,6 +55,10 @@ export function ConfigurationEditor({
   projectName,
   environmentName,
   onChanged,
+  onDirtyChange,
+  editing,
+  resetVersion,
+  children,
 }: Props) {
   const [draft, setDraft] = useState<ConfigurationInput>(() =>
     configurationInput(flag.configuration)
@@ -60,13 +68,12 @@ export function ConfigurationEditor({
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [version, setVersion] = useState(0);
   const [context, setContext] = useState<EvaluationContext>({ attributes: {} });
-  const [contextModel, setContextModel] = useState<'current' | 'pinned'>(
-    writable ? 'current' : 'pinned'
-  );
+  const [contextModel, setContextModel] = useState<'current' | 'published'>('current');
   const [preview, setPreview] = useState<Preview | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [confirm, setConfirm] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [fieldsVersion, setFieldsVersion] = useState(0);
   const [reviewDraft, setReviewDraft] = useState<ConfigurationInput | null>(null);
   const [reviewMode, setReviewMode] = useState<'audience' | 'simulation'>('audience');
   const [invalidConfigurationFields, setInvalidConfigurationFields] = useState(false);
@@ -77,10 +84,26 @@ export function ConfigurationEditor({
   const dirty = JSON.stringify(draft) !== JSON.stringify(configurationInput(flag.configuration));
   const weightTotal = draft.variants.reduce((sum, variant) => sum + variant.weightBasisPoints, 0);
   useEffect(() => {
+    setDraft(configurationInput(flag.configuration));
+    setUndoDraft(null);
+    setPreview(null);
+    setReviewDraft(null);
+    setReviewOpen(false);
+    setInvalidConfigurationFields(false);
+    setError('');
+    setFieldsVersion((value) => value + 1);
+    requestVersion.current++;
+  }, [flag.configuration, flag.revision, resetVersion]);
+  useEffect(() => {
+    onDirtyChange(dirty || invalidConfigurationFields);
+    return () => onDirtyChange(false);
+  }, [dirty, invalidConfigurationFields, onDirtyChange]);
+  useEffect(() => {
     let current = true;
     setCatalogLoading(true);
     setPreview(null);
     setReviewDraft(null);
+    setReviewOpen(false);
     requestVersion.current++;
     setError('');
     get(request, `${scope}/catalog`, catalogSchema)
@@ -103,7 +126,7 @@ export function ConfigurationEditor({
     };
   }, [request, scope, version]);
   function change(next: ConfigurationInput) {
-    setConfirm(false);
+    setReviewOpen(false);
     setUndoDraft(draft);
     setDraft(next);
     setPreview(null);
@@ -142,7 +165,7 @@ export function ConfigurationEditor({
   function invalidateFieldReview() {
     setPreview(null);
     setReviewDraft(null);
-    setConfirm(false);
+    setReviewOpen(false);
     requestVersion.current++;
     setInvalidConfigurationFields(configurationFields.current?.matches(':invalid') ?? false);
   }
@@ -172,6 +195,7 @@ export function ConfigurationEditor({
     setError('');
     setPreview(null);
     setReviewDraft(null);
+    setReviewOpen(false);
     try {
       const proposed = writable ? configurationInputSchema.parse(draft) : undefined;
       const body = previewRequestSchema.parse({
@@ -188,6 +212,7 @@ export function ConfigurationEditor({
         setPreview(result);
         setReviewDraft(proposed ?? null);
         setReviewMode(mode);
+        setReviewOpen(mode === 'audience' && Boolean(proposed));
       }
     } catch (cause) {
       setError(
@@ -216,99 +241,127 @@ export function ConfigurationEditor({
     if (!audience)
       return `Advanced ${configuration.offValue.type} configuration preserved · ${configuration.rules.length} ordered rules · ${configuration.variants.length} variants. Review its full behavior in Advanced controls.`;
     if (audience.mode === 'everyone') return 'Everyone · enabled for all evaluation subjects.';
-    if (!audience.segmentIds.length) return 'Nobody selected · the audience default is off.';
+    if (!audience.segmentIds.length && !audience.directoryTargets.length)
+      return 'Nobody selected · the audience default is off.';
     const names = audience.segmentIds.map((id) => {
       const segment = segments.find((item) => item.id === id);
       return segment ? segment.name : `Unavailable segment (${id})`;
     });
+    names.push(
+      ...audience.directoryTargets.map(
+        (target) =>
+          `${target.ids.length} ${target.kind} (source ${target.sourceId}, tenant ${target.tenantId})`
+      )
+    );
     return `Selected audiences · matches any of: ${names.join(', ')}. Everyone else receives off.`;
   }
-  return (
+  const feedback = (
     <>
-      <Block name="content" label="Audience targeting" icon="sliders">
-        {error && <Notice tone="danger">{error}</Notice>}
-        {invalidConfigurationFields && (
-          <Notice tone="danger">
-            Advanced configuration has invalid or incomplete fields. No changes have been published.{' '}
-            <Button onClick={openAdvanced}>Open advanced controls</Button>
-          </Notice>
-        )}
-        <div className="fd-actions">
-          <Badge>
-            {invalidConfigurationFields
-              ? 'Invalid unsaved edits'
-              : dirty
-                ? 'Unsaved changes'
-                : 'Saved'}
-          </Badge>
+      {error && <Notice tone="danger">{error}</Notice>}
+      {invalidConfigurationFields && (
+        <Notice tone="danger">
+          Advanced configuration has invalid or incomplete fields. No changes have been published.{' '}
+          <Button onClick={openAdvanced}>Open advanced controls</Button>
+        </Notice>
+      )}
+    </>
+  );
+  const draftActions = writable && (
+    <div className="fd-editor-draft-actions">
+      <div className="fd-editor-discard-actions">
+        <Button
+          type="button"
+          disabled={(!dirty && !invalidConfigurationFields) || busy}
+          onClick={() => {
+            change(configurationInput(flag.configuration));
+            setInvalidConfigurationFields(false);
+            setError('');
+            setFieldsVersion((value) => value + 1);
+          }}
+        >
+          Discard draft changes
+        </Button>
+        {undoDraft && (
           <Button
-            disabled={catalogLoading || busy}
-            onClick={() => setVersion((value) => value + 1)}
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setDraft(undoDraft);
+              setUndoDraft(null);
+              setPreview(null);
+              setReviewDraft(null);
+              setReviewOpen(false);
+              setInvalidConfigurationFields(false);
+              setError('');
+              setFieldsVersion((value) => value + 1);
+              requestVersion.current++;
+            }}
           >
-            Refresh segments
+            Undo last draft edit or removal
           </Button>
-        </div>
-        {catalogLoading ? (
-          <p role="status">Loading targeting options…</p>
-        ) : !catalog ? (
-          <Empty>
-            Targeting options could not be loaded. Refresh to retry; nothing can be saved without
-            them.
-          </Empty>
-        ) : (
-          <>
-            {catalog.revision !== flag.configuration.catalogRevision &&
-              (draft.rules.length > 0 || flag.configuration.rules.length > 0) && (
-                <Notice tone="warning">
-                  The targeting library has changed since this flag was saved. Saving will use its
-                  latest definitions, which may change who matches the selected segments.
-                </Notice>
-              )}
-            <SimpleTargeting
-              draft={draft}
-              published={flag.configuration}
-              catalog={catalog}
-              writable={writable}
-              busy={busy}
-              onChange={change}
-              onReview={() => void review({ attributes: {} }, 'audience')}
-              onOpenAdvanced={openAdvanced}
-            />
-            {writable && (
-              <div className="fd-actions">
-                <Button
-                  disabled={!dirty || busy}
-                  onClick={() => change(configurationInput(flag.configuration))}
-                >
-                  Discard draft changes
-                </Button>
-                {undoDraft && (
-                  <Button
-                    disabled={busy}
-                    onClick={() => {
-                      setDraft(undoDraft);
-                      setUndoDraft(null);
-                      setPreview(null);
-                      setReviewDraft(null);
-                      requestVersion.current++;
-                    }}
-                  >
-                    Undo last draft edit or removal
-                  </Button>
-                )}
-              </div>
-            )}
-          </>
         )}
-      </Block>
-      <details ref={advancedControls} className="fd-advanced-controls">
+      </div>
+      <Button
+        type="button"
+        variant="primary"
+        disabled={busy || catalogLoading || !catalog}
+        onClick={() => void review({ attributes: {} }, 'audience')}
+      >
+        Review changes →
+      </Button>
+    </div>
+  );
+  const audiencePanel = writable && (
+    <Block name="content" label="Audience targeting" icon="sliders">
+      {editing && feedback}
+      <div className="fd-actions">
+        <Badge>
+          {invalidConfigurationFields
+            ? 'Invalid unpublished changes'
+            : dirty
+              ? 'Unpublished changes'
+              : 'Matches published configuration'}
+        </Badge>
+        <Button disabled={catalogLoading || busy} onClick={() => setVersion((value) => value + 1)}>
+          Refresh segments
+        </Button>
+      </div>
+      {catalogLoading ? (
+        <p role="status">Loading targeting options…</p>
+      ) : !catalog ? (
+        <Empty>
+          Targeting options could not be loaded. Refresh to retry; nothing can be saved without
+          them.
+        </Empty>
+      ) : (
+        <>
+          <SimpleTargeting
+            request={request}
+            scope={scope}
+            draft={draft}
+            catalog={catalog}
+            writable={writable}
+            busy={busy || !editing}
+            onChange={change}
+            onOpenAdvanced={openAdvanced}
+          />
+          <p className="fd-help">Draft only · {environmentName} is unchanged</p>
+          {draftActions}
+        </>
+      )}
+    </Block>
+  );
+  const advancedPanel = (
+    <>
+      {!editing && feedback}
+      <details ref={advancedControls} className="fd-advanced-controls fd-published-card">
         <summary>Advanced controls</summary>
         <Block name="content" label="Targeting and typed configuration" icon="sliders">
           <p>
             <strong>
               {projectName} · {environmentName}
             </strong>{' '}
-            · Global flag revision r{flag.revision}
+            · Local flag configuration r{flag.revision}
           </p>
           <p className="fd-help">
             Precedence: archived → environment disabled → active exact tenant/subject override →
@@ -316,15 +369,14 @@ export function ConfigurationEditor({
             match.
           </p>
           <p className="fd-help">
-            Typed values, ordered predicates, rollouts, variants, pinned definitions and the
-            evaluation playground remain available here. Opening or closing these controls does not
-            discard edits.
+            Typed values, ordered predicates, rollouts and variants remain available here. Opening
+            or closing these controls does not discard edits.
           </p>
           <details>
-            <summary>Published pinned definitions and reusable segments (read-only)</summary>
+            <summary>Published context definitions and following segments (read-only)</summary>
             <p>
-              Catalog r{flag.configuration.catalogRevision} · Live evaluation uses these snapshots
-              until explicit publish.
+              Referenced segments follow their current published definitions in this environment.
+              Segment drafts are not live.
             </p>
             <ul>
               {flag.configuration.contextDefinitions.map((attribute) => (
@@ -333,7 +385,7 @@ export function ConfigurationEditor({
                 </li>
               ))}
             </ul>
-            {!flag.configuration.segments.length && <p>No reusable segments pinned.</p>}
+            {!flag.configuration.segments.length && <p>No segment references.</p>}
             {flag.configuration.segments.map((segment) => (
               <section key={segment.id}>
                 <h3>
@@ -341,10 +393,17 @@ export function ConfigurationEditor({
                 </h3>
                 <code>{segment.id}</code>
                 <ul>
-                  {segment.conditions.map((condition, index) => (
+                  {segment.blocks.map((block, index) => (
                     <li key={index}>
-                      {condition.attribute} {condition.operator}{' '}
-                      {condition.values.map((value) => JSON.stringify(value)).join(', ')}
+                      ANY block {index + 1} · ALL conditions
+                      <ul>
+                        {block.conditions.map((condition, position) => (
+                          <li key={position}>
+                            {condition.attribute} {condition.operator}{' '}
+                            {condition.values.map((value) => JSON.stringify(value)).join(', ')}
+                          </li>
+                        ))}
+                      </ul>
                     </li>
                   ))}
                 </ul>
@@ -369,6 +428,7 @@ export function ConfigurationEditor({
                 }
               >
                 <fieldset
+                  key={fieldsVersion}
                   ref={configurationFields}
                   className="fd-fieldset"
                   disabled={!writable || busy}
@@ -664,12 +724,12 @@ export function ConfigurationEditor({
                           <legend>Reusable segments (AND)</legend>
                           {!catalog.segments.length && (
                             <p>
-                              No current segments. Create reusable predicates in Project targeting
-                              catalog.
+                              No published segments. Create and publish reusable audiences in
+                              Segments.
                             </p>
                           )}
                           {catalog.segments.map((segment) => {
-                            const pinned = flag.configuration.segments.find(
+                            const followed = flag.configuration.segments.find(
                               (item) => item.id === segment.id
                             );
                             return (
@@ -693,17 +753,24 @@ export function ConfigurationEditor({
                                   />
                                   {segment.name} · <code>{segment.key}</code> · Current r
                                   {segment.revision} /{' '}
-                                  {pinned ? `Pinned r${pinned.revision}` : 'Not pinned'}
+                                  {followed ? `Following v${followed.revision}` : 'Not referenced'}
                                 </label>
                                 <details>
-                                  <summary>Current segment conditions</summary>
+                                  <summary>Current published definition</summary>
                                   <ul>
-                                    {segment.conditions.map((condition, position) => (
+                                    {segment.blocks.map((block, position) => (
                                       <li key={position}>
-                                        {condition.attribute} {condition.operator}{' '}
-                                        {condition.values
-                                          .map((value) => JSON.stringify(value))
-                                          .join(', ')}
+                                        ANY block {position + 1}
+                                        <ul>
+                                          {block.conditions.map((condition, index) => (
+                                            <li key={index}>
+                                              {condition.attribute} {condition.operator}{' '}
+                                              {condition.values
+                                                .map((value) => JSON.stringify(value))
+                                                .join(', ')}
+                                            </li>
+                                          ))}
+                                        </ul>
                                       </li>
                                     ))}
                                   </ul>
@@ -787,26 +854,11 @@ export function ConfigurationEditor({
                       Add rule
                     </Button>
                   </fieldset>
-                  {writable && (
-                    <Button
-                      disabled={!dirty}
-                      onClick={() => change(configurationInput(flag.configuration))}
-                    >
-                      Discard draft changes
-                    </Button>
-                  )}
-                  {writable && undoDraft && (
-                    <Button
-                      onClick={() => {
-                        setDraft(undoDraft);
-                        setUndoDraft(null);
-                        setPreview(null);
-                        setReviewDraft(null);
-                        requestVersion.current++;
-                      }}
-                    >
-                      Undo last draft edit or removal
-                    </Button>
+                  {!editing && (
+                    <>
+                      <p className="fd-help">Draft only · {environmentName} is unchanged</p>
+                      {draftActions}
+                    </>
                   )}
                 </fieldset>
                 <label>
@@ -816,22 +868,24 @@ export function ConfigurationEditor({
                     value={contextModel}
                     disabled={busy}
                     onChange={(event) => {
-                      setContextModel(event.target.value as 'current' | 'pinned');
+                      setContextModel(event.target.value as 'current' | 'published');
                       setContext({ ...context, attributes: {} });
                       setPreview(null);
                       setReviewDraft(null);
                       requestVersion.current++;
                     }}
                   >
-                    <option value="current">Current project catalog · r{catalog.revision}</option>
-                    <option value="pinned">
-                      Published pinned catalog · r{flag.configuration.catalogRevision}
+                    <option value="current">
+                      Current environment schema · r{catalog.revision}
+                    </option>
+                    <option value="published">
+                      Published context schema · r{flag.configuration.catalogRevision}
                     </option>
                   </select>
                 </label>
                 <p className="fd-help">
-                  Switching resets only context attributes. If a definition changed type, select its
-                  current or pinned type to inspect both decisions for the exact same context.
+                  Switching resets only context attributes. This advanced comparison does not
+                  publish changes.
                 </p>
                 <ContextEditor
                   context={context}
@@ -905,87 +959,16 @@ export function ConfigurationEditor({
           </Block>
         )}
       </details>
-      {preview && (
-        <Block name="content" label="Targeting change review" icon="eye">
-          <Notice>
-            {reviewMode === 'audience'
-              ? 'The server validated this configuration with an empty context. This is not a real-user simulation or an audience size estimate. BC directory identities are not connected.'
-              : 'This review includes the exact context simulation shown in Advanced controls, not a population estimate.'}{' '}
-            Publishing applies the entire reviewed draft to {projectName} / {environmentName}; other
-            environments remain pinned to their own configuration.
-          </Notice>
-          <div className="fd-change-grid">
-            <section>
-              <h3>Current published audience</h3>
-              <p>
-                {audienceSummary(
-                  configurationInput(flag.configuration),
-                  flag.configuration.segments
-                )}
-              </p>
-              <p className="fd-help">Pinned catalog r{flag.configuration.catalogRevision}</p>
-            </section>
-            {reviewDraft && (
-              <section>
-                <h3>Proposed audience</h3>
-                <p>
-                  {audienceSummary(reviewDraft, [
-                    ...(catalog?.segments ?? []),
-                    ...flag.configuration.segments,
-                  ])}
-                </p>
-                <p className="fd-help">Publication pins current catalog r{catalog?.revision}</p>
-              </section>
-            )}
-          </div>
-          <p className="fd-help">
-            The environment gate remains {flag.enabled ? 'enabled' : 'disabled'}.
-            {flag.archived
-              ? ' Archive still forces the off value.'
-              : ' Active individual exceptions retain their priority when the gate is enabled.'}
-          </p>
-          {preview.warnings.length > 0 && (
-            <Notice tone="warning">
-              <ul>
-                {preview.warnings.map((warning, index) => (
-                  <li key={index}>{warning}</li>
-                ))}
-              </ul>
-            </Notice>
-          )}
-          <p>
-            <strong>
-              {preview.allocationChanged
-                ? 'Allocation-sensitive changes · existing subjects may be reassigned.'
-                : 'No allocation change detected by server.'}
-            </strong>
-          </p>
-          {writable && reviewDraft && preview.proposed && (
-            <div className="fd-actions">
-              <Button
-                variant="primary"
-                disabled={busy || catalogLoading}
-                onClick={() => {
-                  if (!validConfigurationFields()) return;
-                  if (reviewMode === 'simulation' && !form.current?.checkValidity()) {
-                    openAdvanced();
-                    form.current?.reportValidity();
-                    return;
-                  }
-                  setConfirm(true);
-                }}
-              >
-                Review and publish to {environmentName}
-              </Button>
-            </div>
-          )}
-        </Block>
-      )}
-      {confirm && reviewDraft && catalog && preview?.proposed && (
+    </>
+  );
+  return (
+    <>
+      {children({ audience: audiencePanel, advanced: advancedPanel })}
+      {reviewOpen && writable && reviewDraft && catalog && preview?.proposed && (
         <Confirm
-          title={`Publish targeting to ${environmentName}?`}
+          title="Targeting change review"
           action={`Publish to ${environmentName}`}
-          onClose={() => setConfirm(false)}
+          onClose={() => setReviewOpen(false)}
           onConfirm={async () => {
             const input = publishConfigurationSchema.parse({
               expectedRevision: flag.revision,
@@ -996,34 +979,79 @@ export function ConfigurationEditor({
             onChanged(next);
           }}
         >
-          <p>
-            <strong>
-              {projectName} / {environmentName}
-            </strong>{' '}
-            · <code>{flag.key}</code> · Expected flag r{flag.revision} / catalog r{catalog.revision}
-          </p>
-          <p>
-            This publishes the exact reviewed draft, pins current catalog definitions and referenced
-            segments, and increments the global flag revision. Other environments do not change. The
-            environment gate remains {flag.enabled ? 'enabled' : 'disabled'}
-            {flag.archived ? '; archive still forces the off value' : ''}.
-          </p>
-          <Notice tone={preview.allocationChanged ? 'warning' : 'primary'}>
-            {preview.allocationChanged
-              ? 'Allocation risk: existing subjects may receive different assignments. Review stable IDs, ordered rules, refreshed segments and variant weight intervals before confirming.'
-              : 'Review all typed values and targeting changes before confirming.'}
-          </Notice>
-          {reviewMode === 'simulation' ? (
+          <div className="fd-targeting-review">
+            <Notice>
+              Publishing changes {projectName} / {environmentName} only. Other environments remain
+              unchanged. This validates configuration, not a real BC user or audience estimate.
+            </Notice>
             <p>
-              Preview decision: <ValueDisplay value={preview.proposed.value} /> ·{' '}
-              {preview.proposed.reason}
+              <code>{flag.key}</code> · Expected flag r{flag.revision} / catalog r{catalog.revision}
             </p>
-          ) : (
+            <Badge>
+              {dirty ? 'Unpublished targeting changes' : 'No authored targeting changes'}
+            </Badge>
+            {!dirty && (
+              <Notice>
+                No authored targeting changes are proposed. Publishing still records a new
+                configuration revision using the reviewed catalog.
+              </Notice>
+            )}
+            <div className="fd-change-grid">
+              <section>
+                <h3>Current published audience</h3>
+                <p>
+                  {audienceSummary(
+                    configurationInput(flag.configuration),
+                    flag.configuration.segments
+                  )}
+                </p>
+                <p className="fd-help">Published configuration · Following segment definitions</p>
+              </section>
+              <section>
+                <h3>Proposed audience</h3>
+                <p>
+                  {audienceSummary(reviewDraft, [
+                    ...catalog.segments,
+                    ...flag.configuration.segments,
+                  ])}
+                </p>
+                <p className="fd-help">
+                  Published references follow future local segment publications. Segment drafts
+                  remain unpublished.
+                </p>
+              </section>
+            </div>
+            <details>
+              <summary>Exact before / after configuration (read-only)</summary>
+              <div className="fd-change-grid">
+                <pre>{JSON.stringify(configurationInput(flag.configuration), null, 2)}</pre>
+                <pre>{JSON.stringify(reviewDraft, null, 2)}</pre>
+              </div>
+            </details>
             <p>
-              This review validated configuration only. It did not simulate a real BC user or verify
-              BC audience membership.
+              The gate remains {flag.enabled ? 'On' : 'Off'} and lifecycle stays {flag.lifecycle}.
+              {flag.archived
+                ? ' Archive still forces the off value.'
+                : ' Active individual exceptions retain priority while the gate is On.'}
             </p>
-          )}
+            {preview.warnings.length > 0 && (
+              <Notice tone="warning">
+                <ul>
+                  {preview.warnings.map((warning, index) => (
+                    <li key={index}>{warning}</li>
+                  ))}
+                </ul>
+              </Notice>
+            )}
+            <Notice tone={preview.allocationChanged ? 'warning' : 'primary'}>
+              {preview.allocationChanged
+                ? 'Allocation-sensitive changes · existing subjects may be reassigned. Review stable IDs, ordered rules, refreshed segments and variant weights.'
+                : 'No allocation change detected by server.'}
+            </Notice>
+            <p>
+              Cancel returns to your draft. Only Publish to {environmentName} applies this change.
+            </p>
+          </div>
         </Confirm>
       )}
     </>

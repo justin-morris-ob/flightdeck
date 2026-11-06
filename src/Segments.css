@@ -1,0 +1,426 @@
+.fd-segments {
+  display: grid;
+  align-content: start;
+  gap: var(--ob-sys-space-inset-md);
+  min-width: 0;
+  padding: var(--ob-sys-space-inset-lg);
+  color: var(--ob-sys-fg-primary);
+}
+
+.fd-segments .fd-actions,
+.fd-segment-editor .fd-actions,
+.fd-segment-review .fd-actions {
+  flex-wrap: wrap;
+}
+
+.fd-segments p,
+.fd-segment-editor p,
+.fd-segment-review p {
+  margin: 0;
+}
+
+.fd-segments-toolbar {
+  display: flex;
+  gap: var(--ob-sys-space-inset-md);
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.fd-segments-toolbar label {
+  display: grid;
+  gap: var(--ob-sys-space-inset-xs);
+  min-width: 12rem;
+}
+
+.fd-segments-toolbar label:first-child {
+  flex: 1 1 20rem;
+}
+
+.fd-segments-table-scroll {
+  overflow-x: auto;
+}
+
+.fd-segments-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--ob-sys-type-body-size);
+}
+
+.fd-segments-table th {
+  color: var(--ob-sys-fg-secondary);
+  font-weight: 600;
+}
+
+.fd-segments-table th,
+.fd-segments-table td {
+  padding: var(--ob-sys-space-inset-md);
+  border-bottom: 1px solid var(--ob-sys-border-subtle);
+  vertical-align: top;
+  min-width: 10rem;
+  overflow-wrap: anywhere;
+}
+
+.fd-segments-table .fd-help {
+  display: block;
+  margin-top: var(--ob-sys-space-inset-xs);
+}
+
+.fd-segments-table td:nth-child(2) {
+  max-width: 30rem;
+}
+
+.fd-segment-reference-list {
+  display: grid;
+  gap: var(--ob-sys-space-inset-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fd-segments-table .fd-flag-link:focus-visible {
+  text-decoration: underline;
+}
+
+.fd-segment-detail-header,
+.fd-segment-definition,
+.fd-segment-block,
+.fd-segment-history-snapshot {
+  display: grid;
+  gap: var(--ob-sys-space-inset-sm);
+  min-width: 0;
+}
+
+.fd-segment-detail-header h2,
+.fd-segment-block h3,
+.fd-segment-block h4,
+.fd-segment-impact h3 {
+  margin: 0;
+}
+
+.fd-segment-summary-card,
+.fd-segment-tab-panel,
+.fd-segment-library-card {
+  display: grid;
+  gap: var(--ob-sys-space-inset-lg);
+  min-width: 0;
+  padding: var(--ob-sys-space-inset-lg);
+  border: 1px solid var(--ob-sys-border-subtle);
+  border-radius: var(--ob-sys-radius-container);
+  background: var(--ob-sys-bg-raised);
+}
+
+.fd-segment-summary-heading,
+.fd-segment-status,
+.fd-segment-version-selector {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ob-sys-space-inset-sm);
+}
+
+.fd-segment-summary-heading {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ob-sys-space-inset-lg);
+}
+
+.fd-segment-summary-heading .fd-segment-detail-header {
+  flex: 1 1 20rem;
+  overflow-wrap: anywhere;
+}
+
+.fd-segment-summary-heading > .fd-actions {
+  flex: 0 1 auto;
+}
+
+.fd-segment-summary-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: var(--ob-sys-space-inset-lg);
+  padding-top: var(--ob-sys-space-inset-lg);
+  border-top: 1px solid var(--ob-sys-border-subtle);
+}
+
+.fd-segment-summary-definition,
+.fd-segment-impact,
+.fd-segment-other-version,
+.fd-segment-tab-panel,
+.fd-segment-library-card {
+  display: grid;
+  align-content: start;
+  gap: var(--ob-sys-space-inset-md);
+  min-width: 0;
+}
+
+.fd-segment-summary-definition h3,
+.fd-segment-other-version h4,
+.fd-segment-tab-panel > h3 {
+  margin: 0;
+}
+
+.fd-segment-impact {
+  padding-left: var(--ob-sys-space-inset-lg);
+  border-left: 1px solid var(--ob-sys-border-subtle);
+}
+
+.fd-segment-audience-summary {
+  font-weight: var(--ob-sys-type-weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.fd-segment-other-version > button {
+  justify-self: start;
+}
+
+.fd-segment-header-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ob-sys-space-inset-md);
+}
+
+.fd-segment-header-controls > nav {
+  display: flex;
+}
+
+.fd-segment-header-controls > nav + .fd-segment-library-actions {
+  padding-left: var(--ob-sys-space-inset-md);
+  border-left: 1px solid var(--ob-sys-border-subtle);
+}
+
+.fd-segment-detail-tabs[data-block='view-bar'] {
+  padding-inline: 0;
+  overflow-x: auto;
+}
+
+.fd-segment-detail-tabs .view-tab {
+  flex: none;
+  white-space: nowrap;
+}
+
+.fd-segment-tab-panel[hidden] {
+  display: none;
+}
+
+.fd-segment-tab-panel > .fd-segment-definition > .fd-segment-block {
+  padding: var(--ob-sys-space-inset-lg);
+}
+
+.fd-segment-block,
+.fd-segment-history-snapshot {
+  padding: var(--ob-sys-space-inset-md);
+  border: 1px solid var(--ob-sys-border-subtle);
+  border-radius: var(--ob-sys-radius-container);
+  background: var(--ob-sys-bg-raised);
+}
+
+.fd-segment-definition-heading,
+.fd-segment-block h4 {
+  display: flex;
+  align-items: center;
+  gap: var(--ob-sys-space-inset-sm);
+  flex-wrap: wrap;
+}
+
+.fd-segment-selections,
+.fd-segment-traits {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--ob-sys-space-inset-sm);
+  overflow-wrap: anywhere;
+}
+
+.fd-segment-traits li {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1fr) minmax(0, 2fr);
+  gap: var(--ob-sys-space-inset-sm);
+  padding: var(--ob-sys-space-inset-sm);
+  border-radius: var(--ob-sys-radius-control);
+  background: var(--ob-sys-bg-sunken);
+}
+
+.fd-segment-trait-conjunction {
+  grid-column: 1 / -1;
+  color: var(--ob-sys-fg-secondary);
+  font-size: var(--ob-sys-type-caption-size);
+}
+
+.fd-segment-selections .fd-help {
+  display: block;
+}
+
+.fd-segment-logic {
+  text-align: center;
+  font-weight: 700;
+  color: var(--ob-sys-fg-secondary);
+}
+
+.fd-segment-condition {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--ob-sys-space-inset-sm);
+  padding-block: var(--ob-sys-space-inset-sm);
+  border-bottom: 1px solid var(--ob-sys-border-subtle);
+}
+
+.fd-segment-condition > label,
+.fd-segment-operand > label {
+  display: grid;
+  gap: var(--ob-sys-space-inset-xs);
+}
+
+.fd-segment-condition > label {
+  flex: 1 1 12rem;
+}
+
+.fd-segment-operand {
+  display: flex;
+  align-items: end;
+  gap: var(--ob-sys-space-inset-xs);
+}
+
+.fd-modal:has(.fd-segment-editor),
+.fd-modal:has(.fd-segment-review),
+.fd-modal:has(.fd-segment-review-columns) {
+  width: min(76rem, calc(100vw - 3rem));
+}
+
+.fd-segment-review-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ob-sys-space-inset-md);
+}
+
+.fd-segment-review-columns > section {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  gap: var(--ob-sys-space-inset-sm);
+  padding: var(--ob-sys-space-inset-md);
+  border: 1px solid var(--ob-sys-border-subtle);
+  border-radius: var(--ob-sys-radius-container);
+  overflow-wrap: anywhere;
+}
+
+.fd-segment-editor [hidden] {
+  display: none;
+}
+
+.fd-segments button[aria-pressed='true'] {
+  outline: 2px solid var(--ob-sys-border-control);
+  outline-offset: -2px;
+}
+
+.fd-segment-creation .fd-creation-card {
+  padding: 0;
+  border: 0;
+}
+
+.fd-segment-metadata {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--ob-sys-space-inset-md);
+}
+
+.fd-segment-metadata > label:last-child {
+  grid-column: 1 / -1;
+  max-width: 26rem;
+}
+
+.fd-segment-editor .fd-segment-builder {
+  padding: 0;
+  border: 0;
+  gap: var(--ob-sys-space-inset-md);
+}
+
+.fd-segment-builder > legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 0 var(--ob-sys-space-inset-md);
+}
+
+.fd-segment-block-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ob-sys-space-inset-sm);
+}
+
+.fd-segment-block-heading h3 {
+  flex: 1;
+  font-size: var(--ob-sys-type-body-size);
+  font-weight: var(--ob-sys-type-weight-medium);
+}
+
+.fd-segment-block-heading > button {
+  margin-left: auto;
+}
+
+.fd-segment-builder .fd-segment-block {
+  padding: var(--ob-sys-space-inset-lg);
+  background: var(--ob-sys-bg-raised);
+}
+
+.fd-segment-builder .fd-segment-block > button,
+.fd-segment-builder > .fd-segment-add-block {
+  justify-self: start;
+  align-self: flex-start;
+}
+
+.fd-segment-builder .fd-segment-logic {
+  display: flex;
+  align-items: center;
+  gap: var(--ob-sys-space-inset-md);
+  font-size: var(--ob-sys-type-caption-size);
+  font-weight: var(--ob-sys-type-weight-regular);
+}
+
+.fd-segment-builder .fd-segment-logic::before,
+.fd-segment-builder .fd-segment-logic::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--ob-sys-border-subtle);
+}
+
+.fd-segment-builder .fd-segment-condition {
+  border-bottom: 0;
+}
+
+.fd-segment-builder .fd-segment-operand {
+  flex: 1 1 16rem;
+}
+
+.fd-segment-builder .fd-segment-operand > label {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 54rem) {
+  .fd-segment-summary-details,
+  .fd-segment-metadata,
+  .fd-segment-review-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fd-segment-impact {
+    padding: var(--ob-sys-space-inset-md) 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--ob-sys-border-subtle);
+  }
+}
+
+@media (max-width: 40rem) {
+  .fd-segment-builder .fd-segment-block {
+    padding: var(--ob-sys-space-inset-md);
+  }
+
+  .fd-segment-traits li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

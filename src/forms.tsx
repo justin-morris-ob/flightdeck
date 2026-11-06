@@ -4,6 +4,7 @@ import { Button, Notice } from '@onebrief/atlas-ui';
 
 import { createFlagSchema, type Flag } from '../shared/contracts.ts';
 import { errorMessage } from './api.ts';
+import { lifecycleLabels } from './lifecycle.ts';
 
 interface ModalProps {
   title: string;
@@ -20,7 +21,15 @@ export function Modal({ title, children, onClose }: ModalProps) {
     return () => element?.close();
   }, []);
   return (
-    <dialog ref={dialog} className="fd-modal" aria-labelledby={titleId} onCancel={onClose}>
+    <dialog
+      ref={dialog}
+      className="fd-modal"
+      aria-labelledby={titleId}
+      onCancel={(event) => {
+        event.preventDefault();
+        onClose();
+      }}
+    >
       <div className="fd-modal-head">
         <h2 id={titleId}>{title}</h2>
         <Button aria-label="Close dialog" onClick={onClose}>
@@ -36,19 +45,56 @@ interface FlagFormProps {
   flag?: Flag;
   busy: boolean;
   onCancel: () => void;
+  environmentName?: string;
+  onDirtyChange?: (dirty: boolean) => void;
   onSave: (data: {
     key: string;
     name: string;
     description: string;
     owner: string;
+    lifecycle: Flag['lifecycle'];
   }) => Promise<void>;
 }
+const lifecycleGroups = [
+  {
+    title: 'Delivery · Temporary',
+    help: 'Typical path · Development → Release',
+    options: [
+      { value: 'development', description: 'Build and test before controlled release.' },
+      { value: 'release', description: 'Roll out to an audience, then review for removal.' },
+    ],
+  },
+  {
+    title: 'Long-lived',
+    help: 'No delivery progression or automatic age-based cleanup.',
+    options: [
+      { value: 'system', description: 'Ongoing operational behavior or system control.' },
+      { value: 'permissions', description: 'Ongoing feature eligibility or entitlement.' },
+    ],
+  },
+] as const;
 
-export function FlagForm({ flag, busy, onCancel, onSave }: FlagFormProps) {
+export function FlagForm({
+  flag,
+  busy,
+  environmentName,
+  onCancel,
+  onSave,
+  onDirtyChange,
+}: FlagFormProps) {
   const id = useId();
   const [error, setError] = useState('');
+  const form = useRef<HTMLFormElement>(null);
+  const initialValues = useRef('');
+  const keyInput = useRef<HTMLInputElement>(null);
+  const customKey = useRef(false);
+  useEffect(() => {
+    if (form.current) initialValues.current = JSON.stringify([...new FormData(form.current)]);
+    return () => onDirtyChange?.(false);
+  }, [onDirtyChange]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
     setError('');
     const data = new FormData(event.currentTarget);
     const parsed = createFlagSchema.safeParse(Object.fromEntries(data.entries()));
@@ -65,38 +111,64 @@ export function FlagForm({ flag, busy, onCancel, onSave }: FlagFormProps) {
     }
   }
   return (
-    <form className="fd-form" onSubmit={submit}>
+    <form
+      ref={form}
+      className="fd-form"
+      onSubmit={submit}
+      onChange={(event) =>
+        onDirtyChange?.(
+          JSON.stringify([...new FormData(event.currentTarget)]) !== initialValues.current
+        )
+      }
+    >
       {error && <Notice tone="danger">{error}</Notice>}
-      <label htmlFor={`${id}-name`}>
-        Name
-        <input
-          id={`${id}-name`}
-          name="name"
-          className="input"
-          required
-          maxLength={120}
-          defaultValue={flag?.name}
-          autoFocus
-        />
-      </label>
-      <label htmlFor={`${id}-key`}>
-        Flag key
-        <input
-          id={`${id}-key`}
-          name="key"
-          className="input fd-mono"
-          required
-          maxLength={100}
-          pattern="[a-z][a-z0-9_-]*"
-          readOnly={Boolean(flag)}
-          defaultValue={flag?.key}
-          aria-describedby={`${id}-key-help`}
-        />
-      </label>
-      <p id={`${id}-key-help`} className="fd-help">
-        Immutable identifier · lowercase letters, digits, underscores and hyphens. Start with a
-        letter.
-      </p>
+      <div className="fd-flag-identity">
+        <label htmlFor={`${id}-name`}>
+          Name
+          <input
+            id={`${id}-name`}
+            name="name"
+            className="input"
+            required
+            maxLength={120}
+            defaultValue={flag?.name}
+            autoFocus
+            onChange={(event) => {
+              if (flag || customKey.current || !keyInput.current) return;
+              keyInput.current.value = event.target.value
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9_-]+/g, '_')
+                .replace(/^[^a-z]+/, '')
+                .slice(0, 100);
+            }}
+          />
+        </label>
+        <div>
+          <label htmlFor={`${id}-key`}>
+            Flag key
+            <input
+              id={`${id}-key`}
+              ref={keyInput}
+              name="key"
+              className="input fd-mono"
+              required
+              maxLength={100}
+              pattern="[a-z][a-z0-9_-]*"
+              readOnly={Boolean(flag)}
+              defaultValue={flag?.key}
+              aria-describedby={`${id}-key-help`}
+              onChange={() => {
+                customKey.current = true;
+              }}
+            />
+          </label>
+          <p id={`${id}-key-help`} className="fd-help">
+            Lowercase letters, digits, underscores and hyphens; start with a letter.
+            {!flag && ' Generated from Name until you edit it. Immutable after creation.'}
+          </p>
+        </div>
+      </div>
       <label htmlFor={`${id}-owner`}>
         Owner
         <input
@@ -119,10 +191,42 @@ export function FlagForm({ flag, busy, onCancel, onSave }: FlagFormProps) {
           defaultValue={flag?.description ?? ''}
         />
       </label>
+      {!flag && (
+        <fieldset className="fd-fieldset fd-lifecycle-options">
+          <legend>Lifecycle</legend>
+          <p className="fd-help">Default · Development</p>
+          <div className="fd-lifecycle-groups">
+            {lifecycleGroups.map((group, index) => (
+              <section
+                className="fd-lifecycle-group"
+                key={group.title}
+                aria-labelledby={`${id}-lifecycle-group-${index}`}
+              >
+                <h3 id={`${id}-lifecycle-group-${index}`}>{group.title}</h3>
+                {group.options.map(({ value, description }) => (
+                  <label className="fd-lifecycle-card" key={value}>
+                    <input
+                      type="radio"
+                      name="lifecycle"
+                      value={value}
+                      defaultChecked={value === 'development'}
+                    />
+                    <span>
+                      <strong>{lifecycleLabels[value]}</strong>
+                      <span className="fd-table-sub">{description}</span>
+                    </span>
+                  </label>
+                ))}
+                <p className="fd-help">{group.help}</p>
+              </section>
+            ))}
+          </div>
+        </fieldset>
+      )}
       <p className="fd-help">
         {flag
-          ? `Metadata is shared across every environment. Current flag version: ${flag.revision}.`
-          : 'Created disabled in every project environment. Choose Everyone or selected audiences after creation.'}
+          ? `Metadata is local to ${environmentName ?? 'this environment'}. Current configuration revision: ${flag.revision}.`
+          : `Created Off in ${environmentName ?? 'this environment'} only. Lifecycle does not activate a flag or select an audience.`}
       </p>
       <div className="fd-actions">
         <Button onClick={onCancel} disabled={busy}>

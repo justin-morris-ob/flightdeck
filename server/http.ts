@@ -1,3 +1,5 @@
+import type { Deployment } from '../shared/unified.ts';
+import type { DirectoryClient } from './directory.ts';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Pool } from 'pg';
 
@@ -20,6 +22,7 @@ import {
   sessionCookie,
   signSession,
 } from './auth.ts';
+import { defaultDeployment } from './deployment.ts';
 import { createRoutes } from './routes.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -66,11 +69,15 @@ export function createApplication({
   sessionSecret,
   port = 4721,
   shellOrigin = 'http://localhost:4720',
+  directory,
+  deployment = defaultDeployment,
 }: {
   pool: Pool;
   sessionSecret: string;
   port?: number;
   shellOrigin?: string;
+  directory?: DirectoryClient;
+  deployment?: Deployment;
 }) {
   assertLocalDevelopment();
   if (sessionSecret.length < 32)
@@ -84,7 +91,7 @@ export function createApplication({
     shellOrigin,
   ]);
   const allowedHosts = new Set([`localhost:${port}`, `127.0.0.1:${port}`]);
-  const routes = Object.entries(createRoutes(pool)).map(([key, handler]) => {
+  const routes = Object.entries(createRoutes(pool, directory, deployment)).map(([key, handler]) => {
     const [method, path] = key.split(' ');
     const names: string[] = [];
     const pattern = new RegExp(

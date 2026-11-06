@@ -1,6 +1,6 @@
 # Stage 1 observable requirements
 
-Historical Stage 1 baseline. [Stage 2](stage-two.md) retains lifecycle/security requirements but supersedes §3.1–§3.2's boolean-only decisions with tagged values and configured typed off values. Its POST evaluation contract replaces the preproduction GET API; use current local-development commands rather than historical examples.
+Historical Stage 1 baseline. [Current requirements](stage-two.md) retain security/audit guarantees but supersede boolean-only evaluation, the GET API, project-wide metadata and local environment selection. Use current local-development commands and environment-local lifecycle/segment-following requirements; this historical baseline is not redesign proof.
 
 ## §1 Scope and identity
 

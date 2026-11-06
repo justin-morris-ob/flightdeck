@@ -1,34 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import {
-  AsideSection,
-  Badge,
-  Block,
-  Button,
-  Empty,
-  FeedPage,
-  Notice,
-  Notices,
-  PageHeader,
-  Properties,
-  ViewBar,
-} from '@onebrief/atlas-ui';
+import { Badge, Button, Notice, PageHeader } from '@onebrief/atlas-ui';
 
-import {
-  activitySchema,
-  evaluationSchema,
-  flagSchema,
-  type AuditEntry,
-  type Evaluation,
-  type Flag,
-  type Project,
-  type Role,
-} from '../shared/contracts.ts';
+import { flagSchema, type Flag, type Project, type Role } from '../shared/contracts.ts';
 import { dateTime, errorMessage, get, send, type Request } from './api.ts';
 import { ConfigurationEditor } from './ConfigurationEditor.tsx';
-import { Decision } from './Decision.tsx';
 import { Confirm, FlagForm, Modal } from './forms.tsx';
+import { lifecycleDescription, lifecycleLabels } from './lifecycle.ts';
 import { Overrides } from './Overrides.tsx';
+import { PublishedBehavior } from './PublishedBehavior.tsx';
+import { PublishedContext } from './PublishedContext.tsx';
 
 interface Props {
   request: Request;
@@ -38,8 +19,10 @@ interface Props {
   environmentId: string;
   role: Role;
   onBack: () => void;
+  onAudit: (id: string) => void;
+  onDirtyChange: (dirty: boolean) => void;
+  master?: boolean;
 }
-
 export function FlagDetail({
   request,
   scope,
@@ -48,43 +31,45 @@ export function FlagDetail({
   environmentId,
   role,
   onBack,
+  onAudit,
+  onDirtyChange,
+  master = false,
 }: Props) {
   const [flag, setFlag] = useState<Flag | null>(null);
-  const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
-  const [activity, setActivity] = useState<AuditEntry[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [tab, setTab] = useState<'configuration' | 'overrides' | 'activity'>('configuration');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [moreBusy, setMoreBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [version, setVersion] = useState(0);
-  const [edit, setEdit] = useState(false);
-  const [confirm, setConfirm] = useState<'toggle' | 'archive' | null>(null);
-  const writable = role !== 'viewer';
+  const [editorVersion, setEditorVersion] = useState(0);
+  const [editing, setEditing] = useState(false);
+  const [metadata, setMetadata] = useState(false);
+  const [exceptions, setExceptions] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
+  const [confirm, setConfirm] = useState<'toggle' | 'archive' | 'lifecycle' | null>(null);
+  const [lifecycle, setLifecycle] = useState<Flag['lifecycle']>('development');
+  const pending = useRef<(() => void) | null>(null);
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  const editorHeading = useRef<HTMLHeadingElement>(null);
+  const writable = role !== 'viewer' && !master;
   const environment = project.environments.find((item) => item.id === environmentId)!;
   const path = `${scope}/flags/${encodeURIComponent(flagKey)}`;
+  const reportDirty = useCallback((value: boolean) => setDirty(value), []);
+  useEffect(() => {
+    onDirtyChange(dirty);
+    return () => onDirtyChange(false);
+  }, [dirty, onDirtyChange]);
   useEffect(() => {
     let current = true;
     setLoading(true);
     setError('');
-    Promise.all([
-      get(request, path, flagSchema),
-      send(
-        request,
-        `${scope}/evaluate/${encodeURIComponent(flagKey)}`,
-        'POST',
-        { context: { attributes: {} } },
-        evaluationSchema
-      ),
-      get(request, `${path}/activity?limit=20`, activitySchema),
-    ])
-      .then(([nextFlag, decision, entries]) => {
-        if (!current) return;
-        setFlag(nextFlag);
-        setEvaluation(decision);
-        setActivity(entries.items);
-        setNextCursor(entries.nextCursor);
+    get(request, path, flagSchema)
+      .then((next) => {
+        if (current) {
+          setFlag(next);
+          setLifecycle(next.lifecycle);
+        }
       })
       .catch((cause: unknown) => {
         if (current) setError(errorMessage(cause));
@@ -95,278 +80,280 @@ export function FlagDetail({
     return () => {
       current = false;
     };
-  }, [request, path, scope, flagKey, version]);
-
+  }, [request, path, version]);
+  useEffect(() => {
+    if (editing) editorHeading.current?.focus();
+  }, [editing]);
+  function guard(action: () => void) {
+    if (dirtyRef.current) {
+      pending.current = action;
+      setDiscarding(true);
+    } else action();
+  }
   async function mutate(changes: Record<string, unknown>) {
     if (!flag) return;
     setBusy(true);
     try {
-      await send(
+      const next = await send(
         request,
         path,
         'PATCH',
         { expectedRevision: flag.revision, ...changes },
         flagSchema
       );
-      setVersion((value) => value + 1);
+      setFlag(next);
+      setLifecycle(next.lifecycle);
+      setEditorVersion((value) => value + 1);
     } finally {
       setBusy(false);
     }
   }
-  async function loadMore() {
-    setMoreBusy(true);
-    setError('');
-    try {
-      const result = await get(
-        request,
-        `${path}/activity?limit=20&before=${encodeURIComponent(nextCursor!)}`,
-        activitySchema
-      );
-      setActivity((previous) => [
-        ...previous,
-        ...result.items.filter((item) => !previous.some((old) => old.id === item.id)),
-      ]);
-      setNextCursor(result.nextCursor);
-    } catch (cause) {
-      setError(errorMessage(cause));
-    } finally {
-      setMoreBusy(false);
-    }
-  }
-  const reload = (
-    <Button
-      onClick={() => {
-        setEdit(false);
-        setConfirm(null);
-        setVersion((value) => value + 1);
-      }}
-    >
-      Reload latest version
-    </Button>
-  );
-  if (loading || !flag || !evaluation)
+  if (loading || !flag)
     return (
       <div className="fd-loading" aria-live="polite">
         <Button onClick={onBack}>Back to flags</Button>
         {loading ? (
-          <p>Loading configuration and decision…</p>
+          <p>Loading published configuration…</p>
         ) : (
           <>
             <Notice tone="danger">{error}</Notice>
-            {reload}
+            <Button onClick={() => setVersion((value) => value + 1)}>Retry</Button>
           </>
         )}
       </div>
     );
   return (
     <>
-      <FeedPage
-        header={
-          <PageHeader
-            title={flag.name}
-            badges={
-              <Badge tone={flag.archived ? 'warning' : flag.enabled ? 'success' : 'secondary'}>
-                {flag.archived ? 'Archived' : flag.enabled ? 'Enabled' : 'Disabled'}
+      <section className="fd-unified-detail">
+        <PageHeader
+          title={flag.name}
+          badges={
+            <>
+              <Badge tone={flag.archived ? 'warning' : 'secondary'}>
+                {flag.archived ? 'Archived' : 'Active'}
               </Badge>
-            }
-            crumbs={[`Project · ${project.name}`, `Configuration · ${environment.name}`]}
-            meta={<code>{flag.key}</code>}
-            actions={
-              <>
-                <Button onClick={onBack}>Back to flags</Button>
-                {writable && <Button onClick={() => setEdit(true)}>Edit metadata</Button>}
-                {reload}
-              </>
-            }
-          />
-        }
-        notices={
-          <Notices>
-            {error && <Notice tone="danger">{error}</Notice>}
-            {role === 'viewer' && (
-              <Notice tone="primary">
-                Viewer access · Configuration and activity are read-only. You may simulate
-                decisions.
-              </Notice>
-            )}
-            {flag.archived && (
-              <Notice>
-                Archived in every environment · Evaluation returns the configured typed off value
-                with enabled:false and reason archived. Restoring preserves environment
-                configuration.
-              </Notice>
-            )}
-          </Notices>
-        }
-        viewBar={
-          <ViewBar
-            tabs={[
-              { id: 'configuration', label: 'Targeting' },
-              { id: 'overrides', label: 'Exceptions (advanced)' },
-              { id: 'activity', label: 'Activity' },
-            ]}
-            value={tab}
-            onChange={setTab}
-          />
-        }
-        main={
-          <>
-            <div className="fd-configuration-panel" hidden={tab !== 'configuration'}>
-              <Block name="content" label="Feature availability" icon="flag">
-                <div className="fd-config-state">
-                  <div>
-                    <h2>{environment.name}</h2>
-                    <p>Master switch · Targeting applies only while this environment is On.</p>
-                  </div>
-                  <Badge tone={flag.enabled && !flag.archived ? 'success' : 'secondary'}>
-                    {flag.archived ? 'Archived · evaluates off' : flag.enabled ? 'On' : 'Off'}
-                  </Badge>
-                </div>
-                {writable && (
-                  <div className="fd-actions">
-                    <Button
-                      variant="primary"
-                      disabled={busy || flag.archived}
-                      onClick={() => setConfirm('toggle')}
-                    >
-                      {flag.enabled ? 'Disable' : 'Enable'} in {environment.name}
-                    </Button>
-                  </div>
-                )}
-              </Block>
-              <ConfigurationEditor
-                key={flag.revision}
-                request={request}
-                scope={scope}
-                path={path}
-                flag={flag}
-                writable={writable}
-                projectName={project.name}
-                environmentName={environment.name}
-                onChanged={(next) => {
-                  setFlag(next);
-                  setVersion((value) => value + 1);
-                }}
-              />
-              <Block name="content" label="Lifecycle" icon="flag">
-                <details>
-                  <summary>Archive or restore this flag</summary>
-                  <p>
-                    Archiving applies to every environment. The immutable key and audit history
-                    remain available.
+              <Badge>Lifecycle · {lifecycleLabels[flag.lifecycle]}</Badge>
+            </>
+          }
+          crumbs={[project.name, environment.name]}
+          meta={
+            <>
+              <code>{flag.key}</code> · {flag.owner} · {flag.configuration.offValue.type}
+            </>
+          }
+          actions={
+            <>
+              <Button onClick={onBack}>Back to flags</Button>
+              <Button onClick={() => onAudit(flag.id)}>View audit history</Button>
+              <Button
+                onClick={() =>
+                  guard(() => {
+                    setEditing(false);
+                    setVersion((value) => value + 1);
+                  })
+                }
+              >
+                Reload
+              </Button>
+            </>
+          }
+        />
+        {error && <Notice tone="danger">{error}</Notice>}
+        {master && (
+          <Notice>
+            Read-only environment report. Open this environment's local dashboard to make changes.
+          </Notice>
+        )}
+        <div className="fd-detail-layout">
+          <main className="fd-detail-published">
+            <section className="fd-published-card fd-lifecycle-panel" aria-label="Lifecycle">
+              <div>
+                <h2 className="fd-eyebrow">
+                  Lifecycle ·{' '}
+                  {flag.lifecycle === 'development' || flag.lifecycle === 'release'
+                    ? 'Temporary'
+                    : 'Long-lived'}
+                </h2>
+                {flag.lifecycle === 'development' || flag.lifecycle === 'release' ? (
+                  <p className="fd-lifecycle-path">
+                    <span data-current={flag.lifecycle === 'development' || undefined}>
+                      Development
+                    </span>
+                    <span aria-hidden="true">→</span>
+                    <span data-current={flag.lifecycle === 'release' || undefined}>Release</span>
                   </p>
-                  <div className="fd-actions">
-                    {writable && (
-                      <Button disabled={busy} onClick={() => setConfirm('archive')}>
-                        {flag.archived ? 'Restore flag' : 'Archive flag'}
+                ) : (
+                  <p className="fd-lifecycle-path">
+                    <strong>{lifecycleLabels[flag.lifecycle]}</strong>
+                  </p>
+                )}
+              </div>
+              <p className="fd-help">{lifecycleDescription[flag.lifecycle]}</p>
+              {writable && (
+                <Button
+                  onClick={() =>
+                    guard(() => {
+                      setLifecycle(flag.lifecycle);
+                      setConfirm('lifecycle');
+                    })
+                  }
+                >
+                  Change lifecycle
+                </Button>
+              )}
+            </section>
+            <ConfigurationEditor
+              request={request}
+              scope={scope}
+              path={path}
+              flag={flag}
+              writable={writable}
+              projectName={project.name}
+              environmentName={environment.name}
+              editing={editing}
+              resetVersion={editorVersion}
+              onDirtyChange={reportDirty}
+              onChanged={(next) => {
+                setFlag(next);
+                setDirty(false);
+                setEditing(false);
+                setEditorVersion((value) => value + 1);
+              }}
+            >
+              {({ audience, advanced }) => (
+                <>
+                  <PublishedBehavior
+                    flag={flag}
+                    environmentName={environment.name}
+                    request={request}
+                    scope={scope}
+                    writable={writable}
+                    editing={editing}
+                    audienceEditor={
+                      <section
+                        className="fd-audience-editor"
+                        aria-label="Edit audience"
+                        hidden={!editing}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Escape') {
+                            event.stopPropagation();
+                            guard(() => setEditing(false));
+                          }
+                        }}
+                      >
+                        <header className="fd-audience-editor-head">
+                          <div>
+                            <h3 ref={editorHeading} tabIndex={-1}>
+                              Edit audience
+                            </h3>
+                            <p>
+                              {environment.name} · {flag.name}
+                            </p>
+                          </div>
+                          <Button
+                            aria-label="Close audience editor"
+                            onClick={() => guard(() => setEditing(false))}
+                          >
+                            Close
+                          </Button>
+                        </header>
+                        {audience}
+                      </section>
+                    }
+                    gateAction={
+                      writable && (
+                        <Button
+                          disabled={busy || flag.archived}
+                          onClick={() => guard(() => setConfirm('toggle'))}
+                        >
+                          Change gate
+                        </Button>
+                      )
+                    }
+                    audienceAction={
+                      writable &&
+                      (editing ? (
+                        <Badge>Editing audience</Badge>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          disabled={flag.archived}
+                          onClick={() => setEditing(true)}
+                        >
+                          Edit audience
+                        </Button>
+                      ))
+                    }
+                    exceptionsAction={
+                      <Button
+                        aria-expanded={exceptions}
+                        onClick={() => setExceptions((value) => !value)}
+                      >
+                        {exceptions ? 'Close exceptions' : 'Exceptions'}
                       </Button>
-                    )}
-                  </div>
-                </details>
-              </Block>
-            </div>
-            {tab === 'overrides' ? (
+                    }
+                    contextPanel={<PublishedContext request={request} path={path} flag={flag} />}
+                  />
+                  {advanced}
+                </>
+              )}
+            </ConfigurationEditor>
+            {exceptions && (
               <Overrides
                 request={request}
                 path={path}
                 flag={flag}
-                writable={writable}
+                writable={writable && !dirty}
                 environmentName={environment.name}
                 onChanged={(next) => {
-                  setFlag(next);
-                  setVersion((value) => value + 1);
+                  if (JSON.stringify(next) === JSON.stringify(flag)) return;
+                  guard(() => {
+                    setFlag(next);
+                    setEditorVersion((value) => value + 1);
+                  });
                 }}
               />
-            ) : tab === 'activity' ? (
-              <Block name="content" label="Activity history" icon="clock">
-                <p className="fd-help">
-                  Project-wide history · Each change identifies its environment and verified local
-                  actor.
-                </p>
-                {activity.length === 0 ? (
-                  <Empty>No activity has been recorded.</Empty>
-                ) : (
-                  <ol className="fd-activity">
-                    {activity.map((entry) => (
-                      <li key={entry.id}>
-                        <div className="fd-activity-head">
-                          <strong>{entry.actorName}</strong>
-                          <Badge>{entry.action}</Badge>
-                          <code>r{entry.revision}</code>
-                        </div>
-                        <p>
-                          {project.environments.find((item) => item.id === entry.environmentId)
-                            ?.name ?? entry.environmentId}{' '}
-                          · <time dateTime={entry.createdAt}>{dateTime(entry.createdAt)}</time>
-                        </p>
-                        <details>
-                          <summary>Configuration change · {entry.actorId}</summary>
-                          <div className="fd-change-grid">
-                            <div>
-                              <h3>Before</h3>
-                              <pre>{JSON.stringify(entry.previous, null, 2)}</pre>
-                            </div>
-                            <div>
-                              <h3>After</h3>
-                              <pre>{JSON.stringify(entry.next, null, 2)}</pre>
-                            </div>
-                          </div>
-                        </details>
-                      </li>
-                    ))}
-                  </ol>
-                )}
-                {nextCursor && (
-                  <Button onClick={() => void loadMore()} disabled={moreBusy}>
-                    {moreBusy ? 'Loading…' : 'Load older activity'}
+            )}
+            <section className="fd-published-card fd-flag-information">
+              <h2>Flag information</h2>
+              <p>{flag.description || 'No description'}</p>
+              <dl>
+                <dt>Owner</dt>
+                <dd>{flag.owner}</dd>
+                <dt>Updated</dt>
+                <dd>{dateTime(flag.updatedAt)}</dd>
+              </dl>
+              {writable && (
+                <div className="fd-actions">
+                  <Button onClick={() => guard(() => setMetadata(true))}>Edit metadata</Button>
+                  <Button onClick={() => guard(() => setConfirm('archive'))}>
+                    {flag.archived ? 'Restore flag' : 'Archive flag'}
                   </Button>
-                )}
-              </Block>
-            ) : null}
-          </>
-        }
-        aside={
-          <>
-            <AsideSection name="people" title="Flag information" icon="flag">
-              <Properties
-                items={[
-                  ['Key', <code>{flag.key}</code>],
-                  ['Owner', flag.owner],
-                  ['Project', project.name],
-                  ['Version', flag.revision],
-                  ['Updated', dateTime(flag.updatedAt)],
-                ]}
-              />
-              <p className="fd-help">{flag.description || 'No description'}</p>
-              <p className="fd-help">Metadata is shared across project environments.</p>
-            </AsideSection>
-            <AsideSection name="status" title="Advanced diagnostics" icon="eye">
-              <details>
-                <summary>Inspect the empty-context decision</summary>
-                <Decision decision={evaluation} title="Current published decision" />
-                <p className="fd-help">
-                  Technical baseline only, not a BC user simulation. Use Advanced controls to supply
-                  evaluation context and inspect the trace.
-                </p>
-              </details>
-            </AsideSection>
-          </>
-        }
-      />
-      {edit && (
+                </div>
+              )}
+              <p className="fd-help">
+                Metadata and lifecycle belong to {environment.name}. They do not change audiences or
+                gates in other environments.
+              </p>
+            </section>
+          </main>
+        </div>
+      </section>
+      {metadata && (
         <Modal
-          title="Edit flag metadata"
+          title={`Edit metadata · ${environment.name}`}
           onClose={() => {
-            if (!busy) setEdit(false);
+            if (!busy) setMetadata(false);
           }}
         >
           <FlagForm
             flag={flag}
+            environmentName={environment.name}
             busy={busy}
-            onCancel={() => setEdit(false)}
+            onCancel={() => setMetadata(false)}
             onSave={async ({ name, description, owner }) => {
               await mutate({ name, description, owner });
-              setEdit(false);
+              setMetadata(false);
             }}
           />
         </Modal>
@@ -374,43 +361,104 @@ export function FlagDetail({
       {confirm && (
         <Confirm
           title={
-            confirm === 'archive'
-              ? flag.archived
-                ? 'Restore flag?'
-                : 'Archive flag?'
-              : `${flag.enabled ? 'Disable' : 'Enable'} this environment?`
+            confirm === 'lifecycle'
+              ? `Review lifecycle change · ${environment.name}`
+              : confirm === 'archive'
+                ? `${flag.archived ? 'Restore' : 'Archive'} flag in ${environment.name}?`
+                : `Change gate · ${environment.name}`
           }
           action={
-            confirm === 'archive'
-              ? flag.archived
-                ? 'Restore flag'
-                : 'Archive flag'
-              : flag.enabled
-                ? 'Disable flag'
-                : 'Enable flag'
+            confirm === 'lifecycle'
+              ? 'Save lifecycle change'
+              : confirm === 'archive'
+                ? flag.archived
+                  ? 'Restore flag'
+                  : 'Archive flag'
+                : flag.enabled
+                  ? 'Turn gate Off'
+                  : 'Turn gate On'
           }
           onClose={() => setConfirm(null)}
           onConfirm={async () => {
             await mutate(
-              confirm === 'archive' ? { archived: !flag.archived } : { enabled: !flag.enabled }
+              confirm === 'lifecycle'
+                ? { lifecycle }
+                : confirm === 'archive'
+                  ? { archived: !flag.archived }
+                  : { enabled: !flag.enabled }
             );
           }}
         >
           <p>
-            <strong>{flag.name}</strong> · <code>{flag.key}</code> · Version {flag.revision}
+            <strong>{flag.name}</strong> · {environment.name} only · Expected r{flag.revision}
           </p>
-          <p>
-            {confirm === 'archive'
-              ? `This changes the lifecycle in all ${project.environments.length} project environments. ${flag.archived ? 'Saved environment configurations become effective again.' : 'Every evaluation returns its typed off value with enabled:false and reason archived.'}`
-              : `Only ${environment.name} changes to ${flag.enabled ? 'disabled' : 'enabled'}. Other environments retain their state.`}
-          </p>
-          {confirm === 'toggle' && environment.key === 'production' && (
-            <Notice>
-              Production simulation · Local disposable data only. Confirm this scoped change
-              deliberately; this is not a production approval workflow.
-            </Notice>
+          {confirm === 'lifecycle' ? (
+            <>
+              <p>Lifecycle is classification, not activation or publication.</p>
+              <label>
+                Proposed lifecycle
+                <select
+                  className="input"
+                  value={lifecycle}
+                  onChange={(event) => setLifecycle(event.target.value as Flag['lifecycle'])}
+                >
+                  {Object.entries(lifecycleLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p>
+                {lifecycleLabels[flag.lifecycle]} → {lifecycleLabels[lifecycle]}. Gate, audience and
+                values stay unchanged.
+              </p>
+            </>
+          ) : (
+            <p>
+              {confirm === 'archive'
+                ? 'Archiving returns the configured off value locally and preserves configuration and history.'
+                : `The gate changes to ${flag.enabled ? 'Off' : 'On'}. Saved audience, lifecycle and values stay unchanged; no targeting draft is published.`}
+            </p>
           )}
+          <p>No other environment changes. The action is recorded in Audit trail.</p>
         </Confirm>
+      )}
+      {discarding && (
+        <Modal
+          title="Discard audience draft?"
+          onClose={() => {
+            setDiscarding(false);
+            pending.current = null;
+          }}
+        >
+          <div className="fd-form">
+            <p>Published behavior is unchanged. Discard this draft before continuing?</p>
+            <div className="fd-actions">
+              <Button
+                onClick={() => {
+                  setDiscarding(false);
+                  pending.current = null;
+                }}
+              >
+                Stay
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  const next = pending.current;
+                  pending.current = null;
+                  setDiscarding(false);
+                  setDirty(false);
+                  setEditorVersion((value) => value + 1);
+                  next?.();
+                }}
+              >
+                Discard and continue
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </>
   );

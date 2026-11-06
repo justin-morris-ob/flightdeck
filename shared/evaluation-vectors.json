@@ -3996,16 +3996,24 @@
                 "key": "gold",
                 "name": "Gold",
                 "revision": 1,
-                "conditions": [
+                "contextDefinitions": [
+                  { "key": "tier", "type": "string", "description": "" },
+                  { "key": "count", "type": "number", "description": "" }
+                ],
+                "blocks": [
                   {
-                    "attribute": "tier",
-                    "operator": "eq",
-                    "values": ["gold"]
-                  },
-                  {
-                    "attribute": "count",
-                    "operator": "gte",
-                    "values": [5]
+                    "conditions": [
+                      {
+                        "attribute": "tier",
+                        "operator": "eq",
+                        "values": ["gold"]
+                      },
+                      {
+                        "attribute": "count",
+                        "operator": "gte",
+                        "values": [5]
+                      }
+                    ]
                   }
                 ]
               }
@@ -4099,16 +4107,24 @@
                 "key": "gold",
                 "name": "Gold",
                 "revision": 1,
-                "conditions": [
+                "contextDefinitions": [
+                  { "key": "tier", "type": "string", "description": "" },
+                  { "key": "count", "type": "number", "description": "" }
+                ],
+                "blocks": [
                   {
-                    "attribute": "tier",
-                    "operator": "eq",
-                    "values": ["gold"]
-                  },
-                  {
-                    "attribute": "count",
-                    "operator": "gte",
-                    "values": [5]
+                    "conditions": [
+                      {
+                        "attribute": "tier",
+                        "operator": "eq",
+                        "values": ["gold"]
+                      },
+                      {
+                        "attribute": "count",
+                        "operator": "gte",
+                        "values": [5]
+                      }
+                    ]
                   }
                 ]
               }

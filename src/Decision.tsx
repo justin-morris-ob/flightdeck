@@ -19,7 +19,7 @@ export function Decision({ decision, title }: { decision: Evaluation; title: str
           ],
           ['Reason', decision.reason],
           ['Flag revision', `r${decision.revision}`],
-          ['Pinned catalog', `r${decision.catalogRevision}`],
+          ['Catalog at flag publication', `r${decision.catalogRevision}`],
           ['Matched rule', decision.matchedRuleId ?? 'None'],
           ['Variant', decision.variantId ?? 'None · fixed value'],
           ['Subject override', decision.matchedOverrideId ?? 'None'],

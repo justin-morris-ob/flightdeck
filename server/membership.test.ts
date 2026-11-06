@@ -16,7 +16,7 @@ import {
   type EvaluationContext,
 } from '../shared/targeting.ts';
 import { evaluate } from './evaluator.ts';
-import { pinConfiguration, validateConditions } from './targeting-storage.ts';
+import { publishConfiguration, validateConditions } from './targeting-storage.ts';
 
 const projectId = '20000000-0000-4000-8000-000000000001';
 const ruleId = '40000000-0000-4000-8000-000000000001';
@@ -57,7 +57,7 @@ function fixture(condition = membership('contains_any', ['engineering', 'operati
 function decision(condition: Condition, attributes: EvaluationContext['attributes']) {
   const { current, input } = fixture(condition);
   return evaluateConfiguration(
-    pinConfiguration(input, current, catalog, catalog.revision),
+    publishConfiguration(input, current, catalog, catalog.revision),
     attributes
   );
 }
@@ -161,12 +161,10 @@ describe('string-list evaluation', () => {
   });
 });
 
-describe('membership validation and pinned publication', () => {
+describe('membership validation and publication', () => {
   it('accepts list catalog definitions and validated membership operands', () => {
     expect(catalogSchema.parse(catalog)).toEqual(catalog);
-    expect(
-      catalogInputSchema.safeParse({ attributes: catalog.attributes, segments: [] }).success
-    ).toBe(true);
+    expect(catalogInputSchema.safeParse({ attributes: catalog.attributes }).success).toBe(true);
     for (const operator of ['contains_any', 'contains_all'] as const) {
       expect(() =>
         validateConditions([membership(operator, ['engineering'])], catalog.attributes)
@@ -196,7 +194,7 @@ describe('membership validation and pinned publication', () => {
     for (const attribute of ['plan', 'count', 'staff', 'tenantId', 'subjectId']) {
       for (const operator of ['contains_any', 'contains_all'] as const) {
         const { current, input } = fixture({ attribute, operator, values: ['engineering'] });
-        expect(() => pinConfiguration(input, current, catalog, 1)).toThrow(
+        expect(() => publishConfiguration(input, current, catalog, 1)).toThrow(
           'List membership requires a string-list attribute'
         );
       }
@@ -210,7 +208,7 @@ describe('membership validation and pinned publication', () => {
         operator,
         values: ['engineering'],
       });
-      expect(() => pinConfiguration(input, current, catalog, 1)).toThrow(
+      expect(() => publishConfiguration(input, current, catalog, 1)).toThrow(
         'String-list attributes support only membership and presence'
       );
     }
@@ -226,12 +224,12 @@ describe('membership validation and pinned publication', () => {
       'Operand type does not match attribute'
     );
     const { current, input } = fixture(invalid);
-    expect(() => pinConfiguration(input, current, catalog, 1)).toThrow(
+    expect(() => publishConfiguration(input, current, catalog, 1)).toThrow(
       'Operand type does not match attribute'
     );
   });
 
-  it('validates referenced membership segments and pins snapshots rather than live catalog arrays', () => {
+  it('validates published membership segment blocks and combines segment and direct predicates', () => {
     const { current, input } = fixture();
     input.rules[0]!.conditions = [{ attribute: 'plan', operator: 'eq', values: ['enterprise'] }];
     input.rules[0]!.segmentIds = [segmentId];
@@ -243,27 +241,27 @@ describe('membership validation and pinned publication', () => {
           key: 'engineers',
           name: 'Engineers',
           revision: 1,
-          conditions: [membership('contains_all', ['engineering'])],
+          contextDefinitions: structuredClone(catalog.attributes),
+          blocks: [{ conditions: [membership('contains_all', ['engineering'])] }],
         },
       ],
     };
-    const pinned = pinConfiguration(input, current, withSegment, 1);
-    expect(pinned.segments[0]!.conditions[0]!.operator).toBe('contains_all');
-    withSegment.segments[0]!.conditions[0]!.values = ['operations'];
-    expect(pinned.segments[0]!.conditions[0]!.values).toEqual(['engineering']);
+    const published = publishConfiguration(input, current, withSegment, 1);
+    expect(published.segments[0]!.blocks[0]!.conditions[0]!.operator).toBe('contains_all');
     expect(
-      evaluateConfiguration(pinned, { groupIds: ['engineering'], plan: 'enterprise' }).value.value
+      evaluateConfiguration(published, { groupIds: ['engineering'], plan: 'enterprise' }).value
+        .value
     ).toBe(true);
     expect(
-      evaluateConfiguration(pinned, { groupIds: ['operations'], plan: 'enterprise' }).value.value
+      evaluateConfiguration(published, { groupIds: ['operations'], plan: 'enterprise' }).value.value
     ).toBe(false);
     expect(
-      evaluateConfiguration(pinned, { groupIds: ['engineering'], plan: 'basic' }).value.value
+      evaluateConfiguration(published, { groupIds: ['engineering'], plan: 'basic' }).value.value
     ).toBe(false);
     withSegment.attributes[0]!.type = 'string';
-    expect(() => pinConfiguration(input, current, withSegment, 1)).toThrow(
-      'List membership requires a string-list attribute'
-    );
+    expect(() =>
+      validateConditions(withSegment.segments[0]!.blocks[0]!.conditions, withSegment.attributes)
+    ).toThrow('List membership requires a string-list attribute');
   });
 });
 

@@ -4,9 +4,9 @@
 
 Build an independently owned Enablements and Experiments application: usable on its own, compatible with Atlas, and consumable by BC through a backend API. Model product coverage on Unleash and Flagsmith; express the UI through published Onebrief components and tokens. Apply BC's formatting conventions from day one.
 
-Work one stage at a time. Each stage ends with an executable demonstration, observed validation results, limitations and the proposed next stage. A stage is not complete because its components compile or a mocked screen renders. Do not expand into the next stage before presenting the checkpoint.
+The unified mockup is the approved behavioral replacement, not a cosmetic reskin. Its local/master scope and segment publication model supersede earlier project-wide metadata, local environment selection and pinned segment snapshots. Complete the replacement and record actual integrated evidence before claiming a new checkpoint.
 
-Stages 0–2 are complete for explicitly local development; [Stage 1](stage-one-verification.md) and [Stage 2](stage-two-verification.md) record observed evidence and limits. Stages 3–6 remain planned and unimplemented. Their checklists are acceptance criteria, not assertions that features already exist.
+Earlier Stages 0–2 and Stage 3 consumer/directory-authoring checkpoints have historical local evidence; production identity and operational gates remain open. The unified redesign now has [integrated local verification](stage-two-verification.md#unified-redesign-verification), without marking broader Stage 4 or later qualification complete. Historical checkpoints remain distinct from replacement-specific evidence.
 
 ## Stage map
 
@@ -21,6 +21,22 @@ Stages 0–2 are complete for explicitly local development; [Stage 1](stage-one-
 | 6 — Atlas environment deployment            | Approved artifact publication, migration execution, routing, identity and recovery                                  | Digest-pinned deployment, deployed browser/API proof, restore/rollback exercise                           |
 
 Start deployment/identity onboarding during Stage 1; Stage 6 is qualification and execution, not the first conversation about prerequisites. Until its gates pass, earlier stages remain local or explicitly qualified development deployments.
+
+## Unified redesign acceptance and verification plan
+
+Use Flags / Segments / Audit trail as peer views and settings as secondary navigation. Local environment identity is fixed by server deployment configuration; master is read-only across actual reports, with configured links to local dashboards and no remote writes, requests or notifications.
+
+- [x] Create an Off flag only in the configured local environment; review/save environment-local name, owner, description, archive state and Development/Release/System/Permissions lifecycle without changing other environments, gates or audiences.
+- [x] Inspect published behavior, edit an audience in a local draft, review before/after and publish explicitly. Preserve advanced configurations instead of lossy conversion; test supplied context without directory lookup.
+- [x] Create/save a segment draft with OR blocks and AND trait conditions, including `ends_with`, plus tenant/source-guarded people/membership alternatives. Effective memberships follow people across organizations.
+- [x] Review and publish a segment; all published local references follow together, including Off flags, without flag revision changes, direct-selection changes or flag-draft publication. Verify both gate precedence and exclusion of draft-only references.
+- [x] Retain immutable history; inspect old definitions and confirm guarded restore replaces only a draft. Review/publish separately before any restored contents become live.
+- [x] Reject stale segment review after a draft or affected-reference change. Prove authorization, environment isolation and server-side write denial for viewer/master, including project-only endpoints.
+- [x] Inspect scoped audit filters/pagination and exact publication impact; preserve event-time before/after without relabeling old pinned events as following.
+
+Integrated local verification completed: preserved database migration, `pnpm check`, 353 tests, standalone/Atlas browser flows, master/viewer/environment boundaries and four recordings. The unified recording exercised author → draft → review → publish → actual SDK evaluation → history → restore → non-live draft. Checked criteria describe local acceptance only, not production certification. See [exact results and limitations](stage-two-verification.md#unified-redesign-verification); builds alone are not interactive proof, and production identity/deployment remain unqualified.
+
+The Stage 0–3 sections below retain the earlier staged intent/checkpoints, including their former selectable-environment and catalog workflows; the unified requirements above take precedence wherever those differ. Historical checked boxes do not certify the replacement.
 
 ## Stage 0 — Design and standards
 
@@ -99,27 +115,27 @@ Acceptance:
 - [x] Browser code does not receive an evaluation secret or call Flightdeck with one. The provider is backend-only; management sessions remain separate.
 - [x] Exercise cold start, timeout, malformed response, authorization and scope failures through real SDK/HTTP boundary tests. An actual BC outage/recovery and dedicated-credential revocation were also exercised; revoked authorization was an explicit 502, not false. Expired-cache behavior is inapplicable because no cache is implemented.
 - [x] Provider scope is fixed per instance and wrong-scope responses are rejected. There is no decision cache that can satisfy another project/environment.
-- [ ] When an optional directory connection is introduced, disconnect it and prove existing rules still evaluate consumer-supplied context; new searches show unavailable rather than fabricated results.
+- [x] Stop the optional directory authoring transport and prove saved rules still evaluate consumer-supplied context. The owned connected recording observes new search HTTP 503 while fresh real BC bootstraps remain successful and keep the title filter visible.
 - [x] Exercise exact collection membership, missing/wrong-type data and scope isolation. BC bootstrap supplies effective memberships; singular current organization is deliberately omitted because this route has no server-validated selection.
 - [x] Verify Boolean/string/number/object decisions and context/error/default behavior through actual OpenFeature SDK calls, rather than inferring compatibility from API shape.
 
 **Checkpoint:** BC walkthrough plus service interruption and credential revocation. This is the first proof of BC integration, not something inferred from a command-line API sample.
 
-The first consumer checkpoint includes a reusable local contract lab and a separate opt-in BC change for `HOMEPAGE_CARDS_SHARED_TEXT_FILTER`. The fresh isolated BC database migrated from 0 to 760; the existing inconsistent shared database was not repaired, reset or reused. A managed Flightdeck update changed only the selected BC bootstrap flag. Production identity/delegation, rollout operational signals and shared-environment onboarding remain qualification work; the directory acceptance item above remains deferred until that optional integration is built. Execution details are in the [verification record](stage-two-verification.md#stage-3-consumer-checkpoint).
+The first consumer checkpoint historically included the reusable local contract lab and separate opt-in BC `HOMEPAGE_CARDS_SHARED_TEXT_FILTER` change, with a fresh isolated database and no repair/reset of the inconsistent shared database. Its original records remain in [Stage 3 consumer checkpoint](stage-two-verification.md#stage-3-consumer-checkpoint). The later [unified verification](stage-two-verification.md#unified-redesign-verification) records the now-passing connected directory recording and direct ordinary lookup after the relay closed. The BC API remains a separate change, not a released capability; production identity/delegation, operational signals and shared-environment onboarding remain qualification work.
 
 ## Stage 4 — Lifecycle and operational controls
 
-Add flag ownership, tags, lifecycle/staleness indicators, archive/restore, audit search/export, configuration comparison and rollback as a new audited revision. Add permission-aware production-change review/approval and scheduling where the agreed operator workflow requires them. Keep approval and execution bound to the reviewed revision, with explicit timezone and concurrency behavior.
+The approved unified replacement above brings local lifecycle, explicit segment publication and audit search into the current acceptance scope. Broader governance, scheduling, audit export, evaluation health and any additional configuration rollback remain later work, not implied capabilities. Historical segment restore always copies contents to a guarded draft before separate publication; it never performs an immediate live rollback. No remote change-request/notification workflow is part of master mode.
 
 Acceptance:
 
 - [ ] A reviewer can inspect the exact proposed change; a stale approval cannot publish an unrelated later edit.
-- [ ] A rollback restores a known configuration as a new revision without deleting history.
+- [ ] Any future configuration rollback preserves history and requires an explicit reviewed write; current segment history restores only as draft, followed by separate publication.
 - [ ] Viewer/editor/administrator boundaries hold across APIs and UI; revocation affects outstanding actions according to the declared contract.
 - [ ] Lifecycle indicators distinguish “no observed evaluations” from “safe to delete.” Archived flags and existing clients have an explicit compatibility policy.
 - [ ] Operators can diagnose an update or evaluation failure without raw subject-context logs or browser-exposed credentials.
 
-**Checkpoint:** propose → review → apply → inspect audit → rollback, including a conflicting edit and insufficient-permission attempt.
+**Checkpoint:** local propose → review → publish → inspect audit → restore segment as draft → review again, including conflicting edits and insufficient-permission attempts. Broader operational qualification remains separate.
 
 ## Stage 5 — Experiments, not just random allocation
 
@@ -164,14 +180,14 @@ Acceptance:
 
 Observed source capability is not a guarantee of vendor free-edition availability. Unleash advertises some governance/segmentation features as paid; Flagsmith documents some RBAC/stale detection capabilities as commercial. Flightdeck's scope is a product decision, not a copy of their edition boundaries.
 
-| Area          | Unleash reference                                                    | Flagsmith reference                                              | Flightdeck choice                                                                           |
-| ------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Scope         | Project definitions, environment state                               | Organization → project → environment, environment identities     | Explicit control-plane organization/project/environment; separate BC evaluation subject     |
-| Configuration | Boolean decision and typed variant payloads                          | Enabled state plus string/integer/boolean values                 | Boolean first; explicit typed config in Stage 2                                             |
-| Targeting     | OR strategies; AND constraints/segments                              | Identity override, ordered segment override, environment default | Ordered rules with AND conditions and explicit precedence                                   |
-| Allocation    | Stable stickiness/group IDs; weighted variants                       | Stable subject allocation and multivariate state                 | Versioned deterministic bucketing, stable variant IDs and reassignment warnings             |
-| Management    | Environment columns, flag detail, strategies, variants, activity     | Explicit identities, overrides, ownership and audit              | Unleash-inspired hierarchy in Onebrief toolkit, not copied MUI/theme/source                 |
-| Experiments   | Variant assignment and evaluation metrics; some impact support gated | Exposure/conversion workflow and experimentation data/analysis   | Separate measured-experiment stage, with actual exposure and independent statistical review |
+| Area          | Unleash reference                                                    | Flagsmith reference                                              | Flightdeck choice                                                                               |
+| ------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Scope         | Project definitions, environment state                               | Organization → project → environment, environment identities     | Explicit control-plane organization/project/environment; separate BC evaluation subject         |
+| Configuration | Boolean decision and typed variant payloads                          | Enabled state plus string/integer/boolean values                 | Boolean first; explicit typed config in Stage 2                                                 |
+| Targeting     | OR strategies; AND constraints/segments                              | Identity override, ordered segment override, environment default | Ordered rules with AND conditions and explicit precedence                                       |
+| Allocation    | Stable stickiness/group IDs; weighted variants                       | Stable subject allocation and multivariate state                 | Versioned deterministic bucketing, stable variant IDs and reassignment warnings                 |
+| Management    | Environment columns, flag detail, strategies, variants, activity     | Explicit identities, overrides, ownership and audit              | Approved unified local Flags/Segments/Audit views; read-only master reports in Onebrief toolkit |
+| Experiments   | Variant assignment and evaluation metrics; some impact support gated | Exposure/conversion workflow and experimentation data/analysis   | Separate measured-experiment stage, with actual exposure and independent statistical review     |
 
 ### Source paths at the revisions in the architecture
 

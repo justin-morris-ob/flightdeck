@@ -88,6 +88,6 @@ export class BCDirectoryPage {
   addGroup(name: string): Locator {
     return this.page
       .getByRole('region', { name: 'Groups results', exact: true })
-      .getByRole('checkbox', { name: new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
+      .getByRole('checkbox', { name });
   }
 }

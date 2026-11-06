@@ -82,9 +82,7 @@ export class UnifiedDesignPage {
     });
   }
   segmentChoice(name: string): Locator {
-    return this.audienceEditor.getByRole('checkbox', {
-      name: new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
-    });
+    return this.audienceEditor.getByRole('checkbox', { name });
   }
   get reviewChanges(): Locator {
     return this.audienceEditor.getByRole('button', { name: 'Review changes →', exact: true });

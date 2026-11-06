@@ -30,6 +30,7 @@ interface Props {
   embedded?: boolean;
   initialProjectId?: string;
   initialView?: View;
+  onNavigate?: (view: View, projectId: string) => void;
 }
 
 export function FlightdeckApp({
@@ -37,6 +38,7 @@ export function FlightdeckApp({
   embedded = false,
   initialProjectId,
   initialView = 'flags',
+  onNavigate,
 }: Props) {
   const [session, setSession] = useState<Session | null>(null);
   const [operators, setOperators] = useState<Operator[]>([]);
@@ -186,6 +188,11 @@ export function FlightdeckApp({
     }
   }
   function navigate(next: View) {
+    if (onNavigate && next !== view) {
+      // Atlas retains the source page, including drafts, when opening another view.
+      if (!navigationBusy) onNavigate(next, projectId);
+      return;
+    }
     transition(() => {
       setFlagKey(null);
       setSegmentId(undefined);
@@ -430,15 +437,19 @@ export function FlightdeckApp({
                       });
                   }}
                 />
-              ) : view === 'settings' && !master && session.operator.role === 'administrator' ? (
-                <EnvironmentSettings
-                  key={`${scope}:${session.operator.id}`}
-                  request={request}
-                  scope={scope}
-                  projectName={project.name}
-                  environmentName={environment.name}
-                  onDirtyChange={reportDirty}
-                />
+              ) : view === 'settings' ? (
+                !master && session.operator.role === 'administrator' ? (
+                  <EnvironmentSettings
+                    key={`${scope}:${session.operator.id}`}
+                    request={request}
+                    scope={scope}
+                    projectName={project.name}
+                    environmentName={environment.name}
+                    onDirtyChange={reportDirty}
+                  />
+                ) : (
+                  <Empty>Flightdeck settings are available only to local administrators.</Empty>
+                )
               ) : flagKey ? (
                 <FlagDetail
                   key={`${scope}:${flagKey}:${session.operator.id}`}

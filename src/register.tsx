@@ -14,11 +14,19 @@ const register: RegisterApp = (registrar, platform) => {
         ? 'segments'
         : objectRef.entityType === 'audit'
           ? 'audit'
-          : 'flags';
+          : objectRef.entityType === 'settings'
+            ? 'settings'
+            : 'flags';
     useEffect(() => {
       platform.setTitle(
         instanceId,
-        initialView === 'flags' ? 'Flags' : initialView === 'segments' ? 'Segments' : 'Audit trail'
+        initialView === 'flags'
+          ? 'Flags'
+          : initialView === 'segments'
+            ? 'Segments'
+            : initialView === 'audit'
+              ? 'Audit trail'
+              : 'Flightdeck settings'
       );
     }, [instanceId, initialView]);
     return (
@@ -27,6 +35,9 @@ const register: RegisterApp = (registrar, platform) => {
         embedded
         initialView={initialView}
         initialProjectId={objectRef.entityId === 'all' ? undefined : objectRef.entityId}
+        onNavigate={(view, projectId) =>
+          platform.open({ appId: 'flightdeck', entityType: view, entityId: projectId || 'all' })
+        }
       />
     );
   }
@@ -56,7 +67,7 @@ const register: RegisterApp = (registrar, platform) => {
       collections: [],
     }),
   });
-  for (const entityType of ['flags', 'segments', 'audit'])
+  for (const entityType of ['flags', 'segments', 'audit', 'settings'])
     registrar.page({ entityType, component: FlightdeckPage });
 };
 

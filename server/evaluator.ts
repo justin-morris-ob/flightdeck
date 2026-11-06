@@ -115,7 +115,11 @@ export function evaluate({ flag, context, overrides, now }: EvaluationInput): Ev
     result.value = variant.value;
     return result;
   }
-  function conditionMatches(condition: Condition, id: string): boolean {
+  function conditionMatches(
+    condition: Condition,
+    id: string,
+    definitions = configuration.contextDefinitions
+  ): boolean {
     const builtin =
       condition.attribute === 'tenantId' || condition.attribute === 'subjectId'
         ? condition.attribute
@@ -126,7 +130,7 @@ export function evaluate({ flag, context, overrides, now }: EvaluationInput): Ev
       : Object.hasOwn(context.attributes, condition.attribute);
     const declaredType = builtin
       ? 'string'
-      : configuration.contextDefinitions.find((item) => item.key === condition.attribute)?.type;
+      : definitions.find((item) => item.key === condition.attribute)?.type;
     const typed =
       present &&
       declaredType !== undefined &&
@@ -173,6 +177,10 @@ export function evaluate({ flag, context, overrides, now }: EvaluationInput): Ev
         case 'lte':
           matches = typeof value === 'number' && typeof operand === 'number' && value <= operand;
           break;
+        case 'ends_with':
+          matches =
+            typeof value === 'string' && typeof operand === 'string' && value.endsWith(operand);
+          break;
         case 'contains_any':
         case 'contains_all':
           matches =
@@ -210,6 +218,7 @@ export function evaluate({ flag, context, overrides, now }: EvaluationInput): Ev
     trace.push({ source: 'override', id: override.id, code: 'override' });
     return outcome(override.outcome);
   }
+  const segmentResults = new Map<string, boolean>();
   for (const rule of configuration.rules) {
     let conditionsMatch = true;
     for (const condition of rule.conditions) {
@@ -217,12 +226,20 @@ export function evaluate({ flag, context, overrides, now }: EvaluationInput): Ev
     }
     let segmentsMatch = true;
     for (const id of rule.segmentIds) {
-      const segment = configuration.segments.find((item) => item.id === id);
-      let matches = segment !== undefined;
-      if (segment) {
-        for (const condition of segment.conditions) {
-          if (!conditionMatches(condition, id)) matches = false;
+      let matches = segmentResults.get(id);
+      if (matches === undefined) {
+        const segment = configuration.segments.find((item) => item.id === id);
+        matches = false;
+        if (segment) {
+          for (const block of segment.blocks) {
+            let blockMatches = true;
+            for (const condition of block.conditions)
+              if (!conditionMatches(condition, id, segment.contextDefinitions))
+                blockMatches = false;
+            if (blockMatches) matches = true;
+          }
         }
+        segmentResults.set(id, matches);
       }
       trace.push({ source: 'segment', id, code: matches ? 'segment_matched' : 'segment_failed' });
       if (!matches) segmentsMatch = false;
@@ -295,6 +312,8 @@ export function configurationWarnings(
     JSON.stringify(current.contextDefinitions) !== JSON.stringify(proposed.contextDefinitions) ||
     JSON.stringify(current.segments) !== JSON.stringify(proposed.segments)
   )
-    warnings.push('Pinned catalog or segment snapshots changed; targeting may change.');
+    warnings.push(
+      'Published context or followed segment definitions changed; targeting may change.'
+    );
   return { warnings, allocationChanged: warnings.length > 0 };
 }

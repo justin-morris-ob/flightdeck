@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 
 import { HttpError } from '@onebrief/atlas-bff-kit';
 
+import { directoryAttributes } from '../shared/directory.ts';
 import {
   catalogSchema,
   configurationSchema,
@@ -21,6 +22,7 @@ type Database = Pool | PoolClient;
 export async function readCatalog(
   database: Database,
   projectId: string,
+  environmentId: string,
   lock = false
 ): Promise<Catalog> {
   const result = await database.query<{
@@ -29,16 +31,32 @@ export async function readCatalog(
     attributes: unknown;
     segments: unknown;
   }>(
-    `SELECT project_id, revision, attributes, segments FROM flightdeck.project_targeting WHERE project_id = $1${lock ? ' FOR UPDATE' : ''}`,
-    [projectId]
+    `SELECT project_id, revision, attributes FROM flightdeck.environment_targeting WHERE project_id = $1 AND environment_id = $2${lock ? ' FOR UPDATE' : ''}`,
+    [projectId, environmentId]
   );
   if (!result.rows[0]) throw new HttpError(404, 'Project catalog not found');
   const row = result.rows[0];
+  const segments = await database.query<{
+    id: string;
+    key: string;
+    published_context: Catalog['attributes'];
+    published: { version: number; name: string; blocks: Catalog['segments'][number]['blocks'] };
+  }>(
+    'SELECT id,key,published,published_context FROM flightdeck.segments WHERE project_id=$1 AND environment_id=$2 AND published IS NOT NULL ORDER BY key',
+    [projectId, environmentId]
+  );
   return catalogSchema.parse({
     projectId: row.project_id,
     revision: row.revision,
     attributes: row.attributes,
-    segments: row.segments,
+    segments: segments.rows.map((segment) => ({
+      id: segment.id,
+      key: segment.key,
+      name: segment.published.name,
+      revision: segment.published.version,
+      blocks: segment.published.blocks,
+      contextDefinitions: segment.published_context,
+    })),
   });
 }
 
@@ -64,72 +82,43 @@ export function validateConditions(
       throw new HttpError(400, `Operand type does not match attribute: ${condition.attribute}`);
     if (['gt', 'gte', 'lt', 'lte'].includes(condition.operator) && type !== 'number')
       throw new HttpError(400, 'Ordered comparisons require a numeric attribute');
+    if (condition.operator === 'ends_with' && type !== 'string')
+      throw new HttpError(400, 'Text suffix requires a string attribute');
   }
+}
+
+export function withDirectoryAttributes(attributes: Catalog['attributes']): Catalog['attributes'] {
+  const result = [...attributes];
+  for (const attribute of directoryAttributes) {
+    const existing = result.find((candidate) => candidate.key === attribute.key);
+    if (!existing) result.push(attribute);
+  }
+  return result;
 }
 
 export async function saveCatalog(
   client: PoolClient,
   actor: OperatorPrincipal,
   previous: Catalog,
-  input: {
-    attributes: Catalog['attributes'];
-    segments: Omit<Catalog['segments'][number], 'revision'>[];
-  }
+  input: { attributes: Catalog['attributes'] },
+  environmentId: string
 ): Promise<Catalog> {
-  for (const segment of input.segments) validateConditions(segment.conditions, input.attributes);
-  // Historical pairings remain reserved even after a segment is removed from the current catalog.
-  const historical = await client.query<{ segment: Catalog['segments'][number] }>(
-    `SELECT DISTINCT segment FROM flightdeck.project_targeting_audit a,
-      LATERAL jsonb_array_elements(a.next->'segments') segment
-      WHERE a.project_id = $1 AND (segment->>'id' = ANY($2::text[]) OR segment->>'key' = ANY($3::text[]))`,
-    [
-      previous.projectId,
-      input.segments.map((segment) => segment.id),
-      input.segments.map((segment) => segment.key),
-    ]
-  );
-  const reserved = [...previous.segments, ...historical.rows.map((row) => row.segment)];
-  const segments = input.segments.map((segment) => {
-    for (const old of reserved) {
-      if (
-        (old.id === segment.id || old.key === segment.key) &&
-        (old.id !== segment.id || old.key !== segment.key)
-      )
-        throw new HttpError(400, 'Segment ID/key pairs are immutable');
-    }
-    const old = reserved
-      .filter((candidate) => candidate.id === segment.id)
-      .sort((a, b) => b.revision - a.revision)[0];
-    const unchanged =
-      old &&
-      old.name === segment.name &&
-      old.conditions.length === segment.conditions.length &&
-      old.conditions.every((condition, index) => {
-        const next = segment.conditions[index]!;
-        return (
-          condition.attribute === next.attribute &&
-          condition.operator === next.operator &&
-          condition.values.length === next.values.length &&
-          condition.values.every((value, valueIndex) => value === next.values[valueIndex])
-        );
-      });
-    return { ...segment, revision: old ? old.revision + (unchanged ? 0 : 1) : 1 };
-  });
   const next = catalogSchema.parse({
-    projectId: previous.projectId,
+    ...previous,
     revision: previous.revision + 1,
     attributes: input.attributes,
-    segments,
   });
   await client.query(
-    'UPDATE flightdeck.project_targeting SET revision = $1, attributes = $2, segments = $3 WHERE project_id = $4',
-    [next.revision, JSON.stringify(next.attributes), JSON.stringify(next.segments), next.projectId]
+    'UPDATE flightdeck.environment_targeting SET revision=$1,attributes=$2 WHERE project_id=$3 AND environment_id=$4',
+    [next.revision, JSON.stringify(next.attributes), next.projectId, environmentId]
   );
   await client.query(
-    `INSERT INTO flightdeck.project_targeting_audit (id, project_id, revision, actor_id, actor_name, previous, next) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    `INSERT INTO flightdeck.environment_targeting_audit
+      (id,project_id,environment_id,revision,actor_id,actor_name,previous,next) VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
     [
       randomUUID(),
       next.projectId,
+      environmentId,
       next.revision,
       actor.id,
       actor.name,
@@ -140,7 +129,7 @@ export async function saveCatalog(
   return next;
 }
 
-export function pinConfiguration(
+export function publishConfiguration(
   input: ConfigurationInput,
   current: Configuration,
   catalog: Catalog,
@@ -155,15 +144,71 @@ export function pinConfiguration(
   const referenced = new Set(input.rules.flatMap((rule) => rule.segmentIds));
   const segments = catalog.segments.filter((segment) => referenced.has(segment.id));
   if (segments.length !== referenced.size)
-    throw new HttpError(400, 'Configuration references a missing or cross-project segment');
-  for (const rule of input.rules) validateConditions(rule.conditions, catalog.attributes);
-  for (const segment of segments) validateConditions(segment.conditions, catalog.attributes);
+    throw new HttpError(
+      400,
+      'Configuration references an unpublished, missing or cross-scope segment'
+    );
+  const used = new Set(
+    input.rules.flatMap((rule) => rule.conditions.map((condition) => condition.attribute))
+  );
+  for (const known of directoryAttributes) {
+    const existing = catalog.attributes.find((attribute) => attribute.key === known.key);
+    if (used.has(known.key) && existing && existing.type !== known.type)
+      throw new HttpError(
+        400,
+        `Directory context attribute has an incompatible type: ${known.key}`
+      );
+  }
+  const attributes = withDirectoryAttributes(catalog.attributes).filter((attribute) =>
+    used.has(attribute.key)
+  );
+  for (const rule of input.rules) validateConditions(rule.conditions, attributes);
   return configurationSchema.parse({
     ...input,
     catalogRevision: catalog.revision,
-    contextDefinitions: catalog.attributes,
+    contextDefinitions: attributes,
     segments,
   });
+}
+
+/** Resolve the current local published definitions at read time, never from an old flag snapshot. */
+export async function resolveConfiguration(
+  database: Database,
+  projectId: string,
+  environmentId: string,
+  configuration: Configuration
+): Promise<Configuration> {
+  const ids = [...new Set(configuration.rules.flatMap((rule) => rule.segmentIds))];
+  if (!ids.length) return configurationSchema.parse({ ...configuration, segments: [] });
+  const result = await database.query<{
+    id: string;
+    key: string;
+    published: { version: number; name: string; blocks: Catalog['segments'][number]['blocks'] };
+    published_context: Catalog['attributes'];
+  }>(
+    'SELECT id,key,published,published_context FROM flightdeck.segments WHERE project_id=$1 AND environment_id=$2 AND id=ANY($3::uuid[]) AND published IS NOT NULL ORDER BY key',
+    [projectId, environmentId, ids]
+  );
+  if (result.rows.length !== ids.length) throw new Error('Published segment reference is missing');
+  return configurationSchema.parse({
+    ...configuration,
+    segments: result.rows.map((row) => ({
+      id: row.id,
+      key: row.key,
+      name: row.published.name,
+      revision: row.published.version,
+      blocks: row.published.blocks,
+      contextDefinitions: row.published_context,
+    })),
+  });
+}
+
+export function validateConfigurationTypes(configuration: Configuration) {
+  for (const rule of configuration.rules)
+    validateConditions(rule.conditions, configuration.contextDefinitions);
+  for (const segment of configuration.segments)
+    for (const block of segment.blocks)
+      validateConditions(block.conditions, segment.contextDefinitions);
 }
 
 export function validateOverrideOutcome(

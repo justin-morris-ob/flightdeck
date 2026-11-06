@@ -178,6 +178,10 @@ async function main(): Promise<void> {
       env: {
         NODE_ENV: 'development',
         FLIGHTDECK_MODE: 'local-development',
+        FLIGHTDECK_DASHBOARD_MODE: process.env.FLIGHTDECK_DASHBOARD_MODE ?? 'local',
+        FLIGHTDECK_ENVIRONMENT_KEY: process.env.FLIGHTDECK_ENVIRONMENT_KEY ?? 'development',
+        FLIGHTDECK_ENVIRONMENT_NAME: process.env.FLIGHTDECK_ENVIRONMENT_NAME ?? 'Development',
+        FLIGHTDECK_DASHBOARD_LINKS: process.env.FLIGHTDECK_DASHBOARD_LINKS ?? '{}',
         FLIGHTDECK_DATABASE_URL: databaseUrl(config, false),
         FLIGHTDECK_SESSION_SECRET: config.sessionSecret,
         PORT: process.env.PORT ?? '4721',

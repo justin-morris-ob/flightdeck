@@ -48,6 +48,7 @@ export const conditionSchema = z
       'gte',
       'lt',
       'lte',
+      'ends_with',
       'contains_any',
       'contains_all',
       'present',
@@ -80,6 +81,15 @@ export const conditionSchema = z
         path: ['values'],
       });
     if (
+      condition.operator === 'ends_with' &&
+      condition.values.some((value) => typeof value !== 'string')
+    )
+      context.addIssue({
+        code: 'custom',
+        message: 'Text suffix requires a string',
+        path: ['values'],
+      });
+    if (
       ['contains_any', 'contains_all'].includes(condition.operator) &&
       condition.values.some((value) => typeof value !== 'string')
     )
@@ -90,36 +100,36 @@ export const conditionSchema = z
       });
   });
 export type Condition = z.infer<typeof conditionSchema>;
-export const segmentInputSchema = z.strictObject({
+export const segmentSchema = z.strictObject({
   id: z.uuid(),
   key: identifier,
   name: z.string().trim().min(1).max(120),
-  conditions: z.array(conditionSchema).min(1).max(10),
+  revision: z.number().int().positive(),
+  contextDefinitions: z.array(attributeDefinitionSchema).max(32),
+  blocks: z
+    .array(z.strictObject({ conditions: z.array(conditionSchema).min(1).max(10) }))
+    .min(1)
+    .max(20),
 });
-export const segmentSchema = segmentInputSchema.extend({ revision: z.number().int().positive() });
 export type Segment = z.infer<typeof segmentSchema>;
-const catalogFields = {
-  attributes: z.array(attributeDefinitionSchema).max(32),
-  segments: z.array(segmentInputSchema).max(50),
-};
-export const catalogInputSchema = z.strictObject(catalogFields).superRefine((catalog, context) => {
-  if (
-    new Set(catalog.attributes.map((attribute) => attribute.key)).size !== catalog.attributes.length
-  )
-    context.addIssue({ code: 'custom', message: 'Attribute keys must be unique' });
-  if (
-    new Set(catalog.segments.map((segment) => segment.id)).size !== catalog.segments.length ||
-    new Set(catalog.segments.map((segment) => segment.key)).size !== catalog.segments.length
-  )
-    context.addIssue({ code: 'custom', message: 'Segment IDs and keys must be unique' });
-  if (byteLength(catalog) > 24576)
-    context.addIssue({ code: 'custom', message: 'Project catalog exceeds 24 KiB' });
-});
+export const catalogInputSchema = z
+  .strictObject({
+    attributes: z.array(attributeDefinitionSchema).max(32),
+  })
+  .superRefine((catalog, context) => {
+    if (
+      new Set(catalog.attributes.map((attribute) => attribute.key)).size !==
+      catalog.attributes.length
+    )
+      context.addIssue({ code: 'custom', message: 'Attribute keys must be unique' });
+    if (byteLength(catalog) > 24576)
+      context.addIssue({ code: 'custom', message: 'Environment catalog exceeds 24 KiB' });
+  });
 export const catalogSchema = z.object({
   projectId: z.uuid(),
   revision: z.number().int().positive(),
   attributes: z.array(attributeDefinitionSchema).max(32),
-  segments: z.array(segmentSchema).max(50),
+  segments: z.array(segmentSchema),
 });
 export type Catalog = z.infer<typeof catalogSchema>;
 export const catalogUpdateSchema = z.strictObject({
@@ -208,6 +218,51 @@ export const configurationInputSchema = z
       context.addIssue({ code: 'custom', message: 'Configuration input exceeds 24 KiB' });
   });
 export type ConfigurationInput = z.infer<typeof configurationInputSchema>;
+function configurationTraceBudget(configuration: { rules: Rule[]; segments: Segment[] }) {
+  let entries = 0;
+  let bytes = 2;
+  const add = (entry: {
+    source: string;
+    id: string | null;
+    code: string;
+    attribute?: string;
+    bucket?: number;
+  }) => {
+    entries++;
+    bytes += byteLength(entry) + 1;
+  };
+  const visited = new Set<string>();
+  for (const rule of configuration.rules) {
+    for (const condition of rule.conditions)
+      add({
+        source: 'condition',
+        id: rule.id,
+        code: 'condition_matched',
+        attribute: condition.attribute,
+      });
+    for (const id of rule.segmentIds) {
+      if (!visited.has(id)) {
+        visited.add(id);
+        const segment = configuration.segments.find((item) => item.id === id);
+        for (const block of segment?.blocks ?? [])
+          for (const condition of block.conditions)
+            add({
+              source: 'condition',
+              id,
+              code: 'condition_matched',
+              attribute: condition.attribute,
+            });
+      }
+      add({ source: 'segment', id, code: 'segment_matched' });
+    }
+    add({ source: 'rollout', id: rule.id, code: 'rollout_excluded', bucket: 9999 });
+    add({ source: 'rule', id: rule.id, code: 'rule_matched' });
+  }
+  add({ source: 'default', id: null, code: 'default' });
+  add({ source: 'variant', id: 'x'.repeat(100), code: 'variant_selected', bucket: 9999 });
+  return { entries, bytes };
+}
+
 export const configurationSchema = z
   .object({
     ...configurationFields,
@@ -217,8 +272,16 @@ export const configurationSchema = z
   })
   .superRefine((configuration, context) => {
     validateConfiguration(configuration, context);
-    if (byteLength(configuration) > 65536)
-      context.addIssue({ code: 'custom', message: 'Published configuration exceeds 64 KiB' });
+    // Followed segments own their storage; their complete captured definitions must survive reads.
+    if (byteLength({ ...configuration, segments: [] }) > 65536)
+      context.addIssue({ code: 'custom', message: 'Flag-owned configuration exceeds 64 KiB' });
+    // Bound evaluator output independently of operand/description size, with response headroom.
+    const trace = configurationTraceBudget(configuration);
+    if (trace.entries > 1500 || trace.bytes > 192 * 1024)
+      context.addIssue({
+        code: 'custom',
+        message: 'Configuration exceeds the evaluation trace budget (1500 entries / 192 KiB)',
+      });
   });
 export type Configuration = z.infer<typeof configurationSchema>;
 export const publishConfigurationSchema = z.strictObject({
@@ -280,8 +343,8 @@ export const catalogAuditSchema = z.object({
   revision: z.number().int().positive(),
   actorId: z.string(),
   actorName: z.string(),
-  previous: catalogSchema.nullable(),
-  next: catalogSchema,
+  previous: z.unknown().nullable(),
+  next: z.unknown(),
   createdAt: z.iso.datetime(),
 });
 export const catalogActivitySchema = z.object({

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { evaluationSchema } from '../shared/contracts.ts';
-import { configurationSchema } from '../shared/targeting.ts';
+import { byteLength, configurationSchema } from '../shared/targeting.ts';
 import {
   allocationBucket,
   configurationWarnings,
@@ -111,7 +111,91 @@ it('rule-specific admission is independent of globally stable variant assignment
   expect(rollout).not.toBe(allocationBucket('release', 'rollout', subject, 'second'));
 });
 
-it('warns on variant interval, rule eligibility and pinned snapshot changes', () => {
+it.each([
+  { segments: 11, attribute: 'x' },
+  { segments: 9, attribute: 'a'.repeat(64) },
+  { segments: 7, attribute: 'a'.repeat(64) },
+])(
+  'rejects followed definitions exceeding the evaluation trace budget ($segments segments)',
+  ({ segments, attribute }) => {
+    const input = fixture();
+    const configuration = input.flag!.configuration;
+    configuration.contextDefinitions = [];
+    configuration.segments = Array.from({ length: segments }, (_, index) => ({
+      id: `10000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      key: `audience_${index}`,
+      name: `Audience ${index}`,
+      revision: 1,
+      contextDefinitions: [{ key: attribute, type: 'string' as const, description: '' }],
+      blocks: Array.from({ length: 20 }, () => ({
+        conditions: Array.from({ length: 10 }, () => ({
+          attribute,
+          operator: 'present' as const,
+          values: [],
+        })),
+      })),
+    }));
+    const rule = configuration.rules[0]!;
+    configuration.rules = Array.from({ length: Math.ceil(segments / 5) }, (_, index) => ({
+      ...rule,
+      id: `20000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      conditions: [
+        { attribute: 'subjectId', operator: 'eq' as const, values: ['not-this-subject'] },
+      ],
+      segmentIds: configuration.segments
+        .slice(index * 5, (index + 1) * 5)
+        .map((segment) => segment.id),
+    }));
+    const decision = evaluate(input);
+    if (segments === 7) {
+      expect(decision.trace.length).toBeLessThan(1500);
+      expect(byteLength(decision.trace)).toBeGreaterThan(192 * 1024);
+    } else expect(decision.trace.length > 2000 || byteLength(decision) > 256 * 1024).toBe(true);
+    expect(configurationSchema.safeParse(configuration).success).toBe(false);
+  }
+);
+
+it('evaluates complete followed operand data without charging it to flag-owned storage', () => {
+  const input = fixture();
+  const configuration = input.flag!.configuration;
+  configuration.contextDefinitions = [];
+  configuration.segments = Array.from({ length: 5 }, (_, index) => ({
+    id: `10000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+    key: `audience_${index}`,
+    name: `Audience ${index}`,
+    revision: 1,
+    contextDefinitions: [{ key: 'x', type: 'string' as const, description: '' }],
+    blocks: [
+      {
+        conditions: Array.from({ length: 2 }, () => ({
+          attribute: 'x',
+          operator: 'in' as const,
+          values: [
+            'admitted',
+            ...Array.from({ length: 19 }, (_, value) => `${value}`.padEnd(490, 'x')),
+          ],
+        })),
+      },
+    ],
+  }));
+  configuration.rules = [
+    {
+      ...configuration.rules[0]!,
+      conditions: [],
+      segmentIds: configuration.segments.map((segment) => segment.id),
+      rolloutBasisPoints: 10000,
+      outcome: { kind: 'value', value: { type: 'boolean', value: true } },
+    },
+  ];
+  expect(byteLength(configuration)).toBeGreaterThan(65536);
+  configurationSchema.parse(configuration);
+  input.context.attributes = { x: 'admitted' };
+  expect(evaluationSchema.parse(evaluate(input)).value.value).toBe(true);
+  input.context.attributes = { x: 'excluded' };
+  expect(evaluate(input).reason).toBe('default');
+});
+
+it('warns on variant intervals, rule eligibility and published context revision changes', () => {
   const input = structuredClone(
     vectors.decisions.find((vector) => vector.name === 'weighted assignment')!.input
   );

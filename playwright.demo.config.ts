@@ -33,7 +33,13 @@ export default defineConfig({
     {
       command: 'pnpm start',
       url: 'http://localhost:4721/healthz',
-      env: { PORT: '4721', NODE_ENV: 'development' },
+      env: {
+        PORT: '4721',
+        NODE_ENV: 'development',
+        FLIGHTDECK_DASHBOARD_MODE: 'local',
+        FLIGHTDECK_ENVIRONMENT_KEY: 'development',
+        FLIGHTDECK_ENVIRONMENT_NAME: 'Development',
+      },
       reuseExistingServer: true,
       timeout: 30_000,
       gracefulShutdown: { signal: 'SIGTERM', timeout: 5000 },

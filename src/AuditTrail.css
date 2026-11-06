@@ -1,0 +1,251 @@
+.fd-audit-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--ob-sys-space-inset-md);
+  padding-bottom: var(--ob-sys-space-inset-lg);
+}
+
+.fd-audit-filters > label {
+  display: flex;
+  flex: 1 1 10rem;
+  flex-direction: column;
+  gap: var(--ob-sys-space-inset-xs);
+  min-width: 0;
+  color: var(--ob-sys-fg-secondary);
+  font-size: var(--ob-sys-type-data-size);
+}
+
+.fd-audit-filters > .fd-audit-search {
+  flex-basis: 20rem;
+  max-width: none;
+}
+
+.fd-audit-filter-actions,
+.fd-audit-pagination,
+.fd-audit-pagination > div,
+.fd-audit-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ob-sys-space-inset-sm);
+}
+
+.fd-audit-layout {
+  display: grid;
+  gap: var(--ob-sys-space-inset-lg);
+  min-width: 0;
+}
+
+.fd-audit-layout > section,
+.fd-audit-detail {
+  min-width: 0;
+}
+
+.fd-audit-layout-detail {
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+}
+
+.fd-audit-events tbody tr {
+  position: relative;
+}
+
+.fd-audit-event-open::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+
+.fd-audit-event-open:focus-visible {
+  outline: none;
+}
+
+.fd-audit-event-open:focus-visible::after {
+  outline: 2px solid var(--ob-sys-focus-ring);
+  outline-offset: -2px;
+}
+
+.fd-audit-compact-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: min(42rem, 70dvh);
+  overflow-y: auto;
+  border: 1px solid var(--ob-sys-border-default);
+  border-radius: var(--ob-sys-radius-container);
+}
+
+.fd-audit-compact-events > li + li {
+  border-top: 1px solid var(--ob-sys-border-subtle);
+}
+
+.fd-audit-compact-event {
+  display: grid;
+  gap: var(--ob-sys-space-inset-xs);
+  width: 100%;
+  min-width: 0;
+  padding: var(--ob-sys-space-inset-md);
+  border: 0;
+  background: var(--ob-sys-bg-raised);
+  color: var(--ob-sys-fg-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fd-audit-compact-event:hover,
+.fd-audit-compact-event[aria-current='true'] {
+  background: var(--ob-obj-link-active-bg);
+}
+
+.fd-audit-compact-event:focus-visible {
+  outline: 2px solid var(--ob-sys-focus-ring);
+  outline-offset: -2px;
+}
+
+.fd-audit-compact-event time,
+.fd-audit-compact-object {
+  color: var(--ob-sys-fg-secondary);
+  font-size: var(--ob-sys-type-caption-size);
+}
+
+.fd-audit-compact-event > strong,
+.fd-audit-compact-object {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fd-audit-events time {
+  display: block;
+  min-width: 10rem;
+}
+
+.fd-audit-pagination {
+  justify-content: space-between;
+  padding-top: var(--ob-sys-space-inset-md);
+  color: var(--ob-sys-fg-secondary);
+  font-size: var(--ob-sys-type-caption-size);
+}
+
+.fd-audit-detail {
+  display: grid;
+  align-content: start;
+  gap: var(--ob-sys-space-inset-lg);
+}
+
+.fd-audit-section {
+  display: grid;
+  gap: var(--ob-sys-space-inset-md);
+  min-width: 0;
+  padding: var(--ob-sys-space-inset-lg);
+  border: 1px solid var(--ob-sys-border-subtle);
+  border-radius: var(--ob-sys-radius-container);
+  background: var(--ob-sys-bg-raised);
+}
+
+.fd-audit-section h2,
+.fd-audit-section h3,
+.fd-audit-section h4,
+.fd-audit-section p {
+  margin: 0;
+}
+
+.fd-audit-section > button {
+  justify-self: start;
+}
+
+.fd-audit-detail-head {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.fd-audit-detail-head > div {
+  display: grid;
+  justify-items: start;
+  gap: var(--ob-sys-space-inset-sm);
+  flex: 1 1 18rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.fd-audit-detail-head > button {
+  flex: none;
+}
+
+.fd-audit-muted,
+.fd-audit-properties dt {
+  color: var(--ob-sys-fg-secondary);
+  font-size: var(--ob-sys-type-caption-size);
+}
+
+.fd-audit-properties {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ob-sys-space-inset-md);
+  margin: 0;
+  padding-top: var(--ob-sys-space-inset-md);
+  border-top: 1px solid var(--ob-sys-border-subtle);
+}
+
+.fd-audit-properties dd {
+  margin: var(--ob-sys-space-inset-xs) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.fd-audit-properties dd > code {
+  display: block;
+  color: var(--ob-sys-fg-secondary);
+}
+
+.fd-audit-value {
+  margin: 0;
+  max-height: 24rem;
+  overflow: auto;
+  color: var(--ob-sys-fg-primary);
+  font-family: var(--ob-sys-type-data-family);
+  font-size: var(--ob-sys-type-caption-size);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.fd-audit-diff {
+  table-layout: fixed;
+}
+
+.fd-audit-diff th,
+.fd-audit-diff td {
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.fd-audit-raw {
+  padding-top: var(--ob-sys-space-inset-md);
+  border-top: 1px solid var(--ob-sys-border-subtle);
+}
+
+.fd-audit-raw h4 {
+  margin-block: var(--ob-sys-space-inset-md) var(--ob-sys-space-inset-sm);
+}
+
+.fd-audit-raw summary {
+  min-height: 1.75rem;
+  cursor: pointer;
+}
+
+@media (max-width: 64rem) {
+  .fd-audit-layout-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fd-audit-compact-events {
+    max-height: 18rem;
+  }
+}
+
+@media (max-width: 40rem) {
+  .fd-audit-properties {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

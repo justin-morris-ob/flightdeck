@@ -4,7 +4,7 @@
 
 Flightdeck is an independently owned Enablements and Experiments application. Keep its frontend, backend, schemas, contracts, migrations and deployment package here. Integrate with Atlas through published packages and manifests; do not import source from an Atlas or BC checkout.
 
-Read [the staged plan](docs/plan.md) and [the architecture](docs/architecture.md) before implementation. Complete one stage and report its evidence, limitations and next stage before expanding scope. Planned features are not shipped behavior.
+Read [the delivery plan](docs/plan.md), [architecture](docs/architecture.md) and [current conformance requirements](docs/conformance/feature-flags/README.md) before implementation. The approved unified redesign replaces the earlier inventory/pinning workflow; preserve historical evidence without presenting it as redesign proof. Planned features and unverified integration are not shipped behavior.
 
 ## BC-derived formatting and style
 
@@ -26,10 +26,16 @@ Use Oxfmt, not Prettier. `oxfmt.config.ts` snapshots the formatting rules from B
 - Keep configuration changes and their audit records atomic. Define concurrent-update behavior before adding writes.
 - Never equate a flag evaluation with an experiment exposure or an experiment result.
 - Keep secrets, private certificates, local data and generated recordings out of Git.
+- Deployment configuration fixes the local environment; never let browser scope select another writable environment. Master is read-only at the server boundary, including project-only mutation routes.
+- Keep flag metadata, lifecycle, archive state and revisions environment-local. Creation starts Off locally only; lifecycle changes never activate gates or publish audiences.
+- Keep segment drafts separate from published definitions. Saving/restoring a draft has no live effect; restore requires revision guards and explicit replacement review.
+- Segment publication atomically advances all published local references and records their exact impact. Do not bump flag revisions or change gates, direct selections or unrelated drafts. References follow current publication; historical versions are inspection/restore sources, not per-flag pins.
+- Match ANY segment block and ALL conditions within a block. Directory selections are alternatives; effective memberships come from trusted consumer context across organizations, guarded by tenant/source. Never query the directory during evaluation.
+- Preserve Flags / Segments / Audit trail as peer views; keep settings secondary. Audit is immutable event-time history, not an editing surface or delivery/exposure telemetry.
 
 ## Verification and documentation
 
-Stage 2 targeting and the Stage 3 consumer lab are real local applications. Run `pnpm check` for lint, frontend/server typechecks, API-contract consistency, the provider package and standalone/federation/consumer-demo builds, and formatting. Run `pnpm db:setup` then `pnpm test` for real PostgreSQL/HTTP behavior, actual OpenFeature SDK calls, deterministic evaluation and consumer/session boundaries. Follow [local development](docs/local-development.md), [evaluation semantics](docs/evaluation-spec.md) and the [feature requirements](docs/conformance/feature-flags/README.md); do not add placeholder validation scripts.
+The local targeting service and consumer lab remain runnable applications; [unified redesign verification](docs/stage-two-verification.md#unified-redesign-verification) records the integrated local checks and browser evidence, not production qualification. Run `pnpm check` for lint, frontend/server typechecks, API-contract consistency, the provider package and standalone/federation/consumer-demo builds, and formatting. Run `pnpm db:setup` then `pnpm test` for real PostgreSQL/HTTP behavior, actual OpenFeature SDK calls, deterministic evaluation and consumer/session boundaries. Follow [local development](docs/local-development.md), [evaluation semantics](docs/evaluation-spec.md) and the [feature requirements](docs/conformance/feature-flags/README.md); do not add placeholder validation scripts.
 
 When introducing implementation, add real build, lint, typecheck and relevant test commands in the same stage. Verify behavior by running the application and exercising the changed path. Use deterministic behavior tests for evaluation boundaries, authorization, persistence and concurrency. Do not test source text or mock forwarding as a substitute for behavior.
 

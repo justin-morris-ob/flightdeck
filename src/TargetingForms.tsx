@@ -378,6 +378,7 @@ export function ConditionsEditor({
             ? (['contains_any', 'contains_all'] as const)
             : (['eq', 'not_eq', 'in', 'not_in'] as const)),
           ...(type === 'number' ? (['gt', 'gte', 'lt', 'lte'] as const) : []),
+          ...(type === 'string' ? (['ends_with'] as const) : []),
           'present',
           'absent',
         ];

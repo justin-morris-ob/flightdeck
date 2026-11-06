@@ -1,9 +1,11 @@
 import { assertLocalDevelopment } from './auth.ts';
 import { connectDatabase } from './database.ts';
+import { loadDeployment } from './deployment.ts';
 import { DirectoryClient, loadDirectoryConnections } from './directory.ts';
 import { createApplication } from './http.ts';
 
 assertLocalDevelopment();
+const deployment = loadDeployment();
 const databaseUrl = process.env.FLIGHTDECK_DATABASE_URL;
 const sessionSecret = process.env.FLIGHTDECK_SESSION_SECRET;
 const port = Number(process.env.PORT ?? 4721);
@@ -21,6 +23,7 @@ const server = createApplication({
   port,
   shellOrigin: process.env.ATLAS_SHELL_ORIGIN ?? 'http://localhost:4720',
   directory,
+  deployment,
 });
 server.listen(port, '127.0.0.1', () => {
   console.log(`Flightdeck local-development http://localhost:${port}`);

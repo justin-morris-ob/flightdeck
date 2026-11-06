@@ -1,6 +1,6 @@
 import './styles.css';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 
 import { Badge, Button, Empty, Notice } from '@onebrief/atlas-ui';
@@ -13,37 +13,75 @@ import {
   sessionSchema,
   type Project,
 } from '../shared/contracts.ts';
+import { deploymentSchema, type Deployment } from '../shared/unified.ts';
 import { errorMessage, get, send, type Request } from './api.ts';
-import { Catalog } from './Catalog.tsx';
-import { Credentials } from './Credentials.tsx';
+import { AuditTrail } from './AuditTrail.tsx';
+import { EnvironmentSettings } from './EnvironmentSettings.tsx';
 import { FlagDetail } from './FlagDetail.tsx';
 import { Modal } from './forms.tsx';
 import { Inventory } from './Inventory.tsx';
+import { Segments } from './Segments.tsx';
 
+type View = 'flags' | 'segments' | 'audit' | 'settings';
 type Session = z.infer<typeof sessionSchema>;
 type Operator = z.infer<typeof operatorSchema>;
 interface Props {
   request: Request;
   embedded?: boolean;
   initialProjectId?: string;
+  initialView?: View;
 }
 
-export function FlightdeckApp({ request, embedded = false, initialProjectId }: Props) {
+export function FlightdeckApp({
+  request,
+  embedded = false,
+  initialProjectId,
+  initialView = 'flags',
+}: Props) {
   const [session, setSession] = useState<Session | null>(null);
   const [operators, setOperators] = useState<Operator[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [deployment, setDeployment] = useState<Deployment | null>(null);
   const [projectId, setProjectId] = useState(initialProjectId ?? '');
-  const [environmentId, setEnvironmentId] = useState('');
+  const [observedEnvironmentId, setObservedEnvironmentId] = useState('');
   const [flagKey, setFlagKey] = useState<string | null>(null);
-  const [view, setView] = useState<'flags' | 'credentials' | 'catalog'>('flags');
+  const [segmentId, setSegmentId] = useState<string | undefined>();
+  const [auditFilter, setAuditFilter] = useState<{
+    objectType?: 'flag' | 'segment';
+    objectId?: string;
+  }>({});
+  const [view, setView] = useState<View>(initialView);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [loading, setLoading] = useState(true);
   const [scopeLoading, setScopeLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [scopeError, setScopeError] = useState('');
   const [bootstrap, setBootstrap] = useState(0);
   const [account, setAccount] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [navigationBusy, setNavigationBusy] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [createFlag, setCreateFlag] = useState(0);
+  const [createSegment, setCreateSegment] = useState(0);
+  const pendingNavigation = useRef<(() => void) | null>(null);
+  const reportDirty = useCallback((value: boolean) => setDirty(value), []);
+  const reportBusy = useCallback((value: boolean) => setNavigationBusy(value), []);
+  useEffect(() => {
+    if (!dirty && !navigationBusy) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty, navigationBusy]);
+  function transition(action: () => void) {
+    if (navigationBusy) return;
+    if (dirty) {
+      pendingNavigation.current = action;
+      setLeaving(true);
+    } else action();
+  }
   useEffect(() => {
     let current = true;
     setLoading(true);
@@ -72,17 +110,21 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
     if (!session) return;
     let current = true;
     setScopeLoading(true);
-    setScopeError('');
-    get(request, '/api/v1/projects', projectsSchema)
-      .then((result) => {
+    setError('');
+    Promise.all([
+      get(request, '/api/v1/projects', projectsSchema),
+      get(request, '/api/v1/deployment', deploymentSchema),
+    ])
+      .then(([result, binding]) => {
         if (!current) return;
         setProjects(result.items);
+        setDeployment(binding);
         setProjectId((previous) =>
           result.items.some((item) => item.id === previous) ? previous : (result.items[0]?.id ?? '')
         );
       })
       .catch((cause: unknown) => {
-        if (current) setScopeError(errorMessage(cause));
+        if (current) setError(errorMessage(cause));
       })
       .finally(() => {
         if (current) setScopeLoading(false);
@@ -92,10 +134,14 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
     };
   }, [request, session]);
   const project = projects.find((item) => item.id === projectId);
-  const environment =
-    project?.environments.find((item) => item.id === environmentId) ?? project?.environments[0];
+  const master = deployment?.mode === 'master';
+  const environment = master
+    ? (project?.environments.find((item) => item.id === observedEnvironmentId) ??
+      project?.environments[0])
+    : project?.environments.find((item) => item.key === deployment?.environmentKey);
   const scope = project && environment ? scopePath(project.id, environment.id) : '';
-  const role = session?.operator.role;
+  const writable =
+    deployment?.mode === 'local' && session !== null && session.operator.role !== 'viewer';
   async function login(operatorId: string) {
     setBusy(true);
     setError('');
@@ -108,10 +154,12 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
         sessionSchema
       );
       setProjects([]);
-      setProjectId('');
-      setEnvironmentId('');
+      setDeployment(null);
       setFlagKey(null);
-      setView('flags');
+      setSegmentId(undefined);
+      setAuditFilter({});
+      setObservedEnvironmentId('');
+      setDirty(false);
       setSession(next);
     } catch (cause) {
       setError(errorMessage(cause));
@@ -126,84 +174,124 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
       await request('/api/v1/session', { method: 'DELETE', credentials: 'include' });
       setSession(null);
       setProjects([]);
-      setProjectId('');
-      setEnvironmentId('');
+      setDeployment(null);
       setFlagKey(null);
       setView('flags');
+      setDirty(false);
       setAccount(false);
+      setLeaving(false);
+      pendingNavigation.current = null;
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
       setBusy(false);
     }
   }
-  function navigate(id: string) {
-    setFlagKey(null);
-    if (id === 'credentials' && role === 'administrator') setView('credentials');
-    else if (id === 'catalog') setView('catalog');
-    else {
+  function navigate(next: View) {
+    transition(() => {
+      setFlagKey(null);
+      setSegmentId(undefined);
+      setAuditFilter({});
+      setCreateFlag(0);
+      setCreateSegment(0);
+      setView(next);
+    });
+  }
+  function openFlag(key: string, environmentId = environment?.id ?? '') {
+    transition(() => {
+      setFlagKey(key);
+      setObservedEnvironmentId(environmentId);
+      setCreateFlag(0);
+      setCreateSegment(0);
       setView('flags');
-      if (projects.some((item) => item.id === id)) {
-        setProjectId(id);
-        setEnvironmentId('');
-      }
-    }
+    });
+  }
+  function openAudit(objectType: 'flag' | 'segment', objectId: string) {
+    transition(() => {
+      setAuditFilter({ objectType, objectId });
+      setCreateFlag(0);
+      setCreateSegment(0);
+      setView('audit');
+    });
   }
   const appMenu = (
     <nav className="fd-project-menu" aria-label="Flightdeck menu">
       <MenuSection kind="shared" className="fd-menu-heading">
         <h2 className="fd-menu-title">Flightdeck</h2>
+        {session && writable && (
+          <div className="fd-actions fd-menu-quick-actions">
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() =>
+                transition(() => {
+                  setView('flags');
+                  setFlagKey(null);
+                  setCreateFlag((value) => value + 1);
+                })
+              }
+            >
+              Create flag
+            </Button>
+            <Button
+              size="sm"
+              onClick={() =>
+                transition(() => {
+                  setView('segments');
+                  setSegmentId(undefined);
+                  setCreateSegment((value) => value + 1);
+                })
+              }
+            >
+              Create segment
+            </Button>
+          </div>
+        )}
       </MenuSection>
       <div className="fd-project-menu-scroll">
         <MenuSection title="Views" kind="app">
           <MenuItem
-            label="Feature flags"
+            label="Flags"
             icon="flag"
             current={view === 'flags'}
             onSelect={() => navigate('flags')}
           />
           <MenuItem
-            label="Project targeting catalog"
-            icon="sliders"
-            current={view === 'catalog'}
-            onSelect={() => navigate('catalog')}
+            label="Segments"
+            icon="users"
+            current={view === 'segments'}
+            onSelect={() => navigate('segments')}
           />
-          {role === 'administrator' && (
-            <MenuItem
-              label="Evaluation credentials"
-              icon="approval"
-              current={view === 'credentials'}
-              onSelect={() => navigate('credentials')}
-            />
-          )}
-        </MenuSection>
-        <MenuSection title="Projects" kind="app">
-          {projects.map((item) => (
-            <MenuItem
-              key={item.id}
-              label={item.name}
-              icon="collection"
-              current={item.id === projectId}
-              onSelect={() => navigate(item.id)}
-            />
-          ))}
+          <MenuItem
+            label="Audit trail"
+            icon="clock"
+            current={view === 'audit'}
+            onSelect={() => navigate('audit')}
+          />
         </MenuSection>
       </div>
+      {!master && session?.operator.role === 'administrator' && (
+        <div className="fd-menu-footer">
+          <MenuItem
+            label="Flightdeck settings"
+            icon="sliders"
+            current={view === 'settings'}
+            onSelect={() => navigate('settings')}
+          />
+        </div>
+      )}
     </nav>
-  );
-  const banner = (
-    <div className="fd-dev-banner">
-      <Icon name="flag" size="sm" />
-      <strong>LOCAL DEVELOPMENT</strong>
-      <span>Disposable identities and synthetic data only · Not production authentication</span>
-    </div>
   );
   const content = (
     <div className="fd-app" data-embedded={embedded || undefined}>
-      {banner}
+      <div className="fd-dev-banner">
+        <Icon name="flag" size="sm" />
+        <strong>LOCAL DEVELOPMENT</strong>
+        <span>Disposable identities · Not production authentication</span>
+      </div>
       {loading ? (
         <div className="fd-loading" role="status">
-          Loading local development session…
+          Loading Flightdeck…
         </div>
       ) : !session ? (
         <main className="fd-signin">
@@ -212,53 +300,31 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
           </div>
           <p className="fd-eyebrow">ENABLEMENTS & EXPERIMENTS</p>
           <h1>Welcome to Flightdeck</h1>
-          <p className="fd-signin-intro">
-            Control typed configuration and targeting, inspect decisions, and trace every change.
-          </p>
+          <p className="fd-signin-intro">Control the feature. Make the audience clear.</p>
           <section className="fd-signin-card">
             <h2>Local development sign-in</h2>
-            <p>
-              Select a disposable operator to explore role-based access. These are not real
-              organizational identities.{' '}
-              {embedded && 'Your Atlas demo sign-in does not grant Flightdeck access.'}
-            </p>
+            <p>Select a disposable operator. Atlas sign-in does not grant Flightdeck access.</p>
             {error && <Notice tone="danger">{error}</Notice>}
-            {operators.length === 0 ? (
-              <>
-                <p>
-                  Local sign-in is unavailable. Start the service with explicit local development
-                  identity enabled.
-                </p>
-                <Button onClick={() => setBootstrap((value) => value + 1)}>Retry connection</Button>
-              </>
-            ) : (
-              <div className="fd-operators">
-                {operators.map((operator) => (
-                  <button
-                    className="fd-operator"
-                    type="button"
-                    key={operator.id}
-                    onClick={() => void login(operator.id)}
-                    disabled={busy}
-                  >
-                    <span>
-                      <strong>{operator.name}</strong>
-                      <span className="fd-table-sub">
-                        {operator.id === 'local-outsider'
-                          ? 'Isolation test organization'
-                          : 'Flightdeck development'}
-                      </span>
-                    </span>
-                    <Badge>{operator.role}</Badge>
-                    <Icon name="chevR" size="sm" />
-                  </button>
-                ))}
-              </div>
+            <div className="fd-operators">
+              {operators.map((operator) => (
+                <button
+                  className="fd-operator"
+                  type="button"
+                  key={operator.id}
+                  onClick={() => void login(operator.id)}
+                  disabled={busy}
+                >
+                  <span>
+                    <strong>{operator.name}</strong>
+                    <span className="fd-table-sub">{operator.role}</span>
+                  </span>
+                  <Icon name="chevR" size="sm" />
+                </button>
+              ))}
+            </div>
+            {!operators.length && (
+              <Button onClick={() => setBootstrap((value) => value + 1)}>Retry connection</Button>
             )}
-            <p className="fd-help">
-              Signed HttpOnly local session · Authorization is enforced by the API, independently of
-              the shell.
-            </p>
           </section>
         </main>
       ) : (
@@ -270,12 +336,17 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
                 <select
                   className="input"
                   value={projectId}
-                  onChange={(event) => {
-                    setProjectId(event.target.value);
-                    setEnvironmentId('');
-                    setFlagKey(null);
-                  }}
                   disabled={scopeLoading}
+                  onChange={(event) => {
+                    const id = event.target.value;
+                    transition(() => {
+                      setProjectId(id);
+                      setObservedEnvironmentId('');
+                      setFlagKey(null);
+                      setSegmentId(undefined);
+                      setAuditFilter({});
+                    });
+                  }}
                 >
                   {projects.map((item) => (
                     <option key={item.id} value={item.id}>
@@ -284,34 +355,59 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
                   ))}
                 </select>
               </label>
-              {view !== 'catalog' && (
-                <label>
-                  Configuration environment
-                  <select
-                    className="input"
-                    value={environment?.id ?? ''}
-                    onChange={(event) => {
-                      setEnvironmentId(event.target.value);
-                    }}
-                    disabled={scopeLoading}
-                  >
-                    {project?.environments.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
             </div>
             <div className="fd-session">
-              <span>{session.operator.name}</span>
-              <Badge>{role}</Badge>
+              <Badge>
+                {master
+                  ? 'Master overview · Read only'
+                  : `Environment · ${environment?.name ?? deployment?.environmentName ?? 'Unbound'}`}
+              </Badge>
+              <span>Local data</span>
               <Button size="sm" onClick={() => setAccount(true)}>
                 Local account
               </Button>
             </div>
           </div>
+          <nav className="fd-section-nav" aria-label="Flightdeck sections">
+            {(['flags', 'segments', 'audit'] as const).map((item) => (
+              <Button
+                key={item}
+                variant={view === item ? 'primary' : 'quiet'}
+                onClick={() => navigate(item)}
+              >
+                {item === 'flags' ? 'Flags' : item === 'segments' ? 'Segments' : 'Audit trail'}
+              </Button>
+            ))}
+            {writable && (
+              <>
+                <Button
+                  onClick={() =>
+                    transition(() => {
+                      setView('flags');
+                      setFlagKey(null);
+                      setCreateFlag((value) => value + 1);
+                    })
+                  }
+                >
+                  Create flag
+                </Button>
+                <Button
+                  onClick={() =>
+                    transition(() => {
+                      setView('segments');
+                      setSegmentId(undefined);
+                      setCreateSegment((value) => value + 1);
+                    })
+                  }
+                >
+                  Create segment
+                </Button>
+              </>
+            )}
+            {!master && session.operator.role === 'administrator' && (
+              <Button onClick={() => navigate('settings')}>Flightdeck settings</Button>
+            )}
+          </nav>
           {error && (
             <div className="fd-inline-error">
               <Notice tone="danger">{error}</Notice>
@@ -319,59 +415,93 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
           )}
           {scopeLoading ? (
             <div className="fd-loading" role="status">
-              Loading authorized projects…
+              Loading authorized scope…
             </div>
-          ) : scopeError ? (
+          ) : !deployment ? (
             <div className="fd-loading">
-              <Notice tone="danger">{scopeError}</Notice>
-              <Button onClick={() => setBootstrap((value) => value + 1)}>
-                Reload session and projects
-              </Button>
+              <Notice tone="danger">
+                Deployment configuration could not be loaded. Editing is unavailable.
+              </Notice>
+              <Button onClick={() => setBootstrap((value) => value + 1)}>Retry</Button>
             </div>
           ) : !project || !environment ? (
-            <Empty>No authorized project environments are available.</Empty>
+            <Empty>
+              This project has no environment matching this deployment. No fallback environment has
+              been selected.
+            </Empty>
           ) : (
             <>
-              {embedded && (
-                <nav className="fd-section-nav" aria-label="Flightdeck sections">
-                  <Button
-                    variant={view === 'flags' ? 'primary' : 'quiet'}
-                    onClick={() => navigate('flags')}
-                  >
-                    Feature flags
-                  </Button>
-                  <Button
-                    variant={view === 'catalog' ? 'primary' : 'quiet'}
-                    onClick={() => navigate('catalog')}
-                  >
-                    Project targeting catalog
-                  </Button>
-                  {role === 'administrator' && (
-                    <Button
-                      variant={view === 'credentials' ? 'primary' : 'quiet'}
-                      onClick={() => navigate('credentials')}
+              {master && (view !== 'flags' || flagKey) && (
+                <div className="fd-report-context">
+                  <label>
+                    Viewing environment report
+                    <select
+                      className="input"
+                      value={environment.id}
+                      onChange={(event) => {
+                        setObservedEnvironmentId(event.target.value);
+                      }}
                     >
-                      Evaluation credentials
-                    </Button>
+                      {project.environments.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <span>Read only · Changes belong in the local dashboard.</span>
+                  {deployment.dashboards[environment.key] && (
+                    <a
+                      className="fd-flag-link"
+                      href={deployment.dashboards[environment.key]}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open {environment.name} dashboard ↗
+                    </a>
                   )}
-                </nav>
+                </div>
               )}
-              {view === 'catalog' ? (
-                <Catalog
+              {view === 'segments' ? (
+                <Segments
                   key={`${scope}:${session.operator.id}`}
                   request={request}
                   scope={scope}
                   projectName={project.name}
                   environmentName={environment.name}
-                  role={session.operator.role}
+                  writable={writable}
+                  onAudit={(id) => openAudit('segment', id)}
+                  onOpenFlag={openFlag}
+                  onDirtyChange={reportDirty}
+                  onBusyChange={reportBusy}
+                  createRequest={createSegment}
+                  initialSegmentId={segmentId}
                 />
-              ) : view === 'credentials' && role === 'administrator' ? (
-                <Credentials
+              ) : view === 'audit' ? (
+                <AuditTrail
+                  key={`${scope}:${session.operator.id}:${auditFilter.objectId ?? ''}`}
+                  request={request}
+                  scope={scope}
+                  projectName={project.name}
+                  environmentName={environment.name}
+                  {...auditFilter}
+                  onOpenObject={(type, id) => {
+                    if (type === 'flag') openFlag(id);
+                    else
+                      transition(() => {
+                        setView('segments');
+                        setSegmentId(id);
+                      });
+                  }}
+                />
+              ) : view === 'settings' && !master && session.operator.role === 'administrator' ? (
+                <EnvironmentSettings
                   key={`${scope}:${session.operator.id}`}
                   request={request}
                   scope={scope}
                   projectName={project.name}
                   environmentName={environment.name}
+                  onDirtyChange={reportDirty}
                 />
               ) : flagKey ? (
                 <FlagDetail
@@ -381,21 +511,31 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
                   flagKey={flagKey}
                   project={project}
                   environmentId={environment.id}
-                  role={session.operator.role}
-                  onBack={() => setFlagKey(null)}
+                  role={master ? 'viewer' : session.operator.role}
+                  onBack={() => transition(() => setFlagKey(null))}
+                  onAudit={(id) => openAudit('flag', id)}
+                  onDirtyChange={reportDirty}
+                  master={master}
                 />
               ) : (
                 <Inventory
-                  key={`${project.id}:${session.operator.id}`}
+                  key={`${project.id}:${session.operator.id}:${master}`}
                   request={request}
                   scope={scope}
                   project={project}
                   environmentId={environment.id}
-                  role={session.operator.role}
+                  role={master ? 'viewer' : session.operator.role}
                   onOpen={(key, selectedEnvironmentId) => {
-                    setEnvironmentId(selectedEnvironmentId);
+                    setDirty(false);
                     setFlagKey(key);
+                    setObservedEnvironmentId(selectedEnvironmentId);
+                    setCreateFlag(0);
+                    setCreateSegment(0);
                   }}
+                  master={master}
+                  createRequest={createFlag}
+                  onDirtyChange={reportDirty}
+                  onBusyChange={reportBusy}
                 />
               )}
             </>
@@ -408,15 +548,49 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
             <p>
               <strong>{session.operator.name}</strong> · {session.operator.role}
             </p>
-            <p>Application-local identity only. Signing out here does not sign you out of Atlas.</p>
-            <p className="fd-help">
-              To change roles, sign out and select another disposable operator.
-            </p>
-            {error && <Notice tone="danger">{error}</Notice>}
+            <p>Application-local identity only. Signing out clears all unsaved work.</p>
             <div className="fd-actions">
               <Button onClick={() => setAccount(false)}>Close</Button>
-              <Button variant="primary" onClick={() => void logout()} disabled={busy}>
-                {busy ? 'Signing out…' : 'Sign out of Flightdeck'}
+              <Button variant="primary" disabled={busy} onClick={() => void logout()}>
+                Sign out of Flightdeck
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      {leaving && (
+        <Modal
+          title="Discard unpublished changes?"
+          onClose={() => {
+            setLeaving(false);
+            pendingNavigation.current = null;
+          }}
+        >
+          <div className="fd-form">
+            <p>
+              Your unsaved changes belong to this scope. Leaving will discard them; published
+              behavior stays unchanged.
+            </p>
+            <div className="fd-actions">
+              <Button
+                onClick={() => {
+                  setLeaving(false);
+                  pendingNavigation.current = null;
+                }}
+              >
+                Stay
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  const next = pendingNavigation.current;
+                  pendingNavigation.current = null;
+                  setLeaving(false);
+                  setDirty(false);
+                  next?.();
+                }}
+              >
+                Discard and leave
               </Button>
             </div>
           </div>
@@ -440,17 +614,14 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
               if (session) setAccount(true);
             }}
             utilities={
-              <>
-                <strong>Flightdeck</strong>
-                <Button
-                  size="sm"
-                  aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-                  onClick={() => setTheme((value) => (value === 'dark' ? 'light' : 'dark'))}
-                  icon={<Icon name={theme === 'dark' ? 'sun' : 'moon'} size="sm" />}
-                >
-                  {theme === 'dark' ? 'Light' : 'Dark'}
-                </Button>
-              </>
+              <Button
+                size="sm"
+                aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+                onClick={() => setTheme((value) => (value === 'dark' ? 'light' : 'dark'))}
+                icon={<Icon name={theme === 'dark' ? 'sun' : 'moon'} size="sm" />}
+              >
+                {theme === 'dark' ? 'Light' : 'Dark'}
+              </Button>
             }
           />
         }
@@ -459,7 +630,7 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
             items={[
               {
                 id: 'flags',
-                label: 'Feature flags',
+                label: 'Flags',
                 shortLabel: 'Flags',
                 icon: 'flag',
                 tone: 'atom',
@@ -477,13 +648,13 @@ export function FlightdeckApp({ request, embedded = false, initialProjectId }: P
             <ContextBar
               scope={project?.name ?? 'No project'}
               time={
-                view === 'catalog'
-                  ? 'Targeting library'
-                  : view === 'credentials'
-                    ? 'Service credentials'
-                    : flagKey
-                      ? 'Flag configuration'
-                      : 'Shared flag inventory'
+                view === 'flags'
+                  ? 'Feature flags'
+                  : view === 'segments'
+                    ? 'Segments'
+                    : view === 'audit'
+                      ? 'Audit trail'
+                      : 'Settings'
               }
             />
           )

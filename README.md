@@ -4,7 +4,7 @@ Enablements and Experiments for Onebrief: feature flags, targeted enablements, c
 
 ## Current status
 
-**Stage 3 consumer checkpoint, on top of Stage 2 targeting.** Author typed flags, pinned segments, overrides, deterministic rollouts and variants; use the same Onebrief-toolkit pages standalone and inside Atlas. Generic string-list targeting, a server OpenFeature provider and a reusable consumer lab now exercise the backend contract.
+**Unified redesign — locally verified.** The replacement uses deployment-scoped Flags, Segments and Audit trail views, local lifecycle metadata and explicitly published reusable audiences. Integrated checks, 353 tests, standalone/Atlas browser flows and four recordings are recorded in [unified redesign verification](docs/stage-two-verification.md#unified-redesign-verification). Earlier checkpoint evidence remains historical, not new proof.
 
 Flightdeck remains loopback-only with synthetic management identities and credential-scoped tenant grants. The real BC adapter lives in a separate BC change; local integration evidence is not production authentication or a deployed Atlas service. Assignment is not experiment exposure or results.
 
@@ -21,11 +21,27 @@ pnpm start
 
 Open **http://localhost:4721**. Select **Alex Morgan** for administrator access, **Ellis Chen** for editor access or **Vera Singh** for read-only access. All are synthetic local identities. The isolated **Jordan Rivera** identity demonstrates a different organization's scope.
 
-Choose a project under **Projects**. Its Feature flags page is one shared flag inventory with a status column for every environment—not a different flag collection per environment. Click an environment's status to review that configuration; **Configuration environment** determines which configuration opens when you click a flag's name. Creating a flag initializes it disabled everywhere. Enable/configure it independently per environment; metadata and archival apply across the project.
+Use the project selector, then the three peer views: **Flags**, **Segments** and **Audit trail**. Settings is secondary navigation, not a fourth primary workflow. In local mode, the environment comes from server deployment configuration: there is no environment selector or comparison matrix. Creating a flag starts it Off only in that environment. Name, description, owner, lifecycle and archive state are environment-local; an immutable key identifies the flag across reports.
 
-The default **Targeting** tab keeps Boolean flags simple: choose **Everyone** or **Selected audiences**, select existing Flightdeck segments and optional direct BC people/organization/group audiences, then review and publish. Branches are OR; an empty selection matches nobody. The optional directory authoring connection uses private server configuration and a separate supported BC API change, not a copied directory. Without configuration its pickers remain disconnected; configured status does not assert health. See [directory setup and boundaries](docs/local-development.md#optional-bc-directory-authoring-connection).
+With **Group by · Lifecycle**, each lifecycle heading spans the full table and starts expanded. Click the heading, or focus it and press Enter/Space, to collapse only that lifecycle's rows; its heading and the other groups stay visible. Selecting a lifecycle filter automatically expands that group without resetting other groups' collapse choices. Collapse choices are local to the current inventory view, not saved flag state. **Group by · None** shows every returned row. Grouping and collapse apply to the current bounded page without changing search, filters or pagination.
 
-Working typed values, ordered rules, rollouts, variants and the playground remain under **Advanced controls**, collapsed by default. Complex existing configurations are preserved and are never automatically converted to the simple editor. Individual overrides remain in **Exceptions (advanced)**. Project targeting catalog owns reusable attributes/segments; publication still explicitly pins their definitions. The Flightdeck and Sandbox names are demo projects, not environments or separate deployments.
+**Create flag** and **Create segment** open dedicated screens within that project/environment context, not modal forms. Cancel or Back returns to the inventory/library; unsaved edits require explicit discard before leaving. A new segment saves as a non-live draft. Short review/publication and discard confirmations remain dialogs.
+
+Flag creation keeps Name, Flag key, Owner and Description alongside large lifecycle cards grouped as **Delivery · Temporary** (Development/Release) and **Long-lived** (System/Permissions). The key follows Name in lowercase with underscore separators until you edit the key yourself; it is immutable after creation. Generated keys obey the existing letter-first, 100-character contract; names without a usable letter require a manually entered key.
+
+Inspect published behavior first, then **Edit audience**, review the before/after change and publish explicitly to the named local environment. Compatible Boolean flags offer **Everyone** or **Selected audiences**; segment and direct people/organization/group alternatives are OR, and an empty selection matches nobody. The shared audience picker preserves stable selections across searches. Directory configuration is private; missing connections and failed lookups are explicit, not fabricated results. See [directory setup and boundaries](docs/local-development.md#optional-bc-directory-authoring-connection).
+
+Flag detail follows four full-width blocks: **Lifecycle**, **Published behavior**, **Audience**, then **Test a context** on its own row. **Edit audience** expands the Audience block in place, with Discard on the left and Review changes on the right. One compact audience search finds **People**, **Organizations**, **Groups** and **Segments**, with All/type filters, grouped results and a shared removable-chip selection. Published Flightdeck segments match by name/key and remain searchable without a BC connection; draft-only segments cannot be selected. Directory lookup uses its private configured connection (two-character minimum and a short debounce), never synthetic fallback data. Clearing/changing search preserves both selection types. Create segment shares the compact membership picker but retains its separate POC fixtures and does not nest segments. **Advanced controls** is a separate, initially collapsed section below both blocks; it shares the same draft without losing edits, undo or test context when collapsed. Review changes validates the exact draft and opens one **Targeting change review** modal with before/after, scope and warnings. Cancel preserves the draft; only the modal's explicit Publish action writes it. Context testing always evaluates published configuration, not an unsaved audience draft. Metadata, advanced inspection and audit remain available.
+
+**Segments** separates draft, current published definition, where-used and retained version history. Saving or restoring a draft changes nothing live. Segment publication atomically updates every published local reference without republishing flags or changing flag revisions, gates, direct selections or unrelated drafts. References follow the current published definition, not per-flag version pins. ANY definition block may match; ALL trait conditions within a block must match, including exact text suffix matching (`ends_with`).
+
+**Audit trail** opens an event from anywhere in its table row, with keyboard access through the row's event button. While an event is open, a compact list shows abbreviated UTC date/time, action and the recorded flag/segment name beside the read-only detail. Full timestamps, actor, scope, identities, before/after values and recorded publication impact remain available in the detail. Switching events stays compact; **Close event** restores the full table, filters, page and focus. On narrow screens the compact list stacks above the detail.
+
+Selected-event detail is separated into bordered cards for the event summary/metadata, recorded before/after changes, affected published references when recorded, and the historical-snapshot notice/current-object handoff. Raw snapshots remain available within the changes card; grouping does not alter or omit the recorded values.
+
+Lifecycle is local metadata: **Development**, **Release**, **System** or **Permissions**. Saving it is not audience publication, gate activation or automatic cleanup. Typed values, ordered rules, rollouts, variants and overrides remain available without lossy conversion; synthetic-context testing evaluates published behavior without a directory lookup.
+
+Master mode is a read-only overview of actually stored environment reports. It cannot create, edit, publish, toggle gates or send change requests. Only configured dashboard links hand off to local dashboards, where authorization still applies; absent state is unavailable, not Off.
 
 ### Separate backend consumer
 
@@ -67,7 +83,7 @@ Keep Flightdeck running. Use a separate, installed and built compatible Atlas ch
 ATLAS_CHECKOUT=/absolute/path/to/atlas pnpm shell
 ```
 
-Open **http://localhost:4720**, sign into Atlas's demo shell and navigate to Flightdeck → Feature flags. Flightdeck's development session is independent of the shell's demo identity. Neither build nor standalone startup requires an Atlas source checkout.
+Open **http://localhost:4720**, sign into Atlas's demo shell and navigate to Flightdeck → Flags. Flightdeck's development session is independent of the shell's demo identity. Neither build nor standalone startup requires an Atlas source checkout.
 
 ## Check the implementation
 
@@ -94,4 +110,4 @@ pnpm test
 
 ## Next stage
 
-Continue Stage 3 qualification through the separate, opt-in BC homepage-filter adapter and its failure-boundary walkthrough. Optional BC directory authoring is implemented locally, with tenant/source-guarded ordinary predicates and no runtime directory dependency; its supported credential API requires a separate BC PR that is not released now. Production identity, shared-environment deployment, onboarding and measured experiments remain external gates. This checkpoint is not a claim that all Stage 3 acceptance or connected-recording evidence is complete.
+Review the unified redesign and qualify the separate, opt-in BC consumer/directory changes for their intended environments. The local connected walkthrough and authoring-outage recordings passed; the supported BC credential API still requires its separate, unreleased BC PR. Production identity, shared-environment deployment, onboarding, shell availability handling and measured experiments remain external gates.

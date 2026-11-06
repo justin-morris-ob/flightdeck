@@ -36,9 +36,21 @@ import {
   previewRequestSchema,
   publishConfigurationSchema,
   revokeOverrideSchema,
+  type TypedValue,
+  type Outcome,
   type Configuration,
   type SubjectOverride,
 } from '../shared/targeting.ts';
+import {
+  deploymentSchema,
+  createSegmentSchema,
+  updateSegmentDraftSchema,
+  publishSegmentSchema,
+  restoreSegmentSchema,
+  segmentLibrarySchema,
+  type Deployment,
+} from '../shared/unified.ts';
+import { defaultDeployment } from './deployment.ts';
 import {
   DirectoryClient,
   directoryResolveRequestSchema,
@@ -47,14 +59,30 @@ import {
 import { configurationWarnings, evaluate } from './evaluator.ts';
 import {
   matchingOverrides,
-  pinConfiguration,
+  publishConfiguration,
+  resolveConfiguration,
   readCatalog,
   saveCatalog,
   subjectOverride,
   validateActiveOverrides,
+  validateConfigurationTypes,
   validateOverrideOutcome,
   type OverrideRow,
 } from './targeting-storage.ts';
+import {
+  auditQuerySchema,
+  createSegment,
+  listSegments,
+  saveSegmentDraft,
+  publishSegment,
+  restoreSegment,
+  readSegmentHistory,
+  segmentHistoryQuerySchema,
+  readAudit,
+  lockEnvironment,
+  invalidateSegmentReview,
+  writeUnifiedAudit,
+} from './unified-storage.ts';
 
 type Database = Pool | PoolClient;
 interface FlagRow {
@@ -66,13 +94,11 @@ interface FlagRow {
   description: string;
   owner: string;
   archived: boolean;
+  lifecycle: Flag['lifecycle'];
   revision: number;
   enabled: boolean;
   configuration: Configuration;
   updated_at: Date;
-}
-interface FlagSummaryRow extends Omit<FlagRow, 'environment_id' | 'enabled' | 'configuration'> {
-  environments: FlagSummary['environments'];
 }
 interface CredentialRow {
   id: string;
@@ -90,6 +116,9 @@ const inventoryQuery = z.strictObject({
   after: flagKeySchema.optional(),
   limit: z.coerce.number().int().min(1).max(20).default(20),
   archived: z.enum(['active', 'archived', 'all']).default('active'),
+  environmentId: z.uuid().optional(),
+  lifecycle: z.enum(['development', 'release', 'system', 'permissions']).optional(),
+  longevity: z.enum(['temporary', 'long-lived']).optional(),
 });
 const activityQuery = z.strictObject({
   before: z.coerce.number().int().positive().max(2147483647).optional(),
@@ -97,8 +126,8 @@ const activityQuery = z.strictObject({
 });
 const noQuery = z.strictObject({});
 const overridesQuery = z.strictObject({ after: z.uuid().optional(), limit: limitSchema });
-const flagColumns = `f.id, f.project_id, c.environment_id, f.key, f.name, f.description,
-  f.owner, f.archived, f.revision, c.enabled, c.configuration, f.updated_at`;
+const flagColumns = `f.id, f.project_id, c.environment_id, f.key, c.name, c.description,
+  c.owner, c.archived, c.lifecycle, c.revision, c.enabled, c.configuration, c.updated_at`;
 
 function query<T>(context: RouteContext, schema: z.ZodType<T>): T {
   const input: Record<string, string> = {};
@@ -149,6 +178,7 @@ function flag(row: FlagRow): Flag {
     description: row.description,
     owner: row.owner,
     archived: row.archived,
+    lifecycle: row.lifecycle,
     revision: row.revision,
     enabled: row.enabled,
     configuration: row.configuration,
@@ -172,6 +202,8 @@ function snapshot(value: Flag) {
     description: value.description,
     owner: value.owner,
     archived: value.archived,
+    lifecycle: value.lifecycle,
+    revision: value.revision,
     enabled: value.enabled,
     configuration: value.configuration,
   });
@@ -197,7 +229,14 @@ async function findFlag(
     [projectId, environmentId, key]
   );
   if (!result.rows[0]) throw new HttpError(404, 'Flag not found');
-  return flag(result.rows[0]);
+  const row = result.rows[0];
+  row.configuration = await resolveConfiguration(
+    database,
+    projectId,
+    environmentId,
+    row.configuration
+  );
+  return flag(row);
 }
 async function transaction<T>(
   pool: Pool,
@@ -225,12 +264,14 @@ async function audit(
   action: string,
   overrideChange?: { previous: SubjectOverride | null; next: SubjectOverride | null }
 ) {
+  await invalidateSegmentReview(client, previous, next);
+  const id = randomUUID();
   await client.query(
     `INSERT INTO flightdeck.audit
     (id, flag_id, environment_id, project_id, actor_id, actor_name, action, revision, previous, next)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
     [
-      randomUUID(),
+      id,
       next.id,
       next.environmentId,
       next.projectId,
@@ -250,11 +291,212 @@ async function audit(
       }),
     ]
   );
+  await writeUnifiedAudit(
+    client,
+    actor,
+    { projectId: next.projectId, environmentId: next.environmentId },
+    { type: 'flag', id: next.id, key: next.key, name: next.name },
+    action,
+    previous
+      ? { ...snapshot(previous), ...(overrideChange ? { override: overrideChange.previous } : {}) }
+      : null,
+    { ...snapshot(next), ...(overrideChange ? { override: overrideChange.next } : {}) },
+    undefined,
+    id
+  );
 }
 
-export function createRoutes(pool: Pool, directory = new DirectoryClient([])): Routes {
+async function inventory(database: Database, context: RouteContext, localEnvironmentId?: string) {
+  const actor = operator(context);
+  const projectId = z.uuid().parse(context.params.projectId);
+  const input = query(context, inventoryQuery);
+  if (localEnvironmentId && input.environmentId && input.environmentId !== localEnvironmentId)
+    throw new HttpError(400, 'The scoped inventory cannot select another environment');
+  const selectedEnvironment = localEnvironmentId ?? input.environmentId ?? null;
+  type SummaryEnvironment = Omit<FlagSummary['environments'][number], 'configurationSummary'> & {
+    updatedAt: string;
+    offValue: TypedValue;
+    defaultOutcome: Outcome;
+    rules: number;
+    variants: number;
+  };
+  const result = await database.query<{
+    id: string | null;
+    project_id: string;
+    key: string;
+    environments: SummaryEnvironment[];
+  }>(
+    `SELECT f.id,f.project_id,f.key,COALESCE(gates.environments,'[]'::jsonb) AS environments
+      FROM flightdeck.projects p LEFT JOIN LATERAL (
+        SELECT f.id,f.project_id,f.key FROM flightdeck.flags f WHERE f.project_id=p.id
+          AND ($3::text IS NULL OR f.key>$3)
+          AND EXISTS (SELECT 1 FROM flightdeck.configurations c WHERE c.flag_id=f.id
+            AND ($7::uuid IS NULL OR c.environment_id=$7)
+            AND ($4='all' OR c.archived=($4='archived'))
+            AND ($5='' OR strpos(lower(f.key || ' ' || c.name || ' ' || c.description || ' ' || c.owner),lower($5))>0)
+            AND ($8::text IS NULL OR c.lifecycle=$8)
+            AND ($9::text IS NULL OR ($9='temporary' AND c.lifecycle IN ('development','release'))
+              OR ($9='long-lived' AND c.lifecycle IN ('system','permissions'))))
+        ORDER BY f.key LIMIT $6
+      ) f ON true LEFT JOIN LATERAL (
+        SELECT jsonb_agg(jsonb_build_object(
+          'environmentId',e.id,'enabled',c.enabled,'archived',c.archived,'lifecycle',c.lifecycle,
+          'name',c.name,'description',c.description,'owner',c.owner,'revision',c.revision,'updatedAt',c.updated_at,
+          'valueType',c.configuration->'offValue'->>'type','offValue',c.configuration->'offValue',
+          'defaultOutcome',c.configuration->'defaultOutcome','rules',jsonb_array_length(c.configuration->'rules'),
+          'variants',jsonb_array_length(c.configuration->'variants'),
+          'audienceSummary',CASE WHEN jsonb_array_length(c.configuration->'rules')=0 THEN
+            CASE WHEN c.configuration->'defaultOutcome'='{"kind":"value","value":{"type":"boolean","value":true}}'::jsonb
+              THEN 'Everyone' ELSE 'No audience rules' END
+            ELSE COALESCE((SELECT string_agg(s.published->>'name',', ' ORDER BY s.key) FROM flightdeck.segments s
+              WHERE s.project_id=c.project_id AND s.environment_id=c.environment_id AND s.published IS NOT NULL
+              AND EXISTS(SELECT 1 FROM jsonb_array_elements(c.configuration->'rules') r WHERE (r->'segmentIds') ? s.id::text)), '')
+              || CASE WHEN EXISTS(SELECT 1 FROM jsonb_array_elements(c.configuration->'rules') r WHERE jsonb_array_length(r->'conditions')>0)
+                THEN ' · Direct targeting rules' ELSE '' END END
+        ) ORDER BY e.key,e.id) AS environments FROM flightdeck.configurations c
+        JOIN flightdeck.environments e ON e.id=c.environment_id AND e.project_id=p.id
+        WHERE c.flag_id=f.id AND c.project_id=p.id AND ($10::uuid IS NULL OR c.environment_id=$10)
+      ) gates ON true WHERE p.id=$1 AND p.organization_id=$2 ORDER BY f.key`,
+    [
+      projectId,
+      actor.organizationId,
+      input.after ?? null,
+      input.archived,
+      input.search,
+      input.limit + 1,
+      selectedEnvironment,
+      input.lifecycle ?? null,
+      input.longevity ?? null,
+      localEnvironmentId ?? null,
+    ]
+  );
+  if (!result.rowCount) throw new HttpError(404, 'Project not found');
+  const rows = result.rows.filter((row) => row.id !== null);
+  const valueLabel = (value: TypedValue) => {
+    const text = JSON.stringify(value.value);
+    return text.length > 80 ? `${value.type} value` : text;
+  };
+  const items = rows.slice(0, input.limit).map((row) => {
+    const first = row.environments[0]!;
+    return {
+      id: row.id,
+      projectId: row.project_id,
+      key: row.key,
+      name: first.name,
+      description: first.description,
+      owner: first.owner,
+      archived: first.archived,
+      lifecycle: first.lifecycle,
+      revision: first.revision,
+      updatedAt: new Date(first.updatedAt).toISOString(),
+      environments: row.environments.map(
+        ({ updatedAt: _updatedAt, offValue, defaultOutcome, rules, variants, ...entry }) => ({
+          ...entry,
+          audienceSummary: entry.audienceSummary || `${rules} ordered targeting rules`,
+          configurationSummary: `Gate Off → ${valueLabel(offValue)}; default → ${
+            defaultOutcome.kind === 'value'
+              ? valueLabel(defaultOutcome.value)
+              : defaultOutcome.kind === 'variant'
+                ? `variant ${defaultOutcome.variantId}`
+                : 'weighted variants'
+          } · ${rules} ordered rules · ${variants} variants`,
+        })
+      ),
+    };
+  });
+  return flagsSchema.parse({
+    items,
+    nextCursor: rows.length > input.limit ? items.at(-1)!.key : null,
+  });
+}
+
+export function createRoutes(
+  pool: Pool,
+  directory = new DirectoryClient([]),
+  deployment: Deployment = defaultDeployment
+): Routes {
+  deployment = deploymentSchema.parse(deployment);
   const base = '/api/v1/projects/:projectId/environments/:environmentId';
   const routes: Routes = {
+    'GET /api/v1/deployment': async (context) => {
+      operator(context);
+      query(context, noQuery);
+      return deployment;
+    },
+    [`GET ${base}/segments`]: async (context) => {
+      operator(context);
+      query(context, noQuery);
+      return transaction(
+        pool,
+        async (client) => {
+          const { projectId, environmentId } = await scope(client, context);
+          return segmentLibrarySchema.parse({
+            items: await listSegments(client, projectId, environmentId),
+          });
+        },
+        true
+      );
+    },
+    [`GET ${base}/segments/:segmentId/history`]: async (context) => {
+      operator(context);
+      const input = query(context, segmentHistoryQuerySchema);
+      const { projectId, environmentId } = await scope(pool, context);
+      const id = z.uuid().parse(context.params.segmentId);
+      return readSegmentHistory(pool, projectId, environmentId, id, input);
+    },
+    [`POST ${base}/segments`]: async (context) => {
+      const actor = operator(context, 'write');
+      query(context, noQuery);
+      const { projectId, environmentId } = await scope(pool, context);
+      const input = createSegmentSchema.parse(context.body);
+      return transaction(pool, (client) =>
+        createSegment(client, actor, projectId, environmentId, input)
+      );
+    },
+    [`PUT ${base}/segments/:segmentId/draft`]: async (context) => {
+      const actor = operator(context, 'write');
+      query(context, noQuery);
+      const { projectId, environmentId } = await scope(pool, context);
+      const id = z.uuid().parse(context.params.segmentId);
+      const input = updateSegmentDraftSchema.parse(context.body);
+      return transaction(pool, (client) =>
+        saveSegmentDraft(client, actor, projectId, environmentId, id, input)
+      );
+    },
+    [`POST ${base}/segments/:segmentId/publish`]: async (context) => {
+      const actor = operator(context, 'write');
+      query(context, noQuery);
+      const { projectId, environmentId } = await scope(pool, context);
+      const id = z.uuid().parse(context.params.segmentId);
+      const input = publishSegmentSchema.parse(context.body);
+      return transaction(pool, (client) =>
+        publishSegment(client, actor, projectId, environmentId, id, input.expectedRevision)
+      );
+    },
+    [`POST ${base}/segments/:segmentId/restore`]: async (context) => {
+      const actor = operator(context, 'write');
+      query(context, noQuery);
+      const { projectId, environmentId } = await scope(pool, context);
+      const id = z.uuid().parse(context.params.segmentId);
+      const input = restoreSegmentSchema.parse(context.body);
+      return transaction(pool, (client) =>
+        restoreSegment(
+          client,
+          actor,
+          projectId,
+          environmentId,
+          id,
+          input.expectedRevision,
+          input.version
+        )
+      );
+    },
+    [`GET ${base}/audit`]: async (context) => {
+      operator(context);
+      const input = query(context, auditQuerySchema);
+      const { projectId, environmentId } = await scope(pool, context);
+      return readAudit(pool, projectId, environmentId, input);
+    },
     [`GET ${base}/directory`]: async (context) => {
       operator(context);
       query(context, noQuery);
@@ -323,61 +565,11 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
       }
       return projectsSchema.parse({ items: [...projects.values()] });
     },
-    'GET /api/v1/projects/:projectId/flags': async (context) => {
-      const actor = operator(context);
-      const projectId = z.uuid().parse(context.params.projectId);
-      const input = query(context, inventoryQuery);
-      const result = await pool.query<FlagSummaryRow>(
-        `SELECT f.id, f.project_id, f.key, f.name, f.description, f.owner, f.archived,
-          f.revision, f.updated_at, gates.environments
-        FROM flightdeck.projects p
-        LEFT JOIN LATERAL (
-          SELECT f.id, f.project_id, f.key, f.name, f.description, f.owner, f.archived,
-            f.revision, f.updated_at
-          FROM flightdeck.flags f
-          WHERE f.project_id = p.id
-          AND ($3::text IS NULL OR f.key > $3)
-          AND ($4 = 'all' OR f.archived = ($4 = 'archived'))
-          AND ($5 = '' OR strpos(lower(f.key || ' ' || f.name || ' ' || f.description || ' ' || f.owner), lower($5)) > 0)
-          ORDER BY f.key LIMIT $6
-        ) f ON true
-        LEFT JOIN LATERAL (
-          SELECT COALESCE(jsonb_agg(jsonb_build_object(
-            'environmentId', e.id, 'enabled', c.enabled
-          ) ORDER BY e.key, e.id), '[]'::jsonb) AS environments
-          FROM flightdeck.configurations c
-          JOIN flightdeck.environments e ON e.id = c.environment_id AND e.project_id = p.id
-          WHERE c.flag_id = f.id AND c.project_id = p.id
-        ) gates ON true
-        WHERE p.id = $1 AND p.organization_id = $2
-        ORDER BY f.key`,
-        [
-          projectId,
-          actor.organizationId,
-          input.after ?? null,
-          input.archived,
-          input.search,
-          input.limit + 1,
-        ]
-      );
-      if (!result.rowCount) throw new HttpError(404, 'Project not found');
-      const rows = result.rows.filter((row) => row.id !== null);
-      const items = rows.slice(0, input.limit).map((row) => ({
-        id: row.id,
-        projectId: row.project_id,
-        key: row.key,
-        name: row.name,
-        description: row.description,
-        owner: row.owner,
-        archived: row.archived,
-        revision: row.revision,
-        updatedAt: row.updated_at.toISOString(),
-        environments: row.environments,
-      }));
-      return flagsSchema.parse({
-        items,
-        nextCursor: rows.length > input.limit ? items.at(-1)!.key : null,
-      });
+    'GET /api/v1/projects/:projectId/flags': async (context) => inventory(pool, context),
+    [`GET ${base}/flags`]: async (context) => {
+      operator(context);
+      const { environmentId } = await scope(pool, context);
+      return inventory(pool, context, environmentId);
     },
     [`POST ${base}/flags`]: async (context) => {
       const actor = operator(context, 'write');
@@ -385,23 +577,28 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
       const { projectId, environmentId } = await scope(pool, context);
       const input = createFlagSchema.parse(context.body);
       return transaction(pool, async (client) => {
-        const id = randomUUID();
+        await lockEnvironment(client, projectId, environmentId);
+        const identity = await client.query<{ id: string }>(
+          `INSERT INTO flightdeck.flags(id,project_id,key) VALUES($1,$2,$3)
+            ON CONFLICT(project_id,key) DO UPDATE SET key=EXCLUDED.key RETURNING id`,
+          [randomUUID(), projectId, input.key]
+        );
+        const id = identity.rows[0]!.id;
         await client.query(
-          `INSERT INTO flightdeck.flags (id, project_id, key, name, description, owner)
-          VALUES ($1,$2,$3,$4,$5,$6)`,
-          [id, projectId, input.key, input.name, input.description, input.owner]
+          `INSERT INTO flightdeck.configurations
+            (flag_id,environment_id,project_id,enabled,configuration,name,description,owner,archived,lifecycle,revision,updated_at)
+            VALUES($1,$2,$3,false,$4,$5,$6,$7,false,$8,1,clock_timestamp())`,
+          [
+            id,
+            environmentId,
+            projectId,
+            JSON.stringify(defaultConfiguration(randomUUID())),
+            input.name,
+            input.description,
+            input.owner,
+            input.lifecycle,
+          ]
         );
-        const environments = await client.query<{ id: string }>(
-          'SELECT id FROM flightdeck.environments WHERE project_id = $1',
-          [projectId]
-        );
-        for (const environment of environments.rows) {
-          await client.query(
-            `INSERT INTO flightdeck.configurations (flag_id, environment_id, project_id, enabled, configuration)
-            VALUES ($1,$2,$3,false,$4)`,
-            [id, environment.id, projectId, JSON.stringify(defaultConfiguration(randomUUID()))]
-          );
-        }
         const next = await findFlag(client, projectId, environmentId, input.key);
         await audit(client, actor, null, next, 'created');
         return next;
@@ -420,6 +617,7 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
       const key = flagKeySchema.parse(context.params.flagKey);
       const input = updateFlagSchema.parse(context.body);
       return transaction(pool, async (client) => {
+        await lockEnvironment(client, projectId, environmentId);
         const previous = await findFlag(client, projectId, environmentId, key, true);
         if (previous.revision !== input.expectedRevision)
           throw new HttpError(409, 'Flag revision conflict; reload before saving');
@@ -427,14 +625,16 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
         if (archived && input.enabled === true)
           throw new HttpError(400, 'Archived flags cannot be enabled; restore the flag first');
         await client.query(
-          `UPDATE flightdeck.flags SET name = $1, description = $2, owner = $3,
-          archived = $4, revision = revision + 1, updated_at = clock_timestamp() WHERE id = $5`,
+          `UPDATE flightdeck.configurations SET name=$1,description=$2,owner=$3,
+          archived=$4,lifecycle=$5,revision=revision+1,updated_at=clock_timestamp() WHERE flag_id=$6 AND environment_id=$7`,
           [
             input.name ?? previous.name,
             input.description ?? previous.description,
             input.owner ?? previous.owner,
             archived,
+            input.lifecycle ?? previous.lifecycle,
             previous.id,
+            environmentId,
           ]
         );
         if (input.enabled !== undefined) {
@@ -481,9 +681,9 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
         created_at: Date;
       }>(
         `SELECT id, flag_id, environment_id, actor_id, actor_name, action, revision, previous, next, created_at
-        FROM flightdeck.audit WHERE flag_id = $1 AND project_id = $2
-        AND ($3::integer IS NULL OR revision < $3) ORDER BY revision DESC LIMIT $4`,
-        [value.id, projectId, input.before ?? null, input.limit + 1]
+        FROM flightdeck.audit WHERE flag_id=$1 AND project_id=$2 AND environment_id=$3
+        AND ($4::integer IS NULL OR revision<$4) ORDER BY revision DESC LIMIT $5`,
+        [value.id, projectId, environmentId, input.before ?? null, input.limit + 1]
       );
       const items = result.rows.slice(0, input.limit).map((row) => ({
         id: row.id,
@@ -505,24 +705,25 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
     [`GET ${base}/catalog`]: async (context) => {
       operator(context);
       query(context, noQuery);
-      const { projectId } = await scope(pool, context);
-      return readCatalog(pool, projectId);
+      const { projectId, environmentId } = await scope(pool, context);
+      return readCatalog(pool, projectId, environmentId);
     },
     [`PUT ${base}/catalog`]: async (context) => {
       const actor = operator(context, 'write');
       query(context, noQuery);
-      const { projectId } = await scope(pool, context);
+      const { projectId, environmentId } = await scope(pool, context);
       const input = catalogUpdateSchema.parse(context.body);
       return transaction(pool, async (client) => {
-        const previous = await readCatalog(client, projectId, true);
+        await lockEnvironment(client, projectId, environmentId);
+        const previous = await readCatalog(client, projectId, environmentId, true);
         if (previous.revision !== input.expectedRevision)
           throw new HttpError(409, 'Catalog revision conflict; reload before saving');
-        return saveCatalog(client, actor, previous, input.catalog);
+        return saveCatalog(client, actor, previous, input.catalog, environmentId);
       });
     },
     [`GET ${base}/catalog/activity`]: async (context) => {
       operator(context);
-      const { projectId } = await scope(pool, context);
+      const { projectId, environmentId } = await scope(pool, context);
       const input = query(context, activityQuery);
       const result = await pool.query<{
         id: string;
@@ -534,9 +735,9 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
         next: unknown;
         created_at: Date;
       }>(
-        `SELECT * FROM flightdeck.project_targeting_audit WHERE project_id = $1
-        AND ($2::integer IS NULL OR revision < $2) ORDER BY revision DESC LIMIT $3`,
-        [projectId, input.before ?? null, input.limit + 1]
+        `SELECT * FROM flightdeck.environment_targeting_audit WHERE project_id=$1 AND environment_id=$2
+        AND ($3::integer IS NULL OR revision<$3) ORDER BY revision DESC LIMIT $4`,
+        [projectId, environmentId, input.before ?? null, input.limit + 1]
       );
       const items = result.rows.slice(0, input.limit).map((row) => ({
         id: row.id,
@@ -560,16 +761,24 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
       const key = flagKeySchema.parse(context.params.flagKey);
       const input = publishConfigurationSchema.parse(context.body);
       return transaction(pool, async (client) => {
+        await lockEnvironment(client, projectId, environmentId);
         const previous = await findFlag(client, projectId, environmentId, key, true);
         if (previous.revision !== input.expectedRevision)
           throw new HttpError(409, 'Flag revision conflict; reload before saving');
-        const catalog = await readCatalog(client, projectId, true);
-        const configuration = pinConfiguration(
+        const catalog = await readCatalog(client, projectId, environmentId, true);
+        const proposed = publishConfiguration(
           input.configuration,
           previous.configuration,
           catalog,
           input.expectedCatalogRevision
         );
+        const configuration = await resolveConfiguration(
+          client,
+          projectId,
+          environmentId,
+          proposed
+        );
+        validateConfigurationTypes(configuration);
         await validateActiveOverrides(
           client,
           previous.id,
@@ -579,11 +788,11 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
         );
         await client.query(
           'UPDATE flightdeck.configurations SET configuration = $1 WHERE flag_id = $2 AND environment_id = $3',
-          [JSON.stringify(configuration), previous.id, environmentId]
+          [JSON.stringify({ ...configuration, segments: [] }), previous.id, environmentId]
         );
         await client.query(
-          'UPDATE flightdeck.flags SET revision = revision + 1, updated_at = clock_timestamp() WHERE id = $1',
-          [previous.id]
+          'UPDATE flightdeck.configurations SET revision=revision+1,updated_at=clock_timestamp() WHERE flag_id=$1 AND environment_id=$2',
+          [previous.id, environmentId]
         );
         const next = await findFlag(client, projectId, environmentId, key);
         await audit(client, actor, previous, next, 'configuration');
@@ -622,13 +831,20 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
               warnings: [],
               allocationChanged: false,
             });
-          const catalog = await readCatalog(client, projectId);
-          const configuration = pinConfiguration(
+          const catalog = await readCatalog(client, projectId, environmentId);
+          const proposedConfiguration = publishConfiguration(
             input.proposedConfiguration,
             currentFlag.configuration,
             catalog,
             input.expectedCatalogRevision
           );
+          const configuration = await resolveConfiguration(
+            client,
+            projectId,
+            environmentId,
+            proposedConfiguration
+          );
+          validateConfigurationTypes(configuration);
           await validateActiveOverrides(client, currentFlag.id, environmentId, configuration, now);
           const changes = configurationWarnings(currentFlag.configuration, configuration);
           const proposed = evaluate({
@@ -671,6 +887,7 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
       const key = flagKeySchema.parse(context.params.flagKey);
       const input = createOverrideSchema.parse(context.body);
       return transaction(pool, async (client) => {
+        await lockEnvironment(client, projectId, environmentId);
         const previous = await findFlag(client, projectId, environmentId, key, true);
         if (previous.revision !== input.expectedRevision)
           throw new HttpError(409, 'Flag revision conflict; reload before saving');
@@ -704,8 +921,8 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
           ]
         );
         await client.query(
-          'UPDATE flightdeck.flags SET revision = revision + 1, updated_at = clock_timestamp() WHERE id = $1',
-          [previous.id]
+          'UPDATE flightdeck.configurations SET revision=revision+1,updated_at=clock_timestamp() WHERE flag_id=$1 AND environment_id=$2',
+          [previous.id, environmentId]
         );
         const next = await findFlag(client, projectId, environmentId, key);
         await audit(client, actor, previous, next, 'override_created', {
@@ -723,6 +940,7 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
       const overrideId = z.uuid().parse(context.params.overrideId);
       const input = revokeOverrideSchema.parse(context.body);
       return transaction(pool, async (client) => {
+        await lockEnvironment(client, projectId, environmentId);
         const previous = await findFlag(client, projectId, environmentId, key, true);
         if (previous.revision !== input.expectedRevision)
           throw new HttpError(409, 'Flag revision conflict; reload before saving');
@@ -738,8 +956,8 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
           [overrideId]
         );
         await client.query(
-          'UPDATE flightdeck.flags SET revision = revision + 1, updated_at = clock_timestamp() WHERE id = $1',
-          [previous.id]
+          'UPDATE flightdeck.configurations SET revision=revision+1,updated_at=clock_timestamp() WHERE flag_id=$1 AND environment_id=$2',
+          [previous.id, environmentId]
         );
         const next = await findFlag(client, projectId, environmentId, key);
         await audit(client, actor, previous, next, 'override_revoked', {
@@ -841,6 +1059,25 @@ export function createRoutes(pool: Pool, directory = new DirectoryClient([])): R
       key,
       async (context: RouteContext) => {
         try {
+          const mutating =
+            !key.startsWith('GET ') &&
+            !key.endsWith('/evaluate/:flagKey') &&
+            !key.endsWith('/preview') &&
+            !key.endsWith('/directory/resolve');
+          if (mutating) {
+            operator(context, key.includes('/credentials') ? 'admin' : 'write');
+            if (deployment.mode !== 'local')
+              throw new HttpError(403, 'The master dashboard is read-only');
+            if (!context.params.environmentId)
+              throw new HttpError(403, 'A local environment scope is required');
+            const binding = await scope(pool, context);
+            const environment = await pool.query<{ key: string }>(
+              'SELECT key FROM flightdeck.environments WHERE id=$1 AND project_id=$2',
+              [binding.environmentId, binding.projectId]
+            );
+            if (environment.rows[0]?.key !== deployment.environmentKey)
+              throw new HttpError(403, 'This dashboard can write only its deployment environment');
+          }
           return await handler(context);
         } catch (error) {
           if (error instanceof z.ZodError)

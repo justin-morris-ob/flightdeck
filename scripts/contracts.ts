@@ -37,6 +37,17 @@ import {
   createOverrideSchema,
   revokeOverrideSchema,
 } from '../shared/targeting.ts';
+import {
+  deploymentSchema,
+  segmentRecordSchema,
+  segmentLibrarySchema,
+  segmentHistorySchema,
+  createSegmentSchema,
+  updateSegmentDraftSchema,
+  publishSegmentSchema,
+  restoreSegmentSchema,
+  auditTrailSchema,
+} from '../shared/unified.ts';
 
 const output = new URL('../api/openapi.json', import.meta.url);
 const componentSchemas: Record<string, unknown> = {};
@@ -69,6 +80,15 @@ const schemaNames = new Map<z.ZodType, string>([
   [directorySearchSchema, 'DirectorySearch'],
   [directoryResolveSchema, 'DirectoryResolve'],
   [directoryResolveRequestSchema, 'ResolveDirectory'],
+  [deploymentSchema, 'Deployment'],
+  [segmentRecordSchema, 'SegmentRecord'],
+  [segmentLibrarySchema, 'SegmentLibrary'],
+  [segmentHistorySchema, 'SegmentHistory'],
+  [createSegmentSchema, 'CreateSegment'],
+  [updateSegmentDraftSchema, 'UpdateSegmentDraft'],
+  [publishSegmentSchema, 'PublishSegment'],
+  [restoreSegmentSchema, 'RestoreSegment'],
+  [auditTrailSchema, 'AuditTrail'],
 ]);
 function rebaseReferences(value: unknown, name: string): unknown {
   if (Array.isArray(value)) return value.map((item) => rebaseReferences(item, name));
@@ -175,9 +195,9 @@ const document = {
   openapi: '3.1.0',
   info: {
     title: 'Flightdeck API',
-    version: '2.1.0',
+    version: '3.0.0',
     description:
-      'Local-development API with the Stage 3 bounded string-list context extension. Version 2.0 replaced Stage 1 boolean GET evaluation with typed POST evaluation; this is not a production-stable external API. Signed local sessions remain demo-only. Inventory is project-scoped, with one shared flag row and ordered environment gate summaries rather than full configurations. Enabled state and typed configuration are environment-specific; metadata, archive state and flag revisions are project-wide. Publication pins project context/segment definitions. Archive/disable return the configured typed off value. Credentials grant explicit tenant contexts within one project/environment. Context and proposed configuration retain independent bounds inside a 64-KiB HTTP envelope. No context is stored as exposure or used as entitlement authorization.',
+      'Local-development API with deployment-fixed local authoring and read-only master observation. Dashboard mode and environment come only from validated server configuration; master mode is not production authentication. Signed local sessions remain loopback-only and demo-only. Flag identity is shared by project key, but metadata, lifecycle, archive state, revisions, gates and configurations are environment-local. Creating a flag initializes only the configured local environment, disabled. Reusable segments have independent drafts and immutable publication history. Published flag references follow current local published segment blocks (OR blocks, AND conditions) without republishing flags or changing flag revisions or gates; historical audit retains original snapshots. Catalog writes edit only local attributes. All operator mutations require local dashboard mode and the configured environment. Credentials grant explicit tenant contexts within one project/environment. Context and proposed configuration retain independent bounds inside a 64-KiB HTTP envelope. No context is stored as exposure or used as entitlement authorization. This is not a production-stable external API.',
   },
   servers: [{ url: 'http://localhost:4721' }],
   components: {
@@ -236,6 +256,123 @@ const document = {
     '/api/v1/projects': {
       get: operation('List projects and environments in the operator organization', projectsSchema),
     },
+    '/api/v1/deployment': {
+      get: operation(
+        'Read validated server-fixed dashboard mode, environment and dashboard links',
+        deploymentSchema
+      ),
+    },
+    [`${scope}/segments`]: {
+      get: operation(
+        'Read local segment drafts, published definitions, history and published flag usage',
+        segmentLibrarySchema,
+        {
+          parameters: scopeParameters,
+        }
+      ),
+      post: operation(
+        'Create an environment-local segment draft; local editor or administrator only',
+        segmentRecordSchema,
+        {
+          parameters: scopeParameters,
+          body: createSegmentSchema,
+        }
+      ),
+    },
+    [`${scope}/segments/{segmentId}/draft`]: {
+      put: operation(
+        'Save a segment draft against its expected local revision without publishing',
+        segmentRecordSchema,
+        {
+          parameters: [
+            ...scopeParameters,
+            parameter('segmentId', 'path', { type: 'string', format: 'uuid' }),
+          ],
+          body: updateSegmentDraftSchema,
+        }
+      ),
+    },
+    [`${scope}/segments/{segmentId}/publish`]: {
+      post: operation(
+        'Publish a reviewed segment draft for all local published references atomically; preserve flag revisions and gates',
+        segmentRecordSchema,
+        {
+          parameters: [
+            ...scopeParameters,
+            parameter('segmentId', 'path', { type: 'string', format: 'uuid' }),
+          ],
+          body: publishSegmentSchema,
+        }
+      ),
+    },
+    [`${scope}/segments/{segmentId}/restore`]: {
+      post: operation(
+        'Restore a historical segment definition into a revision-guarded draft; never change the published definition',
+        segmentRecordSchema,
+        {
+          parameters: [
+            ...scopeParameters,
+            parameter('segmentId', 'path', { type: 'string', format: 'uuid' }),
+          ],
+          body: restoreSegmentSchema,
+        }
+      ),
+    },
+    [`${scope}/segments/{segmentId}/history`]: {
+      get: operation(
+        'Read immutable published segment history in descending version order; authorized environment scope',
+        segmentHistorySchema,
+        {
+          parameters: [
+            ...scopeParameters,
+            parameter('segmentId', 'path', { type: 'string', format: 'uuid' }),
+            parameter('before', 'query', {
+              type: 'integer',
+              minimum: 1,
+              maximum: 2147483647,
+              description: 'Exclusive version cursor from the previous page nextCursor',
+            }),
+            parameter('limit', 'query', {
+              type: 'integer',
+              minimum: 1,
+              maximum: 100,
+              default: 20,
+            }),
+          ],
+        }
+      ),
+    },
+    [`${scope}/audit`]: {
+      get: operation(
+        'Search immutable environment-local flag and segment audit snapshots with opaque pagination',
+        auditTrailSchema,
+        {
+          parameters: [
+            ...scopeParameters,
+            parameter('search', 'query', { type: 'string', maxLength: 100 }),
+            parameter('objectType', 'query', { type: 'string', enum: ['flag', 'segment'] }),
+            parameter('objectId', 'query', { type: 'string', format: 'uuid' }),
+            parameter('actor', 'query', { type: 'string', maxLength: 100 }),
+            parameter('action', 'query', { type: 'string', maxLength: 100 }),
+            parameter('before', 'query', {
+              type: 'string',
+              description: 'Opaque exclusive pagination cursor returned as nextCursor',
+            }),
+            parameter('since', 'query', {
+              type: 'string',
+              format: 'date-time',
+              description: 'Inclusive UTC ISO datetime lower bound',
+            }),
+            parameter('until', 'query', {
+              type: 'string',
+              format: 'date-time',
+              description: 'Inclusive UTC ISO datetime upper bound',
+            }),
+            parameter('limit', 'query', { type: 'integer', minimum: 1, maximum: 100, default: 20 }),
+          ],
+        }
+      ),
+    },
     [`${scope}/directory`]: {
       get: operation(
         'Read optional directory binding; operator viewer or above; configured is not a health claim',
@@ -283,12 +420,18 @@ const document = {
     },
     '/api/v1/projects/{projectId}/flags': {
       get: operation(
-        'List shared project flags with environment gates, ordered by immutable key; operator viewer or above',
+        'List project flag identities with environment-local metadata, lifecycle and configuration summaries; operator viewer or above',
         flagsSchema,
         {
           parameters: [
             parameter('projectId', 'path', { type: 'string', format: 'uuid' }),
             parameter('search', 'query', { type: 'string', maxLength: 100 }),
+            parameter('environmentId', 'query', {
+              type: 'string',
+              format: 'uuid',
+              description:
+                'Filter inventory search and archive state to one authorized environment',
+            }),
             parameter('after', 'query', {
               type: 'string',
               description: 'Exclusive last flag key from previous page',
@@ -304,8 +447,36 @@ const document = {
       ),
     },
     [`${scope}/flags`]: {
+      get: operation(
+        'List flags initialized in this environment; apply local metadata and lifecycle filters before pagination',
+        flagsSchema,
+        {
+          parameters: [
+            ...scopeParameters,
+            parameter('search', 'query', { type: 'string', maxLength: 100 }),
+            parameter('after', 'query', {
+              type: 'string',
+              description: 'Exclusive last flag key from previous page',
+            }),
+            parameter('limit', 'query', { type: 'integer', minimum: 1, maximum: 20, default: 20 }),
+            parameter('archived', 'query', {
+              type: 'string',
+              enum: ['active', 'archived', 'all'],
+              default: 'active',
+            }),
+            parameter('lifecycle', 'query', {
+              type: 'string',
+              enum: ['development', 'release', 'system', 'permissions'],
+            }),
+            parameter('longevity', 'query', {
+              type: 'string',
+              enum: ['temporary', 'long-lived'],
+            }),
+          ],
+        }
+      ),
       post: operation(
-        'Create a project flag disabled in all environments; editor or administrator',
+        'Initialize a flag disabled only in the configured local environment; reuse project key identity; editor or administrator',
         flagSchema,
         { parameters: scopeParameters, body: createFlagSchema }
       ),
@@ -315,28 +486,24 @@ const document = {
         parameters: [...scopeParameters, flagParameter],
       }),
       patch: operation(
-        'Publish a configuration/metadata change against the expected global revision',
+        'Publish local metadata or state against the expected environment-local revision',
         flagSchema,
         { parameters: [...scopeParameters, flagParameter], body: updateFlagSchema }
       ),
     },
     [`${scope}/flags/{flagKey}/activity`]: {
-      get: operation(
-        'Read immutable project flag history, including environment of each change',
-        activitySchema,
-        {
-          parameters: [
-            ...scopeParameters,
-            flagParameter,
-            parameter('before', 'query', {
-              type: 'integer',
-              minimum: 1,
-              description: 'Exclusive revision cursor',
-            }),
-            parameter('limit', 'query', { type: 'integer', minimum: 1, maximum: 100, default: 20 }),
-          ],
-        }
-      ),
+      get: operation('Read immutable environment-local flag history', activitySchema, {
+        parameters: [
+          ...scopeParameters,
+          flagParameter,
+          parameter('before', 'query', {
+            type: 'integer',
+            minimum: 1,
+            description: 'Exclusive revision cursor',
+          }),
+          parameter('limit', 'query', { type: 'integer', minimum: 1, maximum: 100, default: 20 }),
+        ],
+      }),
     },
     [`${scope}/evaluate/{flagKey}`]: {
       post: operation(
@@ -351,28 +518,32 @@ const document = {
     },
     [`${scope}/catalog`]: {
       get: operation(
-        'Read the project-wide reusable targeting catalog; running flags stay pinned',
+        'Read local targeting attributes and current published segment blocks',
         catalogSchema,
         { parameters: scopeParameters }
       ),
       put: operation(
-        'Publish a revision-checked catalog edit without changing any environment configuration',
+        'Publish revision-checked local attribute definitions; segments use separate draft and publication routes',
         catalogSchema,
         { parameters: scopeParameters, body: catalogUpdateSchema }
       ),
     },
     [`${scope}/catalog/activity`]: {
-      get: operation('Read immutable project catalog history', catalogActivitySchema, {
-        parameters: [
-          ...scopeParameters,
-          parameter('before', 'query', { type: 'integer', minimum: 1 }),
-          parameter('limit', 'query', { type: 'integer', minimum: 1, maximum: 100, default: 20 }),
-        ],
-      }),
+      get: operation(
+        'Read immutable environment-local attribute catalog history',
+        catalogActivitySchema,
+        {
+          parameters: [
+            ...scopeParameters,
+            parameter('before', 'query', { type: 'integer', minimum: 1 }),
+            parameter('limit', 'query', { type: 'integer', minimum: 1, maximum: 100, default: 20 }),
+          ],
+        }
+      ),
     },
     [`${scope}/flags/{flagKey}/configuration`]: {
       put: operation(
-        'Publish typed configuration with expected flag/catalog revisions and immutable allocation namespace',
+        'Publish typed local configuration with expected flag/catalog revisions and immutable allocation namespace; segment references follow local publication',
         flagSchema,
         { parameters: [...scopeParameters, flagParameter], body: publishConfigurationSchema }
       ),
@@ -394,7 +565,7 @@ const document = {
         ],
       }),
       post: operation(
-        'Create an expiring tenant/subject override against an expected global flag revision',
+        'Create an expiring tenant/subject override against an expected environment-local flag revision',
         flagSchema,
         { parameters: [...scopeParameters, flagParameter], body: createOverrideSchema }
       ),

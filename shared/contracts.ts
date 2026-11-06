@@ -7,6 +7,7 @@ import {
   traceSchema,
   valueSchema,
 } from './targeting.ts';
+import { lifecycleSchema } from './unified.ts';
 
 export const roleSchema = z.enum(['viewer', 'editor', 'administrator']);
 export type Role = z.infer<typeof roleSchema>;
@@ -64,6 +65,7 @@ export const createFlagSchema = z.strictObject({
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(1000),
   owner: z.string().trim().min(1).max(120),
+  lifecycle: lifecycleSchema.default('development'),
 });
 export const updateFlagSchema = z
   .strictObject({
@@ -73,6 +75,7 @@ export const updateFlagSchema = z
     description: z.string().trim().max(1000).optional(),
     owner: z.string().trim().min(1).max(120).optional(),
     archived: z.boolean().optional(),
+    lifecycle: lifecycleSchema.optional(),
   })
   .refine((value) => Object.keys(value).some((key) => key !== 'expectedRevision'), {
     message: 'At least one change is required',
@@ -86,6 +89,7 @@ export const flagSchema = z.object({
   description: z.string(),
   owner: z.string(),
   archived: z.boolean(),
+  lifecycle: lifecycleSchema,
   revision: z.number().int().positive(),
   enabled: z.boolean(),
   configuration: configurationSchema,
@@ -95,7 +99,21 @@ export type Flag = z.infer<typeof flagSchema>;
 export const flagSummarySchema = flagSchema
   .omit({ environmentId: true, enabled: true, configuration: true })
   .extend({
-    environments: z.array(z.object({ environmentId: z.uuid(), enabled: z.boolean() })),
+    environments: z.array(
+      z.object({
+        environmentId: z.uuid(),
+        enabled: z.boolean(),
+        name: z.string(),
+        description: z.string(),
+        owner: z.string(),
+        archived: z.boolean(),
+        lifecycle: lifecycleSchema,
+        revision: z.number().int().positive(),
+        valueType: z.enum(['boolean', 'string', 'number', 'json']),
+        audienceSummary: z.string(),
+        configurationSummary: z.string(),
+      })
+    ),
   });
 export type FlagSummary = z.infer<typeof flagSummarySchema>;
 export const flagsSchema = z.object({
@@ -128,8 +146,10 @@ export const snapshotSchema = z.object({
   description: z.string(),
   owner: z.string(),
   archived: z.boolean(),
+  lifecycle: lifecycleSchema.optional(),
+  revision: z.number().int().positive().optional(),
   enabled: z.boolean(),
-  configuration: configurationSchema.optional(),
+  configuration: z.unknown().optional(),
   override: overrideSchema.nullable().optional(),
 });
 export const auditSchema = z.object({

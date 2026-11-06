@@ -70,7 +70,9 @@ describe('persistent directory HTTP authorization', () => {
   });
 
   beforeEach(async () => {
-    await owner.query(`TRUNCATE flightdeck.subject_overrides, flightdeck.project_targeting_audit,
+    await owner.query(`TRUNCATE flightdeck.environment_targeting, flightdeck.environment_targeting_audit,
+      flightdeck.segments, flightdeck.segment_history, flightdeck.unified_audit,
+      flightdeck.subject_overrides, flightdeck.project_targeting_audit,
       flightdeck.project_targeting, flightdeck.audit, flightdeck.configurations, flightdeck.flags,
       flightdeck.credentials, flightdeck.environments, flightdeck.projects, flightdeck.organizations`);
     await seedDatabase(migrationUrl!, token);
@@ -238,6 +240,9 @@ describe('persistent directory HTTP authorization', () => {
     }
     // A previously configured connection must not bypass removal of its persisted scope.
     await owner.query('DELETE FROM flightdeck.credentials WHERE environment_id = $1', [
+      environmentId,
+    ]);
+    await owner.query('DELETE FROM flightdeck.environment_targeting WHERE environment_id = $1', [
       environmentId,
     ]);
     await owner.query('DELETE FROM flightdeck.environments WHERE id = $1', [environmentId]);

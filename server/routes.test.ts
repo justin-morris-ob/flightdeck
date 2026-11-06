@@ -37,6 +37,7 @@ import {
   type ConfigurationInput,
   type EvaluationContext,
 } from '../shared/targeting.ts';
+import { segmentRecordSchema } from '../shared/unified.ts';
 import { sessionCookie, signSession } from './auth.ts';
 import { connectDatabase, migrate, seedDatabase } from './database.ts';
 import { createApplication } from './http.ts';
@@ -105,7 +106,9 @@ describe('PostgreSQL routes and storage', () => {
   beforeEach(async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2035-01-01T00:00:00.000Z'));
-    await owner.query(`TRUNCATE flightdeck.subject_overrides, flightdeck.project_targeting_audit,
+    await owner.query(`TRUNCATE flightdeck.environment_targeting, flightdeck.environment_targeting_audit,
+      flightdeck.segments, flightdeck.segment_history, flightdeck.unified_audit,
+      flightdeck.subject_overrides, flightdeck.project_targeting_audit,
       flightdeck.project_targeting, flightdeck.audit, flightdeck.configurations, flightdeck.flags,
       flightdeck.credentials, flightdeck.environments, flightdeck.projects, flightdeck.organizations`);
     await seedDatabase(migrationUrl!, token);
@@ -121,7 +124,17 @@ describe('PostgreSQL routes and storage', () => {
       body?: unknown;
     } = {}
   ) {
-    return routes[route]!({
+    const targetEnvironmentId = options.params?.environmentId ?? environmentId;
+    const deploymentEnvironment = localEnvironments.find(
+      (entry) => entry.id === targetEnvironmentId
+    )!;
+    const scopedRoutes = createRoutes(runtime, undefined, {
+      mode: 'local',
+      environmentKey: deploymentEnvironment.key,
+      environmentName: deploymentEnvironment.name,
+      dashboards: {},
+    });
+    return scopedRoutes[route]!({
       principal: options.principal ?? administrator,
       params: { projectId, environmentId, flagKey: 'sample', ...options.params },
       query: new URLSearchParams(options.query),
@@ -164,12 +177,23 @@ describe('PostgreSQL routes and storage', () => {
   async function publish(
     current: Flag,
     configuration: ConfigurationInput,
-    expectedCatalogRevision = 1
+    expectedCatalogRevision?: number
   ) {
+    const catalogRevision =
+      expectedCatalogRevision ??
+      catalogSchema.parse(
+        await invoke(`GET ${base}/catalog`, {
+          params: { environmentId: current.environmentId },
+        })
+      ).revision;
     return flagSchema.parse(
       await invoke(`PUT ${base}/flags/:flagKey/configuration`, {
         params: { environmentId: current.environmentId, flagKey: current.key },
-        body: { expectedRevision: current.revision, expectedCatalogRevision, configuration },
+        body: {
+          expectedRevision: current.revision,
+          expectedCatalogRevision: catalogRevision,
+          configuration,
+        },
       })
     );
   }
@@ -217,31 +241,42 @@ describe('PostgreSQL routes and storage', () => {
   const segmentId = '71000000-0000-4000-8000-000000000001';
   const ruleId = '72000000-0000-4000-8000-000000000001';
 
-  it('pins typed catalog definitions and segment snapshots without propagating catalog edits or other environments', async () => {
+  it('follows local published segments without changing flag revisions and isolates environments', async () => {
     const created = await create();
-    const production = flagSchema.parse(
-      await invoke(`GET ${base}/flags/:flagKey`, { params: { environmentId: productionId } })
-    );
+    await expect(
+      invoke(`GET ${base}/flags/:flagKey`, {
+        params: { environmentId: productionId },
+      })
+    ).rejects.toMatchObject({ status: 404 });
+    const production = await create('sample', productionId);
+    expect(created.id).toBe(production.id);
     expect(created.configuration.allocationNamespace).not.toBe(
       production.configuration.allocationNamespace
     );
     expect(await catalog()).toMatchObject({ revision: 1, attributes: [], segments: [] });
-    const initial = catalogSchema.parse(
-      await invoke(`PUT ${base}/catalog`, {
-        body: {
-          expectedRevision: 1,
-          catalog: {
-            attributes: [{ key: 'seats', type: 'number', description: 'Synthetic seats' }],
-            segments: [
-              {
-                id: segmentId,
-                key: 'large',
-                name: 'Large accounts',
-                conditions: [{ attribute: 'seats', operator: 'gte', values: [10] }],
-              },
-            ],
-          },
+    await invoke(`PUT ${base}/catalog`, {
+      body: {
+        expectedRevision: 1,
+        catalog: {
+          attributes: [{ key: 'seats', type: 'number', description: 'Synthetic seats' }],
         },
+      },
+    });
+    let segment = segmentRecordSchema.parse(
+      await invoke(`POST ${base}/segments`, {
+        body: {
+          key: 'large',
+          name: 'Large accounts',
+          description: '',
+          blocks: [{ conditions: [{ attribute: 'seats', operator: 'gte', values: [10] }] }],
+        },
+      })
+    );
+    expect((await catalog()).segments).toEqual([]);
+    segment = segmentRecordSchema.parse(
+      await invoke(`POST ${base}/segments/:segmentId/publish`, {
+        params: { segmentId: segment.id },
+        body: { expectedRevision: segment.revision },
       })
     );
     const enabled = await update({ expectedRevision: created.revision, enabled: true });
@@ -254,17 +289,13 @@ describe('PostgreSQL routes and storage', () => {
           id: ruleId,
           name: 'Large tenant enablement',
           conditions: [{ attribute: 'tenantId', operator: 'eq', values: ['local-tenant'] }],
-          segmentIds: [segmentId],
+          segmentIds: [segment.id],
           rolloutBasisPoints: 10000,
           outcome: { kind: 'value', value: { type: 'string', value: 'large' } },
         },
       ],
     };
-    const published = await publish(enabled, configuration, initial.revision);
-    expect(published.configuration).toMatchObject({
-      catalogRevision: 2,
-      segments: [{ id: segmentId, revision: 1 }],
-    });
+    const published = await publish(enabled, configuration, (await catalog()).revision);
     const context = { ...subject, attributes: { seats: 15 } };
     expect(await evaluate(environmentId, context)).toMatchObject({
       value: { type: 'string', value: 'large' },
@@ -275,100 +306,52 @@ describe('PostgreSQL routes and storage', () => {
       value: { type: 'string', value: 'standard' },
       reason: 'default',
     });
-    const edited = catalogSchema.parse(
-      await invoke(`PUT ${base}/catalog`, {
-        params: { environmentId: productionId },
+    const library = (await invoke(`GET ${base}/segments`)) as { items: unknown[] };
+    segment = segmentRecordSchema.parse(library.items[0]);
+    segment = segmentRecordSchema.parse(
+      await invoke(`PUT ${base}/segments/:segmentId/draft`, {
+        params: { segmentId: segment.id },
         body: {
-          expectedRevision: 2,
-          catalog: {
-            attributes: initial.attributes,
-            segments: [
-              {
-                id: segmentId,
-                key: 'large',
-                name: 'Larger accounts',
-                conditions: [{ attribute: 'seats', operator: 'gte', values: [20] }],
-              },
-            ],
-          },
+          expectedRevision: segment.revision,
+          name: 'Larger accounts',
+          description: '',
+          blocks: [{ conditions: [{ attribute: 'seats', operator: 'gte', values: [20] }] }],
         },
       })
     );
-    expect(edited.segments[0]!.revision).toBe(2);
     expect(await evaluate(environmentId, context)).toMatchObject({
       value: { type: 'string', value: 'large' },
-      catalogRevision: 2,
+      revision: published.revision,
     });
-    await expect(publish(published, configuration, 2)).rejects.toMatchObject({ status: 409 });
-    const refreshed = await publish(published, configuration, 3);
+    await invoke(`POST ${base}/segments/:segmentId/publish`, {
+      params: { segmentId: segment.id },
+      body: { expectedRevision: segment.revision },
+    });
     expect(await evaluate(environmentId, context)).toMatchObject({
       value: { type: 'string', value: 'standard' },
-      catalogRevision: 3,
+      revision: published.revision,
     });
-    expect(refreshed.configuration.segments[0]!.revision).toBe(2);
-    const unchanged = flagSchema.parse(
-      await invoke(`GET ${base}/flags/:flagKey`, { params: { environmentId: productionId } })
-    );
-    expect(unchanged.configuration).toEqual(production.configuration);
-    expect(unchanged.enabled).toBe(false);
-    const activity = catalogActivitySchema.parse(
-      await invoke(`GET ${base}/catalog/activity`, { query: 'limit=1' })
-    );
-    expect(activity.items[0]).toMatchObject({
-      revision: 3,
-      actorId: administrator.id,
-      previous: { revision: 2 },
-    });
-    expect(activity.nextCursor).toBe('3');
-    const older = catalogActivitySchema.parse(
-      await invoke(`GET ${base}/catalog/activity`, { query: 'limit=1&before=3' })
-    );
-    expect(older.items[0]!.revision).toBe(2);
-    expect(older.nextCursor).toBeNull();
-    await invoke(`PUT ${base}/catalog`, {
-      body: {
-        expectedRevision: 3,
-        catalog: {
-          attributes: [
-            { key: 'seats', type: 'string', description: 'Now explicitly typed as a string' },
-          ],
-          segments: [
-            {
-              id: segmentId,
-              key: 'large',
-              name: 'Named tier',
-              conditions: [{ attribute: 'seats', operator: 'eq', values: ['large'] }],
-            },
-          ],
-        },
-      },
-    });
-    expect(await evaluate(environmentId, { ...subject, attributes: { seats: 25 } })).toMatchObject({
-      value: { type: 'string', value: 'large' },
-      catalogRevision: 3,
-    });
-    await publish(refreshed, configuration, 4);
-    expect(await evaluate(environmentId, { ...subject, attributes: { seats: 25 } })).toMatchObject({
-      value: { type: 'string', value: 'standard' },
-      catalogRevision: 4,
-    });
+    const refreshed = flagSchema.parse(await invoke(`GET ${base}/flags/:flagKey`));
+    expect(refreshed.revision).toBe(published.revision);
+    expect(configurationInput(refreshed.configuration)).toEqual(configuration);
     expect(
-      await evaluate(environmentId, { ...subject, attributes: { seats: 'large' } })
-    ).toMatchObject({ value: { type: 'string', value: 'large' }, catalogRevision: 4 });
+      flagSchema.parse(
+        await invoke(`GET ${base}/flags/:flagKey`, {
+          params: { environmentId: productionId },
+        })
+      )
+    ).toEqual(production);
+    expect(
+      catalogSchema.parse(
+        await invoke(`GET ${base}/catalog`, {
+          params: { environmentId: productionId },
+        })
+      )
+    ).toMatchObject({ revision: 1, attributes: [], segments: [] });
   });
 
-  it('serializes catalog revisions, validates operands and reserves historical segment identities', async () => {
-    const input = {
-      attributes: [{ key: 'tier', type: 'string', description: '' }],
-      segments: [
-        {
-          id: segmentId,
-          key: 'enterprise',
-          name: 'Enterprise',
-          conditions: [{ attribute: 'tier', operator: 'eq', values: ['enterprise'] }],
-        },
-      ],
-    };
+  it('serializes catalog revisions and validates segment operands and stable identities', async () => {
+    const input = { attributes: [{ key: 'tier', type: 'string', description: '' }] };
     const attempts = await Promise.allSettled([
       invoke(`PUT ${base}/catalog`, { body: { expectedRevision: 1, catalog: input } }),
       invoke(`PUT ${base}/catalog`, { body: { expectedRevision: 1, catalog: input } }),
@@ -377,50 +360,106 @@ describe('PostgreSQL routes and storage', () => {
     expect(attempts.find((attempt) => attempt.status === 'rejected')).toMatchObject({
       reason: { status: 409 },
     });
+    const definition = {
+      key: 'enterprise',
+      name: 'Enterprise',
+      description: '',
+      blocks: [{ conditions: [{ attribute: 'tier', operator: 'eq', values: ['enterprise'] }] }],
+    };
     for (const conditions of [
       [{ attribute: 'undeclared', operator: 'eq', values: ['enterprise'] }],
       [{ attribute: 'tier', operator: 'eq', values: [1] }],
       [{ attribute: 'tier', operator: 'gt', values: [1] }],
     ]) {
       await expect(
-        invoke(`PUT ${base}/catalog`, {
-          body: {
-            expectedRevision: 2,
-            catalog: { ...input, segments: [{ ...input.segments[0], conditions }] },
-          },
+        invoke(`POST ${base}/segments`, {
+          body: { ...definition, blocks: [{ conditions }] },
         })
       ).rejects.toMatchObject({ status: 400 });
     }
-    await invoke(`PUT ${base}/catalog`, {
-      body: { expectedRevision: 2, catalog: { attributes: [], segments: [] } },
-    });
-    await expect(
-      invoke(`PUT ${base}/catalog`, {
-        body: {
-          expectedRevision: 3,
-          catalog: {
-            ...input,
-            segments: [{ ...input.segments[0], key: 'renamed_key' }],
-          },
-        },
+    const segment = segmentRecordSchema.parse(
+      await invoke(`POST ${base}/segments`, {
+        body: definition,
       })
-    ).rejects.toMatchObject({ status: 400 });
-    await expect(
-      invoke(`PUT ${base}/catalog`, {
-        body: {
-          expectedRevision: 3,
-          catalog: {
-            ...input,
-            segments: [{ ...input.segments[0], id: '71000000-0000-4000-8000-000000000002' }],
-          },
-        },
-      })
-    ).rejects.toMatchObject({ status: 400 });
-    const restored = catalogSchema.parse(
-      await invoke(`PUT ${base}/catalog`, { body: { expectedRevision: 3, catalog: input } })
     );
-    expect(restored.segments[0]!.revision).toBe(1);
-    expect((await catalog()).revision).toBe(4);
+    await expect(
+      invoke(`POST ${base}/segments`, {
+        body: definition,
+      })
+    ).rejects.toMatchObject({ status: 409 });
+    await expect(
+      invoke(`PUT ${base}/segments/:segmentId/draft`, {
+        params: { segmentId: segment.id },
+        body: { ...definition, key: 'renamed_key', expectedRevision: segment.revision },
+      })
+    ).rejects.toMatchObject({ status: 400 });
+    expect((await catalog()).revision).toBe(2);
+  });
+
+  it('retains published attribute definitions until explicit flag publication and paginates catalog history', async () => {
+    const created = await create();
+    const first = catalogSchema.parse(
+      await invoke(`PUT ${base}/catalog`, {
+        body: {
+          expectedRevision: 1,
+          catalog: { attributes: [{ key: 'seats', type: 'number', description: '' }] },
+        },
+      })
+    );
+    const enabled = await update({ expectedRevision: 1, enabled: true });
+    const configuration = configurationInput(created.configuration);
+    configuration.defaultOutcome = { kind: 'value', value: { type: 'boolean', value: false } };
+    configuration.rules = [
+      {
+        id: ruleId,
+        name: 'Typed seats',
+        conditions: [{ attribute: 'seats', operator: 'gte', values: [10] }],
+        segmentIds: [],
+        rolloutBasisPoints: 10000,
+        outcome: { kind: 'value', value: { type: 'boolean', value: true } },
+      },
+    ];
+    const published = await publish(enabled, configuration, first.revision);
+    await invoke(`PUT ${base}/catalog`, {
+      body: {
+        expectedRevision: first.revision,
+        catalog: { attributes: [{ key: 'seats', type: 'string', description: '' }] },
+      },
+    });
+    expect(await evaluate(environmentId, { attributes: { seats: 15 } })).toMatchObject({
+      value: { type: 'boolean', value: true },
+      catalogRevision: first.revision,
+    });
+    await expect(publish(published, configuration, first.revision)).rejects.toMatchObject({
+      status: 409,
+    });
+    await expect(publish(published, configuration, 3)).rejects.toMatchObject({ status: 400 });
+    configuration.rules[0]!.conditions = [
+      { attribute: 'seats', operator: 'eq', values: ['large'] },
+    ];
+    await publish(published, configuration, 3);
+    expect(await evaluate(environmentId, { attributes: { seats: 'large' } })).toMatchObject({
+      value: { type: 'boolean', value: true },
+      catalogRevision: 3,
+    });
+    const activity = catalogActivitySchema.parse(
+      await invoke(`GET ${base}/catalog/activity`, {
+        query: 'limit=1',
+      })
+    );
+    expect(activity.items[0]).toMatchObject({
+      revision: 3,
+      actorId: administrator.id,
+      previous: { revision: 2 },
+    });
+    expect(activity.nextCursor).toBe('3');
+    const older = catalogActivitySchema.parse(
+      await invoke(`GET ${base}/catalog/activity`, {
+        query: 'limit=1&before=3',
+      })
+    );
+    expect(older.items[0]!.revision).toBe(2);
+    expect(older.nextCursor).toBeNull();
   });
 
   it('enforces tenant grants before flag lookup and isolates exact override tuples and environments', async () => {
@@ -443,6 +482,7 @@ describe('PostgreSQL routes and storage', () => {
         value: { type: 'boolean', value: true },
       });
     }
+    const production = await create('sample', productionId);
     expect(await evaluate(productionId, subject)).toMatchObject({ reason: 'disabled' });
     for (const context of [{ attributes: {} }, { ...subject, tenantId: 'not-granted' }]) {
       await expect(
@@ -472,7 +512,7 @@ describe('PostgreSQL routes and storage', () => {
     await expect(
       invoke(`POST ${base}/flags/:flagKey/overrides/:overrideId/revoke`, {
         params: { environmentId: productionId, overrideId: item.id },
-        body: { expectedRevision: value.revision },
+        body: { expectedRevision: production.revision },
       })
     ).rejects.toMatchObject({ status: 404 });
     expect(routes[`GET ${base}/evaluate/:flagKey`]).toBeUndefined();
@@ -567,7 +607,7 @@ describe('PostgreSQL routes and storage', () => {
       defaultOutcome: { kind: 'weighted' },
     };
     const before = await owner.query(
-      'SELECT (SELECT count(*) FROM flightdeck.audit) AS audit, (SELECT count(*) FROM flightdeck.subject_overrides) AS overrides, (SELECT count(*) FROM flightdeck.project_targeting_audit) AS catalogs'
+      'SELECT (SELECT count(*) FROM flightdeck.audit) AS audit, (SELECT count(*) FROM flightdeck.subject_overrides) AS overrides, (SELECT count(*) FROM flightdeck.environment_targeting_audit) AS catalogs'
     );
     const preview = previewSchema.parse(
       await invoke(`POST ${base}/flags/:flagKey/preview`, {
@@ -591,7 +631,7 @@ describe('PostgreSQL routes and storage', () => {
     expect(
       (
         await owner.query(
-          'SELECT (SELECT count(*) FROM flightdeck.audit) AS audit, (SELECT count(*) FROM flightdeck.subject_overrides) AS overrides, (SELECT count(*) FROM flightdeck.project_targeting_audit) AS catalogs'
+          'SELECT (SELECT count(*) FROM flightdeck.audit) AS audit, (SELECT count(*) FROM flightdeck.subject_overrides) AS overrides, (SELECT count(*) FROM flightdeck.environment_targeting_audit) AS catalogs'
         )
       ).rows
     ).toEqual(before.rows);
@@ -781,18 +821,18 @@ describe('PostgreSQL routes and storage', () => {
       );
     }
     await owner.query(
-      'ALTER TABLE flightdeck.project_targeting_audit ADD CONSTRAINT test_catalog_audit_failure CHECK (revision < 2)'
+      'ALTER TABLE flightdeck.environment_targeting_audit ADD CONSTRAINT test_catalog_audit_failure CHECK (revision < 2)'
     );
     try {
       await expect(
         invoke(`PUT ${base}/catalog`, {
-          body: { expectedRevision: 1, catalog: { attributes: [], segments: [] } },
+          body: { expectedRevision: 1, catalog: { attributes: [] } },
         })
       ).rejects.toMatchObject({ code: '23514' });
       expect((await catalog()).revision).toBe(1);
     } finally {
       await owner.query(
-        'ALTER TABLE flightdeck.project_targeting_audit DROP CONSTRAINT test_catalog_audit_failure'
+        'ALTER TABLE flightdeck.environment_targeting_audit DROP CONSTRAINT test_catalog_audit_failure'
       );
     }
   });
@@ -956,14 +996,22 @@ describe('PostgreSQL routes and storage', () => {
     expect(credentialsSchema.parse(await invoke(`GET ${base}/credentials`)).items).toHaveLength(1);
   });
 
-  it('creates disabled configurations in every environment and persists scoped changes with project-wide revisions', async () => {
+  it('creates only local disabled configurations and persists environment-local metadata and revisions', async () => {
     const created = await create();
-    expect(created).toMatchObject({ revision: 1, enabled: false, archived: false });
+    expect(created).toMatchObject({
+      revision: 1,
+      enabled: false,
+      archived: false,
+      lifecycle: 'development',
+    });
     expect(await evaluate()).toMatchObject({
       value: { type: 'boolean', value: false },
       reason: 'disabled',
       revision: 1,
     });
+    await expect(evaluate(productionId)).rejects.toMatchObject({ status: 404 });
+    const production = await create('sample', productionId);
+    expect(production.id).toBe(created.id);
     expect(await evaluate(productionId)).toMatchObject({
       value: { type: 'boolean', value: false },
       reason: 'disabled',
@@ -979,8 +1027,15 @@ describe('PostgreSQL routes and storage', () => {
     expect(await evaluate(productionId)).toMatchObject({
       value: { type: 'boolean', value: false },
       reason: 'disabled',
-      revision: 2,
+      revision: 1,
     });
+    expect(
+      flagSchema.parse(
+        await invoke(`GET ${base}/flags/:flagKey`, {
+          params: { environmentId: productionId },
+        })
+      )
+    ).toEqual(production);
     const freshPool = connectDatabase(runtimeUrl!);
     try {
       const restartedRoutes = createRoutes(freshPool);
@@ -1011,7 +1066,7 @@ describe('PostgreSQL routes and storage', () => {
     await create();
     const attempts = await Promise.allSettled([
       update({ expectedRevision: 1, enabled: true }),
-      update({ expectedRevision: 1, owner: 'Competing owner' }, productionId),
+      update({ expectedRevision: 1, owner: 'Competing owner' }),
     ]);
     expect(attempts.filter((attempt) => attempt.status === 'fulfilled')).toHaveLength(1);
     const rejected = attempts.find((attempt) => attempt.status === 'rejected');
@@ -1056,11 +1111,7 @@ describe('PostgreSQL routes and storage', () => {
       reason: 'archived',
       revision: 3,
     });
-    expect(await evaluate(productionId)).toMatchObject({
-      value: { type: 'boolean', value: false },
-      reason: 'archived',
-      revision: 3,
-    });
+    await expect(evaluate(productionId)).rejects.toMatchObject({ status: 404 });
     await expect(update({ expectedRevision: 3, enabled: true })).rejects.toMatchObject({
       status: 400,
     });
@@ -1217,38 +1268,37 @@ describe('PostgreSQL routes and storage', () => {
       nextCursor: null,
     });
     const created = await create('sample', productionId);
-    const development = flagSchema.parse(await invoke(`GET ${base}/flags/:flagKey`));
+    const development = await create();
     expect(development.id).toBe(created.id);
     const changed = await update({ expectedRevision: 1, enabled: true });
-    await owner.query(
-      `UPDATE flightdeck.environments SET key = CASE WHEN id = $1 THEN 'z-development'
-        ELSE 'a-production' END WHERE project_id = $2`,
-      [environmentId, projectId]
-    );
-    const expected = {
-      items: [
-        {
-          id: created.id,
-          projectId,
-          key: created.key,
-          name: created.name,
-          description: created.description,
-          owner: created.owner,
-          archived: false,
+    expect(development.lifecycle).toBe('development');
+    const expected = flagsSchema.parse(await invoke(inventory, { principal: viewer }));
+    expect(expected.items).toHaveLength(1);
+    expect(expected.items[0]).toMatchObject({
+      id: created.id,
+      projectId,
+      key: created.key,
+      environments: expect.arrayContaining([
+        expect.objectContaining({ environmentId: productionId, enabled: false, revision: 1 }),
+        expect.objectContaining({
+          environmentId,
+          enabled: true,
           revision: changed.revision,
-          updatedAt: changed.updatedAt,
-          environments: [
-            { environmentId: productionId, enabled: false },
-            { environmentId, enabled: true },
-          ],
-        },
-      ],
-      nextCursor: null,
-    };
-    expect(await invoke(inventory, { principal: viewer })).toEqual(expected);
+          name: changed.name,
+          owner: changed.owner,
+          lifecycle: 'development',
+          archived: false,
+        }),
+      ]),
+    });
     expect(
-      await invoke(inventory, { principal: viewer, params: { environmentId: productionId } })
-    ).toEqual(expected);
+      flagsSchema.parse(
+        await invoke(inventory, {
+          principal: viewer,
+          params: { environmentId: productionId },
+        })
+      ).items[0]!.id
+    ).toBe(created.id);
     const sandboxProjectId = localProjects[1]!.id;
     const sandboxEnvironmentId = localEnvironments[2]!.id;
     const sandbox = flagSchema.parse(
@@ -1270,17 +1320,14 @@ describe('PostgreSQL routes and storage', () => {
     expect(sandboxInventory.items[0]).toMatchObject({
       id: sandbox.id,
       projectId: sandboxProjectId,
-      environments: [
-        { environmentId: sandboxEnvironmentId, enabled: false },
-        { environmentId: localEnvironments[3]!.id, enabled: false },
-      ],
+      environments: [{ environmentId: sandboxEnvironmentId, enabled: false }],
     });
     expect(await invoke(inventory)).toEqual(expected);
     await owner.query(
       'DELETE FROM flightdeck.configurations WHERE flag_id = $1 AND environment_id = $2',
       [created.id, productionId]
     );
-    expect(flagsSchema.parse(await invoke(inventory)).items[0]!.environments).toEqual([
+    expect(flagsSchema.parse(await invoke(inventory)).items[0]!.environments).toMatchObject([
       { environmentId, enabled: true },
     ]);
   });
@@ -1305,7 +1352,7 @@ describe('PostgreSQL routes and storage', () => {
     expect(
       flagsSchema.parse(await invoke(inventory, { query: "search=' OR true --" })).items
     ).toEqual([]);
-    await update({ expectedRevision: 1, enabled: true }, productionId);
+    await update({ expectedRevision: 1, enabled: true });
     await update({ expectedRevision: 2, archived: true });
     expect(flagsSchema.parse(await invoke(inventory)).items.map((entry) => entry.key)).toEqual([
       'alpha',
@@ -1320,10 +1367,7 @@ describe('PostgreSQL routes and storage', () => {
       flagsSchema.parse(await invoke(inventory, { query: 'archived=archived' })).items[0]
     ).toMatchObject({
       archived: true,
-      environments: [
-        { environmentId, enabled: false },
-        { environmentId: productionId, enabled: true },
-      ],
+      environments: [{ environmentId, enabled: true }],
     });
     expect(
       flagsSchema.parse(await invoke(inventory, { query: 'archived=all' })).items
@@ -1332,7 +1376,7 @@ describe('PostgreSQL routes and storage', () => {
       await invoke(`GET ${base}/flags/:flagKey/activity`, { query: 'limit=2' })
     );
     expect(page.items.map((entry) => entry.revision)).toEqual([3, 2]);
-    expect(page.items[1]!.environmentId).toBe(productionId);
+    expect(page.items[1]!.environmentId).toBe(environmentId);
     expect(page.nextCursor).toBe('2');
     const history = activitySchema.parse(
       await invoke(`GET ${base}/flags/:flagKey/activity`, {
@@ -1361,7 +1405,6 @@ describe('PostgreSQL routes and storage', () => {
           expectedRevision: 1,
           catalog: {
             attributes: [{ key: 'groupIds', type: 'string_list', description: 'Memberships' }],
-            segments: [],
           },
         },
       });
@@ -1509,6 +1552,7 @@ describe('PostgreSQL routes and storage', () => {
     expect(migrations.rows).toEqual([
       { name: '001-initial.sql', checksum: expect.stringMatching(/^[a-f0-9]{64}$/) },
       { name: '002-targeting.sql', checksum: expect.stringMatching(/^[a-f0-9]{64}$/) },
+      { name: '003-unified-design.sql', checksum: expect.stringMatching(/^[a-f0-9]{64}$/) },
     ]);
     expect((await owner.query('SELECT id FROM flightdeck.organizations')).rows).toHaveLength(2);
     const seeded = await owner.query<{ token_hash: string }>(
@@ -1530,6 +1574,8 @@ describe('PostgreSQL routes and storage', () => {
       'TRUNCATE flightdeck.audit',
       'UPDATE flightdeck.project_targeting_audit SET actor_name = actor_name',
       'DELETE FROM flightdeck.project_targeting_audit',
+      'UPDATE flightdeck.environment_targeting_audit SET actor_name = actor_name',
+      'DELETE FROM flightdeck.environment_targeting_audit',
       'DELETE FROM flightdeck.subject_overrides',
       'UPDATE flightdeck.subject_overrides SET reason = reason',
       'ALTER TABLE flightdeck.flags ADD COLUMN forbidden text',
@@ -1538,8 +1584,8 @@ describe('PostgreSQL routes and storage', () => {
     }
     await expect(
       runtime.query(
-        `INSERT INTO flightdeck.configurations (flag_id, environment_id, project_id, enabled, configuration)
-      VALUES ($1, $2, $3, false, $4)`,
+        `INSERT INTO flightdeck.configurations (flag_id, environment_id, project_id, enabled, configuration, name, description, owner, archived, revision, updated_at)
+      VALUES ($1, $2, $3, false, $4, 'Cross scope', '', 'Test', false, 1, clock_timestamp())`,
         [
           value.id,
           localEnvironments[2]!.id,

@@ -29,14 +29,16 @@ const segments: Segment[] = [
     key: 'early_access',
     name: 'Early access',
     revision: 1,
-    conditions: [{ attribute: 'earlyAccess', operator: 'eq', values: [true] }],
+    contextDefinitions: [{ key: 'earlyAccess', type: 'boolean', description: '' }],
+    blocks: [{ conditions: [{ attribute: 'earlyAccess', operator: 'eq', values: [true] }] }],
   },
   {
     id: uuid(2),
     key: 'large_teams',
     name: 'Large teams',
     revision: 1,
-    conditions: [{ attribute: 'teamSize', operator: 'gte', values: [50] }],
+    contextDefinitions: [{ key: 'teamSize', type: 'number', description: '' }],
+    blocks: [{ conditions: [{ attribute: 'teamSize', operator: 'gte', values: [50] }] }],
   },
 ];
 const selected = (segmentIds = segments.map((segment) => segment.id)) =>
@@ -221,15 +223,15 @@ describe('simple audience updates preserve allocation and existing identities', 
     ).toThrow();
   });
 
-  it('accepts pinned historical segment definitions without pretending they are current catalog refs', () => {
-    const pinned = { ...segments[0]!, revision: 4, name: 'Pinned historical name' };
+  it('accepts historical segment snapshots when inspecting an older configuration', () => {
+    const historical = { ...segments[0]!, revision: 4, name: 'Historical name' };
     const next = setSimpleAudience(
       everyone(),
-      { mode: 'selected', segmentIds: [pinned.id], directoryTargets: [] },
-      [pinned],
+      { mode: 'selected', segmentIds: [historical.id], directoryTargets: [] },
+      [historical],
       createIds()
     );
-    expect(next.rules[0]).toMatchObject({ name: pinned.name, segmentIds: [pinned.id] });
+    expect(next.rules[0]).toMatchObject({ name: historical.name, segmentIds: [historical.id] });
   });
 
   it('allows 20 audiences and rejects overflow, duplicates and contradictory Everyone selections', () => {

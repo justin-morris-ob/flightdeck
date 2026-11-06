@@ -12,6 +12,7 @@ import {
 } from '../../shared/directory.ts';
 import { readSimpleAudience, setSimpleAudience } from '../../shared/simple-targeting.ts';
 import { catalogSchema, configurationInput } from '../../shared/targeting.ts';
+import { deploymentSchema } from '../../shared/unified.ts';
 import { BCDirectoryPage } from './bc-directory-page.ts';
 import { startDirectoryRelay, validateBCOrigin, type DirectoryRelay } from './directory-relay.ts';
 import { expect, test as base } from './harness.ts';
@@ -104,8 +105,22 @@ test('should author a real BC group and evaluate through an authoring outage', a
   const openFlag = async () => {
     await page.goto(flightdeckOrigin);
     await ui.project.selectOption(config.projectId);
-    await ui.environment.selectOption(config.environmentId);
+    await expect(page.getByRole('combobox', { name: /environment/i })).toHaveCount(0);
+    await expect(page.getByText('Environment · Development', { exact: true })).toBeVisible();
     await ui.flagSearch.fill(config.flagKey);
+    const searchPending = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname === `${scope}/flags` &&
+        url.searchParams.get('search') === config.flagKey &&
+        response.request().method() === 'GET'
+      );
+    });
+    await ui.flagSearch.press('Enter');
+    const searchResponse = await searchPending;
+    expect(searchResponse.status()).toBe(200);
+    await searchResponse.finished();
+    await expect(ui.inventoryLoading).toHaveCount(0);
     await demo.click(ui.flag(config.flagKey));
   };
   let evaluatedAccountUuid: string | undefined;
@@ -152,17 +167,22 @@ test('should author a real BC group and evaluate through an authoring outage', a
   await page.goto(flightdeckOrigin);
   await demo.click(ui.localAdministrator);
   const initial = await readFlag();
+  const deploymentResponse = await page.request.get(`${flightdeckOrigin}/api/v1/deployment`);
+  expect(deploymentResponse.status()).toBe(200);
+  expect(deploymentSchema.parse(await deploymentResponse.json())).toMatchObject({
+    mode: 'local',
+    environmentKey: 'development',
+  });
   const catalog = await readCatalog();
   if (
     !initial.enabled ||
     initial.archived ||
     initial.owner !== 'Flightdeck directory demo' ||
     !initial.description.includes('[flightdeck-bc-directory-demo]') ||
-    !readSimpleAudience(initial.configuration) ||
-    initial.configuration.catalogRevision !== catalog.revision
+    !readSimpleAudience(initial.configuration)
   ) {
     throw new Error(
-      'Use a dedicated enabled, unarchived simple Boolean flag pinned to the current catalog.'
+      'Use the dedicated enabled, unarchived simple Boolean flag in the local Development deployment.'
     );
   }
   let lastOwned: Flag | null = null;
@@ -204,6 +224,11 @@ test('should author a real BC group and evaluate through an authoring outage', a
       'Real BC directory → owned Flightdeck targeting',
       'An isolated local BC tenant supplies real group names and stable IDs. Flightdeck owns targeting; this is not production identity or deployment evidence.'
     );
+    await expect(ui.editAudience).toBeVisible();
+    await expect(ui.selectedAudience).not.toBeVisible();
+    await expect(ui.audienceEditor).not.toBeVisible();
+    await demo.click(ui.editAudience);
+    await expect(ui.audienceEditor).toBeVisible();
     await expect(ui.selectedAudience).toBeChecked();
     await expect(ui.emptyAudience).toBeVisible();
     const statusResponse = await page.request.get(`${flightdeckOrigin}${scope}/directory`);
@@ -213,16 +238,21 @@ test('should author a real BC group and evaluate through an authoring outage', a
       binding: { sourceId: config.sourceId, tenantId: config.tenantId },
     });
     await demo.caption(
-      'AUTHORING · Search the actual BC group directory. This selection saves stable tenant, source and group predicates—not a replicated membership list.'
+      'INLINE AUTHORING · Search the actual BC group directory. This selection saves stable tenant, source and group predicates—not a replicated membership list.'
+    );
+    const searchesPending = Promise.all(
+      ['people', 'organizations', 'groups'].map((kind) =>
+        page.waitForResponse(
+          (response) =>
+            new URL(response.url()).pathname === `${scope}/directory/search` &&
+            new URL(response.url()).searchParams.get('kind') === kind
+        )
+      )
     );
     await demo.fill(ui.groupSearch, config.groupName);
-    const searchPending = page.waitForResponse(
-      (response) =>
-        new URL(response.url()).pathname === `${scope}/directory/search` &&
-        new URL(response.url()).searchParams.get('kind') === 'groups'
-    );
-    await demo.click(ui.searchGroups);
-    const searchResponse = await searchPending;
+    const searches = await searchesPending;
+    for (const response of searches) expect(response.status()).toBe(200);
+    const searchResponse = searches[2]!;
     expect(searchResponse.status()).toBe(200);
     const result = directorySearchSchema.parse(await searchResponse.json());
     expect(result).toMatchObject({
@@ -238,18 +268,32 @@ test('should author a real BC group and evaluate through an authoring outage', a
     expect(
       relay.forwardedRequests.get('GET /api/external/flightdeck-directory/v1/search')
     ).toBeGreaterThan(0);
+    const selectionResolve = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === `${scope}/directory/resolve` &&
+        response.request().method() === 'POST'
+    );
     await demo.click(ui.addGroup(config.groupName));
+    expect((await selectionResolve).status()).toBe(200);
+    await expect(ui.addGroup(config.groupName)).toBeChecked();
     await expect(ui.selectedGroups).toContainText(config.groupName);
-    await demo.click(ui.reviewTargeting);
+    const validationPending = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === `${flagPath}/preview` &&
+        response.request().method() === 'POST'
+    );
+    await demo.click(ui.reviewChanges);
+    expect((await validationPending).status()).toBe(200);
+    await expect(ui.targetingReview).toBeVisible();
+    await expect(ui.currentAudience).toBeVisible();
     await expect(ui.proposedAudience).toBeVisible();
     await demo.pause();
-    await demo.click(ui.reviewPublication);
     const publishPending = page.waitForResponse(
       (response) =>
         new URL(response.url()).pathname === `${flagPath}/configuration` &&
         response.request().method() === 'PUT'
     );
-    await demo.click(ui.confirmPublication);
+    await demo.click(ui.publishTargeting);
     const published = await publishPending;
     expect(published.status()).toBe(200);
     lastOwned = flagSchema.parse(await published.json());
@@ -278,12 +322,18 @@ test('should author a real BC group and evaluate through an authoring outage', a
     await demo.caption(
       'REAL NETWORK OUTAGE · The demo-owned authoring relay is stopped. BC remains live separately. Existing saved targeting is preserved; new directory searches must show unavailable.'
     );
-    await demo.fill(ui.groupSearch, config.groupName);
-    const unavailablePending = page.waitForResponse(
-      (response) => new URL(response.url()).pathname === `${scope}/directory/search`
+    await demo.click(ui.editAudience);
+    const unavailablePending = Promise.all(
+      ['people', 'organizations', 'groups'].map((kind) =>
+        page.waitForResponse(
+          (response) =>
+            new URL(response.url()).pathname === `${scope}/directory/search` &&
+            new URL(response.url()).searchParams.get('kind') === kind
+        )
+      )
     );
-    await demo.click(ui.searchGroups);
-    expect((await unavailablePending).status()).toBe(503);
+    await demo.fill(ui.groupSearch, config.groupName);
+    for (const response of await unavailablePending) expect(response.status()).toBe(503);
     await expect(ui.unavailableDirectory).toBeVisible();
     await expect(ui.selectedGroups).toContainText(config.groupId);
     const savedDuringOutage = await readFlag();
@@ -316,14 +366,24 @@ test('should author a real BC group and evaluate through an authoring outage', a
       const restored = await page.request.put(`${flightdeckOrigin}${flagPath}/configuration`, {
         data: {
           expectedRevision: current.revision,
-          expectedCatalogRevision: catalog.revision,
+          expectedCatalogRevision: currentCatalog.revision,
           configuration: configurationInput(initial.configuration),
         },
       });
       expect(restored.status(), 'Restore the dedicated flag using optimistic revision guards').toBe(
         200
       );
-      expect(flagSchema.parse(await restored.json()).configuration).toEqual(initial.configuration);
+      const restoredFlag = flagSchema.parse(await restored.json());
+      expect(configurationInput(restoredFlag.configuration)).toEqual(
+        configurationInput(initial.configuration)
+      );
+      expect(restoredFlag.enabled).toBe(initial.enabled);
+      expect(restoredFlag.archived).toBe(initial.archived);
+      expect(restoredFlag.configuration.catalogRevision).toBe(currentCatalog.revision);
+      const referencedIds = new Set(initial.configuration.rules.flatMap((rule) => rule.segmentIds));
+      expect(restoredFlag.configuration.segments).toEqual(
+        currentCatalog.segments.filter((segment) => referencedIds.has(segment.id))
+      );
     }
   } catch (cleanupFailure) {
     if (scenarioFailure)
